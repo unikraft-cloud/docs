@@ -1,0 +1,323 @@
+---
+title: Scheduling instance operations
+description: Learn how to automate instance lifecycle operations using scheduled actions
+---
+
+Use scheduled operations to automate the lifecycle of your instances. You can configure instances to automatically start, stop, or delete at specific times using calendar expressions.
+
+## Prerequisites
+
+- An active Unikraft Cloud account
+- Basic familiarity with the Unikraft Cloud API or CLI
+- Understanding of systemd calendar event expressions (optional)
+
+## Understanding schedules
+
+Schedules define automated operations that run at specific times. Each schedule consists of:
+
+- **name**: A unique identifier for the schedule (DNS-valid, lowercase, max 31 characters)
+- **when**: A calendar expression defining when the operation runs
+- **action**: The operation to perform (`start`, `stop`, or `delete`)
+
+You can configure up to 8 schedules per instance.
+
+## Creating an instance with schedules
+
+Add schedules when creating an instance by including the `schedules` array in your request:
+
+```bash
+curl -X POST https://api.kraft.cloud/v1/instances \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "image": "nginx:latest",
+    "schedules": [
+      {
+        "name": "morning-start",
+        "when": "Mon-Fri 09:00:00",
+        "action": "start"
+      },
+      {
+        "name": "evening-stop",
+        "when": "Mon-Fri 18:00:00",
+        "action": "stop"
+      }
+    ]
+  }'
+```
+
+This creates an instance that automatically starts at 9 AM and stops at 6 PM on weekdays.
+
+## Adding schedules to existing instances
+
+Update an existing instance to add schedules using the PATCH endpoint:
+
+```bash
+curl -X PATCH https://api.kraft.cloud/v1/instances/{instance_id} \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "op": "add",
+    "path": "/schedules",
+    "value": [
+      {
+        "name": "weekend-stop",
+        "when": "Sat,Sun 00:00:00",
+        "action": "stop"
+      }
+    ]
+  }'
+```
+
+You can modify schedules while the instance is running.
+
+## Replacing all schedules
+
+Replace all existing schedules with a new set using the SET operation:
+
+```bash
+curl -X PATCH https://api.kraft.cloud/v1/instances/{instance_id} \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "op": "set",
+    "path": "/schedules",
+    "value": [
+      {
+        "name": "daily-cleanup",
+        "when": "daily 02:00:00",
+        "action": "delete"
+      }
+    ]
+  }'
+```
+
+## Removing schedules
+
+Remove specific schedules by name using the DEL operation:
+
+```bash
+curl -X PATCH https://api.kraft.cloud/v1/instances/{instance_id} \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "op": "del",
+    "path": "/schedules",
+    "value": ["morning-start", "evening-stop"]
+  }'
+```
+
+## Viewing scheduled operations
+
+Check the status of your instance to see configured schedules and their next execution times:
+
+```bash
+curl https://api.kraft.cloud/v1/instances/{instance_id} \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+The response includes the `schedules` array with `next_at` timestamps:
+
+```json
+{
+  "uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "my-instance",
+  "state": "running",
+  "schedules": [
+    {
+      "name": "morning-start",
+      "when": "Mon-Fri 09:00:00",
+      "action": "start",
+      "next_at": "2026-02-19T09:00:00Z"
+    },
+    {
+      "name": "evening-stop",
+      "when": "Mon-Fri 18:00:00",
+      "action": "stop",
+      "next_at": "2026-02-18T18:00:00Z"
+    }
+  ]
+}
+```
+
+## Calendar expression format
+
+Schedules use systemd calendar event expressions. Here are common patterns:
+
+### Daily operations
+
+```json
+{
+  "name": "daily-backup",
+  "when": "daily 02:00:00",
+  "action": "stop"
+}
+```
+
+Or use the full format:
+
+```json
+{
+  "name": "daily-backup",
+  "when": "*-*-* 02:00:00",
+  "action": "stop"
+}
+```
+
+### Weekday operations
+
+```json
+{
+  "name": "weekday-start",
+  "when": "Mon-Fri 09:00:00",
+  "action": "start"
+}
+```
+
+### Specific days
+
+```json
+{
+  "name": "mwf-maintenance",
+  "when": "Mon,Wed,Fri 12:00:00",
+  "action": "stop"
+}
+```
+
+### Weekly operations
+
+```json
+{
+  "name": "monday-restart",
+  "when": "Mon 00:00:00",
+  "action": "stop"
+}
+```
+
+### Monthly operations
+
+```json
+{
+  "name": "monthly-cleanup",
+  "when": "*-*-01 00:00:00",
+  "action": "delete"
+}
+```
+
+## Supported actions
+
+### start
+
+Starts a stopped instance. If the instance is already running, the operation has no effect.
+
+```json
+{
+  "name": "morning-start",
+  "when": "Mon-Fri 09:00:00",
+  "action": "start"
+}
+```
+
+### stop
+
+Gracefully stops a running instance. If the instance is already stopped, the operation has no effect.
+
+```json
+{
+  "name": "evening-stop",
+  "when": "Mon-Fri 18:00:00",
+  "action": "stop"
+}
+```
+
+### delete
+
+Force-stops the instance and deletes it. Use this action carefully as it permanently removes the instance.
+
+```json
+{
+  "name": "cleanup",
+  "when": "Sun 23:59:00",
+  "action": "delete"
+}
+```
+
+## Common use cases
+
+### Development environment
+
+Automatically start instances during work hours and stop them after hours to save costs:
+
+```json
+{
+  "schedules": [
+    {
+      "name": "work-start",
+      "when": "Mon-Fri 08:00:00",
+      "action": "start"
+    },
+    {
+      "name": "work-end",
+      "when": "Mon-Fri 19:00:00",
+      "action": "stop"
+    },
+    {
+      "name": "weekend-stop",
+      "when": "Sat 00:00:00",
+      "action": "stop"
+    }
+  ]
+}
+```
+
+### Temporary testing instance
+
+Create an instance that automatically deletes itself after a testing period:
+
+```json
+{
+  "schedules": [
+    {
+      "name": "auto-cleanup",
+      "when": "2026-02-25 23:59:00",
+      "action": "delete"
+    }
+  ]
+}
+```
+
+### Maintenance window
+
+Stop instances during maintenance windows:
+
+```json
+{
+  "schedules": [
+    {
+      "name": "maintenance-start",
+      "when": "Sun 02:00:00",
+      "action": "stop"
+    },
+    {
+      "name": "maintenance-end",
+      "when": "Sun 04:00:00",
+      "action": "start"
+    }
+  ]
+}
+```
+
+## Constraints and limitations
+
+- Maximum of 8 schedules per instance
+- Schedule names must be DNS-valid (lowercase, alphanumeric, hyphens allowed)
+- Schedule names must be unique within an instance
+- Schedule names cannot exceed 31 characters
+- The `delete` action force-stops the instance before deletion
+- Schedules can be modified while the instance is running
+
+## Next steps
+
+- Learn more about [instance lifecycle management](/api-reference/instances/create-instance)
+- Explore [instance update operations](/api-reference/instances/update-instances)
+- Read about [systemd calendar expressions](https://www.freedesktop.org/software/systemd/man/systemd.time.html#Calendar%20Events)
