@@ -98,25 +98,24 @@
         "pages": [
           "changelog"
         ]
-      }
-    ]
-  },
-  {
-    "dropdown": "API reference",
-    "icon": "terminal",
-    "description": "How to use the Example Co. API",
-    "groups": [
-      {
-        "group": "API reference",
-        "pages": [
-            "api-reference/introduction"
-        ]
       },
       {
-        "group": "Endpoints",
-        "openapi": {
-            "source": "openapi.json"
-        }
+        "dropdown": "API reference",
+        "icon": "terminal",
+        "groups": [
+          {
+            "group": "API reference",
+            "pages": [
+                "api-reference/introduction"
+            ]
+          },
+          {
+            "group": "Endpoints",
+            "openapi": {
+                "source": "https://raw.githubusercontent.com/unikraft-cloud/openapi/refs/heads/prod-staging/platform.json"
+            }
+          }
+        ]
       }
     ]
   },
