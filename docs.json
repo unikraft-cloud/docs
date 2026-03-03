@@ -101,6 +101,25 @@
       }
     ]
   },
+  {
+    "dropdown": "API reference",
+    "icon": "terminal",
+    "description": "How to use the Example Co. API",
+    "groups": [
+      {
+        "group": "API reference",
+        "pages": [
+            "api-reference/introduction"
+        ]
+      },
+      {
+        "group": "Endpoints",
+        "openapi": {
+            "source": "openapi.json"
+        }
+      }
+    ]
+  },
   "errors": {
     "404": {
       "redirect": false,
