@@ -1,0 +1,111 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "maple",
+  "name": "Unikraft Cloud",
+  "description": "Unikraft Cloud is a platform that provides cloud solutions.",
+  "colors": {
+    "primary": "#3B82F6",
+    "light": "#F8FAFC",
+    "dark": "#0F172A"
+  },
+  "api": {
+    "playground": {
+      "display": "interactive"
+    },
+    "examples": {
+      "languages": ["javascript", "curl", "python"]
+    }
+  },
+  "navigation": {
+    "dropdowns": [
+      {
+        "dropdown": "Documentation",
+        "icon": "book",
+        "description": "How to use the Unikraft Cloud product",
+        "groups": [
+          {
+            "group": "Getting started",
+            "pages": [
+              "Introduction",
+              "FAQ"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "Scale-to-Zero",
+              "Load Balancing",
+              "Snapshots",
+              "Autoscale",
+              "ROMs"
+            ]
+          },
+          {
+            "group": "Use Cases",
+            "pages": [
+                "Headless Browsers",
+                "MCP Servers",
+                "Serverless Databases",
+                "Remote IDEs",
+                "API Gateways",
+                "Webhooks"
+            ]
+          },
+          {
+            "group": "Cloud Platform",
+            "pages": [
+                "Metros",
+                "Instances",
+                "Domains",
+                "Certificates",
+                "Services",
+                "Volumes",
+                "Images",
+                "Troubleshooting"
+            ]
+          },
+          {
+            "group": "Integrations",
+            "pages": [
+                "Kubernetes"
+            ]
+          }
+        ]
+      },
+      {
+        "dropdown": "API reference",
+        "icon": "terminal",
+        "description": "How to use the Example Co. API",
+        "groups": [
+          {
+            "group": "API reference",
+            "pages": [
+              "api-reference/introduction"
+            ]
+          },
+          {
+            "group": "Endpoints",
+            "openapi": {
+              "source": "openapi.json"
+            }
+          }
+        ]
+      },
+      {
+        "dropdown": "Changelog",
+        "icon": "history",
+        "description": "Updates and changes",
+        "pages": [
+          "changelog"
+        ]
+      }
+    ]
+  },
+  "errors": {
+    "404": {
+      "redirect": false,
+      "title": "I can't be found",
+      "description": "What ever **happened** to this _page_?"
+    }
+  }
+}
