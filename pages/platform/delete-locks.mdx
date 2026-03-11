@@ -1,0 +1,59 @@
+---
+title: Delete Locks
+navigation_icon: lock
+---
+
+Delete locks prevent accidental deletion of instances and volumes. When a delete lock is enabled, any delete operation on the resource will fail until the lock is removed.
+
+## Enabling Delete Locks
+
+To enable a delete lock on an instance:
+
+```bash title=""
+kraft cloud instance update <instance-name> --delete-lock
+```
+
+Or by UUID:
+
+```bash title=""
+kraft cloud instance update <uuid> --delete-lock
+```
+
+To enable a delete lock on a volume:
+
+```bash title=""
+kraft cloud volume update <volume-name> --delete-lock
+```
+
+## Disabling Delete Locks
+
+To remove the delete lock from an instance:
+
+```bash title=""
+kraft cloud instance update <instance-name> --no-delete-lock
+```
+
+To remove the delete lock from a volume:
+
+```bash title=""
+kraft cloud volume update <volume-name> --no-delete-lock
+```
+
+## Checking Delete Lock Status
+
+The delete lock status is returned in the resource status:
+
+```bash title=""
+kraft cloud instance list -o wide
+kraft cloud volume list -o wide
+```
+
+The `DELETE LOCK` column shows whether each resource is protected.
+
+## Behavior
+
+- **Delete attempts** on locked resources return an error
+- **Autokill** schedules are suspended for locked instances when the lock is removed
+- **Instance templates** can have delete locks enabled to prevent accidental deletion of frequently used templates
+- **Volume templates** support delete locks as well
+- **New instances** created from templates inherit the delete lock state from the template
