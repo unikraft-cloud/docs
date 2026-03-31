@@ -62,7 +62,48 @@ This ensures statefulness across scale-to-zero and scale-to-one cycles.
 It also eliminates long initialization times from heavyweight apps.
 
 
+## Snapshot format
+
+When Unikraft Cloud snapshots an instance, it saves the full VM state: CPU registers, device state, and memory contents.
+
+Each snapshot consists of two files:
+
+- **State file**: device state (CPU registers, device model state).
+- **Memory file**: memory contents in a compressed format.
+
+The snapshot format uses LZ4 compression and zero-page deduplication to reduce disk usage.
+On-disk snapshot size depends on the amount of memory the app has actually touched, not the total memory allocation.
+
+### Block types
+
+The memory file stores data in blocks.
+Each block has a type that determines how Unikraft Cloud stores it:
+
+| Type | Storage |
+|------|---------|
+| Zero | Not stored on disk; the block contains only zeros. |
+| Raw | Full uncompressed block. |
+| LZ4 | LZ4-compressed block. Unikraft Cloud stores only the compressed payload. |
+| Initrd | References the external initrd file. Not stored inline in the snapshot. |
+| Kernel | References the external kernel image. Not stored inline in the snapshot. |
+
+### Disk usage
+
+Zero blocks and reference blocks (initrd, kernel) don't consume extra disk space in the snapshot.
+Raw blocks store the full block contents.
+LZ4 blocks store only the compressed payload.
+
+Workloads that touch less memory produce smaller snapshots.
+An app that allocates 256 MiB but only writes to 32 MiB of memory produces a snapshot close to 32 MiB (before compression).
+
+### Restore performance
+
+Unikraft Cloud loads memory pages on demand from the snapshot during restore.
+Restore time is constant (a few milliseconds) regardless of memory size.
+The platform prefetches pages around the first access to reduce page faults during early execution.
+
 ## Learn more
 
 * The [CLI reference](/docs/cli/unikraft) and the legacy [CLI reference](/docs/cli/kraft/overview).
 * Unikraft Cloud's [REST API reference](/api/platform/v1), and in particular the [scale-to-zero schema](/api/platform/v1/~schemas#instance-scale-to-zero).
+* [Instance templates](/features/templates): templates use snapshots as their base.
