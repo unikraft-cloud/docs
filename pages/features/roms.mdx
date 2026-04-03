@@ -239,7 +239,6 @@ Package and push the ROMs:
 ```bash title=""
 cd rom1/
 kraft pkg \
-  --no-kernel \
   --plat kraftcloud \
   --arch x86_64 \
   --name "$UKC_USER"/my-rom1:latest \
@@ -248,7 +247,6 @@ kraft pkg \
 
 cd ../rom2/
 kraft pkg \
-  --no-kernel \
   --plat kraftcloud \
   --arch x86_64 \
   --name "$UKC_USER"/my-rom2:latest \
