@@ -57,10 +57,41 @@ Unikraft Cloud waits until the app's exposed port becomes available, and then st
 This assumes no traffic is coming to that port.
 At this point, Unikraft Cloud saves the state of your app and sets the app to standby (consuming no resources).
 
+![Snapshot lifecycle](/images/diagrams/basic-snapshots.svg)
+
 Next, when traffic arrives, Unikraft Cloud brings up the app including its saved state.
 This ensures statefulness across scale-to-zero and scale-to-one cycles.
 It also eliminates long initialization times from heavyweight apps.
 
+
+{/* vale off */}
+## Copy-on-write checkpointing
+{/* vale on */}
+
+Unikraft Cloud uses copy-on-write checkpointing to capture VM state with minimal downtime.
+
+![Copy-on-write checkpointing](/images/diagrams/checkpointing.svg)
+
+The process works as follows:
+
+1. The platform forks the VM process, freezing a copy of memory through Linux copy-on-write semantics.
+1. The VM resumes immediately after the fork, resulting in microseconds of downtime.
+1. The platform reads the frozen memory asynchronously and writes incremental updates to the snapshot file.
+1. Only dirty memory pages transfer to storage, reducing I/O overhead.
+
+The snapshot format supports mixed compressed and uncompressed blocks for efficient storage.
+This mechanism enables fast [scale-to-zero](/features/scale-to-zero) transitions and serves as the foundation for continuous checkpointing and [forking](/features/forking).
+
+## Continuous checkpointing
+
+Continuous checkpointing extends copy-on-write checkpointing by periodically creating incremental snapshots of a running instance.
+Each pass captures only memory that changed since the last checkpoint.
+This enables point-in-time recovery and fast migration.
+
+:::note
+This feature is currently in development.
+The interface may change before general availability.
+:::
 
 ## Learn more
 

@@ -12,6 +12,8 @@ Instance forking lets a running instance create an independent copy of itself at
 Both the original instance (the **parent**) and the copy (the **child**) resume execution from the same memory state.
 This works like `fork(2)` in a POSIX process.
 
+![Instance forking](/images/diagrams/forking.svg)
+
 The app inside an instance triggers the fork through a filesystem interface.
 
 ## Filesystem interface
