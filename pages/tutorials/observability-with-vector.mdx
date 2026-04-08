@@ -1,0 +1,247 @@
+---
+title: Observability with Vector
+navigation_icon: activity
+---
+
+{/* vale off */}
+Unikraft exposes metrics and logs from several components: per-instance VM metrics, platform controller metrics, agent metrics, and host-level system metrics.
+All metric endpoints speak Prometheus.
+The platform controller streams VM logs as JSON to a Unix domain socket.
+{/* vale on */}
+
+[Vector](https://vector.dev) is a lightweight observability pipeline that can scrape these sources and forward them to any destination—OpenTelemetry, Datadog, Elasticsearch, ClickHouse, S3, or dozens of other sinks.
+This tutorial covers the ingestion side: getting metrics and logs into Vector.
+Once data flows through Vector, you can route it wherever you need.
+
+## Architecture
+
+```text title=""
+┌─────────────────────────────────────────────────────────┐
+│  Unikraft Host                                          │
+│                                                         │
+│  ┌──────────┐  Prometheus   ┌────────┐                  │
+│  │ Controller├─────────────►│        │                  │
+│  └──────────┘               │        │                  │
+│  ┌──────────┐  Prometheus   │        │    ┌───────────┐ │
+│  │  Agent   ├──────────────►│ Vector ├───►│ OTEL / any│ │
+│  └──────────┘               │        │    │   sink    │ │
+│  ┌──────────┐  JSON socket  │        │    └───────────┘ │
+│  │   Logs   ├──────────────►│        │                  │
+│  └──────────┘               └────────┘                  │
+└─────────────────────────────────────────────────────────┘
+```
+
+## Prerequisites
+
+Install Vector on the host.
+The following installs Vector via the official install script:
+
+```bash title=""
+curl --proto '=https' --tlsv1.2 -sSfL https://sh.vector.dev | bash
+```
+
+See the [Vector installation docs](https://vector.dev/docs/setup/installation/) for other methods (APT, RPM, Docker, etc.).
+
+## Collecting metrics
+
+The platform exposes four Prometheus endpoints on the host.
+Vector's `prometheus_scrape` source polls each one at a configurable interval.
+
+{/* vale off */}
+### Controller and VM metrics
+{/* vale on */}
+
+The controller exposes platform-level and per-VM metrics on the metrics API endpoint (default `127.0.0.1:45233`).
+This endpoint requires a bearer token for authentication.
+
+```toml title=""
+[sources.controller_metrics]
+type = "prometheus_scrape"
+endpoints = ["http://127.0.0.1:45233/metrics/controller"]
+scrape_interval_secs = 15
+
+[sources.controller_metrics.auth]
+strategy = "bearer"
+token = "${UKP_PROMETHEUS_API_TOKEN}"
+```
+
+{/* vale off */}
+### Agent and host metrics
+
+The agent runs an embedded Prometheus node_exporter that provides host-level system metrics (CPU, memory, disk, network) alongside agent-specific metrics.
+{/* vale on */}
+It listens on a separate port (default `127.0.0.1:9100`).
+
+```toml title=""
+[sources.host_metrics]
+type = "prometheus_scrape"
+endpoints = ["http://127.0.0.1:9100/metrics"]
+scrape_interval_secs = 15
+
+[sources.host_metrics.auth]
+strategy = "bearer"
+token = "${UKP_PROMETHEUS_API_TOKEN}"
+```
+
+## Collecting logs
+
+The platform controller can stream logs and VM state-change events as JSON to a Unix domain socket.
+Vector listens on the socket and ingests each event as a structured log entry.
+
+### Configure the platform log sink
+
+Add a socket sink to the platform's log sink configuration file (configured via `--log-sink-config`):
+
+```json title=""
+[
+  {
+    "name": "vector",
+    "type": "socket",
+    "encoding": "json",
+    "path": "/run/ukp/vector-logs.sock",
+    "events": ["log", "vm"],
+    "buffer_size_kb": 64
+  }
+]
+```
+
+This tells the platform controller to connect to the Unix socket at `/run/ukp/vector-logs.sock` and stream all log events and VM state changes as JSON.
+
+### Configure Vector to listen on the socket
+
+```toml title=""
+[sources.platform_logs]
+type = "socket"
+mode = "unix_stream"
+path = "/run/ukp/vector-logs.sock"
+
+[sources.platform_logs.decoding]
+codec = "json"
+```
+
+Vector creates the socket file and listens for incoming connections.
+The platform controller connects to this socket at startup and streams events continuously.
+
+> **Important:** Vector must start before the platform controller so the socket exists when ukpd attempts to connect.
+> If ukpd starts first, it retries the connection using the configured `backoff_time_s` (default: 2 seconds).
+
+## Forwarding to a sink
+
+Once metrics and logs flow into Vector, configure one or more sinks to forward them.
+The examples below show common destinations.
+
+{/* vale off */}
+### OpenTelemetry (OTLP)
+{/* vale on */}
+
+```toml title=""
+[sinks.otel_logs]
+type = "opentelemetry"
+inputs = ["platform_logs"]
+endpoint = "http://otel-collector:4317"
+```
+
+For metrics, use the `prometheus_remote_write` sink to send to an OpenTelemetry collector's Prometheus receiver:
+
+```toml title=""
+[sinks.otel_metrics]
+type = "prometheus_remote_write"
+inputs = ["controller_metrics", "host_metrics"]
+endpoint = "http://otel-collector:9090/api/v1/write"
+```
+
+### Datadog
+
+```toml title=""
+[sinks.datadog_metrics]
+type = "datadog_metrics"
+inputs = ["controller_metrics", "host_metrics"]
+default_api_key = "${DATADOG_API_KEY}"
+
+[sinks.datadog_logs]
+type = "datadog_logs"
+inputs = ["platform_logs"]
+default_api_key = "${DATADOG_API_KEY}"
+```
+
+### File (for debugging)
+
+```toml title=""
+[sinks.debug_file]
+type = "file"
+inputs = ["controller_metrics", "host_metrics", "platform_logs"]
+path = "/var/log/vector/ukp-%Y-%m-%d.log"
+
+[sinks.debug_file.encoding]
+codec = "json"
+```
+
+## Complete configuration
+
+The following configuration collects all metrics and logs and forwards them to an OpenTelemetry collector:
+
+```toml title=""
+# Metrics: controller + per-VM
+[sources.controller_metrics]
+type = "prometheus_scrape"
+endpoints = ["http://127.0.0.1:45233/metrics/controller"]
+scrape_interval_secs = 15
+
+[sources.controller_metrics.auth]
+strategy = "bearer"
+token = "${UKP_PROMETHEUS_API_TOKEN}"
+
+# Metrics: agent + host (node_exporter)
+[sources.host_metrics]
+type = "prometheus_scrape"
+endpoints = ["http://127.0.0.1:9100/metrics"]
+scrape_interval_secs = 15
+
+[sources.host_metrics.auth]
+strategy = "bearer"
+token = "${UKP_PROMETHEUS_API_TOKEN}"
+
+# Logs: platform controller + VM state changes
+[sources.platform_logs]
+type = "socket"
+mode = "unix_stream"
+path = "/run/ukp/vector-logs.sock"
+
+[sources.platform_logs.decoding]
+codec = "json"
+
+# Sink: metrics to OTEL via Prometheus remote write
+[sinks.otel_metrics]
+type = "prometheus_remote_write"
+inputs = ["controller_metrics", "host_metrics"]
+endpoint = "http://otel-collector:9090/api/v1/write"
+
+# Sink: logs to OTEL via OTLP
+[sinks.otel_logs]
+type = "opentelemetry"
+inputs = ["platform_logs"]
+endpoint = "http://otel-collector:4317"
+```
+
+Save this as `/etc/vector/vector.toml` and start Vector:
+
+```bash title=""
+sudo systemctl enable --now vector
+```
+
+## Verifying the pipeline
+
+Check that Vector is receiving data:
+
+```bash title=""
+vector top
+```
+
+This shows live throughput for each source and sink.
+You should see events flowing through `controller_metrics`, `host_metrics`, and `platform_logs`.
+
+## Learn more
+
+- [Instance Metrics](/tutorials/instance-metrics) for retrieving metrics via the API.
+- [Platform Metrics](/platform/metrics) for the full list of available metric fields.
+- [Vector documentation](https://vector.dev/docs/) for the complete list of sources, transforms, and sinks.

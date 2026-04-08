@@ -207,6 +207,7 @@ const config: ZudokuConfig = {
         "/tutorials/rootfs-volumes-roms",
         "/tutorials/scale-to-zero-triggers",
         "/tutorials/instance-metrics",
+        "/tutorials/observability-with-vector",
         "/tutorials/network-communication"
       ]
     },
