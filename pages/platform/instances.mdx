@@ -158,6 +158,38 @@ No depth limit applies to nesting, and circular references aren't possible becau
 
 For more information, check out the API reference for instance templates [here](/api/platform/v1/instances#create-template-instances-from-instances).
 
+### On-demand template creation
+
+Templates exist on a single node.
+When your service runs on more than one node, a template you created on one node isn't automatically available on the others.
+To avoid pre-staging templates by hand, you can have the platform create a template on demand the first time the platform needs it.
+Include `prepare: true` and `create_args` in the instance creation request:
+
+```json title="POST /instances"
+{
+  "name": "my-instance",
+  "template": {
+    "name": "my-worker-template",
+    "prepare": true,
+    "create_args": {
+      "image": "oci://...",
+      "memory_mb": 256
+    }
+  }
+}
+```
+
+If `my-worker-template` already exists on the target node, the new instance starts from it immediately.
+If it doesn't exist, the platform:
+
+1. Starts an instance using `create_args`.
+2. Waits for the guest to write `1` to `/uk/libukp/template_instance`.
+3. Snapshots the running instance and converts it into a template.
+4. Starts the originally requested instance from the new template's snapshot.
+
+The first request that hits a fresh node pays the full template-creation cost.
+Later requests that resolve to the same template start from its snapshot directly.
+
 ## Creating instances
 
 ### Replicas
