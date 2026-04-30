@@ -321,27 +321,57 @@ You can't delete a source volume or template while it has active clones.
 
 ## Shared volumes
 
-More than one instance can mount the same volume simultaneously as long as all mounts are in *read-only* mode.
-Read-only sharing is always permitted regardless of how many other instances have the volume mounted.
+A volume's `access_mode` field controls how many instances can mount it and whether they can write.
+The platform supports three modes:
 
-A *read-write* mount is **exclusive**.
-You can't add one while any other mount exists on that volume, and a volume can't have two *read-write* mounts at once.
+| Mode | Alias | Behavior |
+|------|-------|----------|
+| `ro-many` | `rox` | Many instances may mount the volume, all read-only. |
+| `rw-once` | `rwo` | Exactly one instance may mount the volume read-write. Default. |
+| `rw-many` | `rwx` | Many instances may mount the volume read-write at the same time. Available on `virtiofs` volumes. |
 
-Specify `readonly: true` when attaching a volume at instance creation or via the attach endpoint:
+Set `access_mode` when you create the volume:
 
-```json title="POST /instances"
+```json title="POST /volumes"
 {
-  ...
-  "volumes": [
-    {
-      "name": "my-shared-volume",
-      "at": "/data",
-      "readonly": true
-    }
-  ],
-  ...
+  "name": "my-shared-volume",
+  "filesystem": "virtiofs",
+  "size_mb": 100,
+  "access_mode": "rwx"
 }
 ```
+
+If you don't set `access_mode`, the platform applies `rw-once`.
+
+Choose the mode based on the workload:
+
+- **`ro-many`**—fan-out reads of an artifact (configs, model weights, static assets) across many instances.
+- **`rw-once`**—single-writer workloads (databases, queues, app state). The default and the safest choice.
+- **`rw-many`**—coordinated multi-writer workloads on a `virtiofs` volume (shared scratch space, collaborative document storage, build caches). Your app must coordinate writes itself; the platform doesn't add a coordinator.
+
+## Warm-plug volumes
+
+You can attach a new volume to an instance that already has a snapshot, without rebuilding the snapshot.
+The platform queues the change and applies it on the next [scale-to-zero](/features/scale-to-zero) cycle: the instance picks up the new volume the next time it resumes.
+
+Use the [`PATCH /instances/{name}`](/api/v1/instances#update-instance) endpoint to add a volume to a running or standby instance:
+
+```json title="PATCH /instances/my-instance"
+{
+  "volumes": [
+    {
+      "name": "my-extra-volume",
+      "at": "/data2"
+    }
+  ]
+}
+```
+
+The platform accepts the request immediately and reports the change as queued.
+The actual attachment happens at the next scale-to-zero wake-up.
+For instances that don't use scale-to-zero, the queued attachment applies on the next restart.
+
+The same approach works for [ROMs](/features/roms): the queued-update mechanism applies to both volumes and ROMs.
 
 ## Custom filesystems
 
