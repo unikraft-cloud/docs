@@ -195,6 +195,9 @@ When set, the platform rounds the value up to the next full second.
 Use `timeout_s` instead.
 :::
 
+If the instance crashes while the API is waiting, the platform returns the response immediately with the failure rather than blocking until the timeout elapses.
+The `state` and `stop_code` fields in the response describe what happened.
+
 ### Delete on stop
 
 Pass `delete-on-stop` in the features array to automatically delete the instance when it stops:
@@ -215,6 +218,8 @@ This is useful for ephemeral workloads—batch jobs, one-shot tasks—where you 
 :::note
 To use the "delete-on-stop" feature, set the `restart_policy` to `never`.
 :::
+
+The platform reports the configured `delete-on-stop` feature back in the instance status response, so you can confirm it from a [`GET /instances/{name}`](/api/platform/v1/instances#get-instance) call without having to reread your own creation request.
 
 ## Stopping instances
 
