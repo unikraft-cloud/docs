@@ -460,6 +460,12 @@ No per-file size limit exists.
 The total size limit applies to the combined size of all files in a single inline ROM.
 Since inline ROM data is base64-encoded in the JSON request body, the 8 MB request body limit is the practical upper bound on total data per API call.
 
+{/* vale off */}
+:::note
+An inline ROM is ephemeral: it's automatically deleted once the last reference to it is closed.
+:::
+{/* vale on */}
+
 ## Automounting
 
 Instead of mounting the ROM device manually inside the guest, you can set the optional `at` field on any ROM entry.
@@ -484,45 +490,6 @@ In this case you can simplify or remove the `wrapper.sh` from the base image, si
 {/* vale on */}
 
 The `at` field is optional--omitting it leaves the ROM as a raw block device at `/dev/ukp_rom_<name>` and the guest remains responsible for mounting it.
-
-## Inline ROMs
-
-Instead of referencing a pre-built image, you can supply file contents directly in the instance creation request using **inline ROMs**.
-You specify an inline ROM by a `files` array instead of an `image` field.
-Each entry in the array specifies the file `path` inside the ROM filesystem, the `encoding` of the provided data (`"base64"` or `"text"`), and the raw `data` string.
-
-```json title="POST /instances"
-{
-  "image": "...",
-  "roms": [
-    {
-      "name": "my-rom",
-      "files": [
-        {
-          "path": "test/file.txt",
-          "encoding": "base64",
-          "data": "VGhpcyBpcyBhIHRlc3QgZmlsZS4="
-        },
-        {
-          "path": "another-file.txt",
-          "encoding": "text",
-          "data": "This is another test file."
-        }
-      ],
-      "at": "/roms/my-rom"
-    }
-  ]
-}
-```
-
-Inline ROMs are particularly useful when working with **instances created from templates**, where you can't change the environment variables and startup arguments of the original template.
-By attaching an inline ROM you can inject configuration files, scripts, or other data into the instance at creation time without modifying the base image or the template.
-
-{/* vale off */}
-:::note
-An inline ROM is ephemeral: it's automatically deleted once the last reference to it is closed.
-:::
-{/* vale on */}
 
 ### Testing
 
