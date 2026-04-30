@@ -61,6 +61,17 @@ Next, when traffic arrives, Unikraft Cloud brings up the app including its saved
 This ensures statefulness across scale-to-zero and scale-to-one cycles.
 It also eliminates long initialization times from heavyweight apps.
 
+## Compressed and incremental snapshots
+
+The platform compresses every snapshot by default, which keeps the on-disk footprint of standby instances small.
+
+Snapshots are also **incremental**: after the first snapshot for an instance, the platform only captures the memory and state that have changed since the previous snapshot.
+The first scale-to-zero cycle for a given instance runs the full snapshot path.
+Later cycles are cheaper and faster because the platform reuses the unchanged data from earlier captures.
+
+You don't need to configure any of this.
+The behavior is on by default and applies to every stateful scale-to-zero instance.
+
 
 ## Learn more
 
