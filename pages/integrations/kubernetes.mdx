@@ -7,6 +7,8 @@ Unikraft Cloud integrates seamlessly with any Kubernetes cluster through a virtu
 This is a lightweight Kubernetes node implementation which connects your cluster to Unikraft Cloud's high-performance compute instead of running real pods locally.
 This enables developers to deploy and manage Unikraft microVMs as if they were native Kubernetes pods.
 
+![Kubernetes integration](/images/diagrams/k8s.svg)
+
 This integration extends Kubernetes' scheduling and orchestration capabilities to the Unikraft Cloud platform.
 This allows workloads to take advantage of microVM-level I/O performance, security, cold start and transparent scale-to-zero efficiency while retaining full compatibility with existing Kubernetes tooling.
 
@@ -366,6 +368,78 @@ Kraftlet reads the following annotations from Pod and Service objects to configu
 | Annotation | Type | Default | Description |
 |---|---|---|---|
 | `cloud.unikraft.v1.services/domain` | string | — | Custom domain for the Unikraft Cloud service. For multi-container pods, prefix with the container name (`cloud.unikraft.v1.services/domain.<containerName>`) to set a per-container domain, or use the global annotation to derive `<containerName>-<domain>` automatically. |
+
+## CRD reference
+
+The operator defines three CRDs in the `unikraft.com/v1alpha1` API group.
+
+### Instance CRD
+
+| Field | Type | Required | Mutable | Description |
+|-------|------|----------|---------|-------------|
+| `name` | string | No | No | Instance name |
+| `image` | string | Yes | No | Container image reference |
+| `args` | []string | No | Yes | Arguments passed to the instance |
+| `env` | map[string]string | No | Yes | Environment variables |
+| `memory_mb` | int64 | No | Yes | Memory in MiB (default: 128) |
+| `vcpus` | int32 | No | Yes | Virtual CPUs (default: 1) |
+| `service_group` | object | No | No | Service group with domains and services |
+| `volumes` | []object | No | No | Volume mounts with UUID/name, size_mb, at, readonly |
+| `autostart` | bool | No | No | Start on creation |
+| `replicas` | int64 | No | No | Number of replicas |
+| `restart_policy` | enum | No | No | never, always, or on_failure |
+| `scale_to_zero` | object | No | Yes | Policy, stateful, cooldown_time_ms, notify_time_ms |
+| `features` | []enum | No | No | Feature flags (delete_on_stop) |
+| `roms` | []object | No | No | ROM images with name and image |
+| `tags` | []string | No | No | Arbitrary tags |
+| `template` | object | No | No | Template reference with UUID or name |
+| `sched_priority` | int32 | No | No | Scheduling priority |
+
+Most spec fields don't change after creation.
+Fields marked mutable accept in-place updates.
+
+### Service CRD
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | No | Service group name |
+| `services` | []object | No | Port mappings (port, destination_port, handlers) |
+| `domains` | []object | No | Domain bindings (name, certificate) |
+| `soft_limit` | uint64 | No | Soft connection limit |
+| `hard_limit` | uint64 | No | Hard connection limit |
+
+Service CRDs don't support in-place updates.
+
+### Volume CRD
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | No | Volume name |
+| `size_mb` | uint64 | Yes | Volume size in MiB |
+
+Volume CRDs don't support in-place updates.
+
+## Helm chart configuration
+
+| Value | Description |
+|-------|-------------|
+| `ukc.metro` | (required) Platform metro identifier |
+| `ukc.token` | (required) API authentication token |
+| `image.name` | Operator container image name |
+| `image.tag` | Operator container image tag |
+| `image.pullSecrets` | Image pull secrets |
+| `leaderElection.enabled` | Enable leader election for HA |
+| `resources` | Kubernetes resource requests/limits |
+
+## Operator flags
+
+| Flag | Environment variable | Default | Description |
+|------|---------------------|---------|-------------|
+| `--ukc-token` | `OPERATOR_UKC_TOKEN` | — | (required) API token |
+| `--ukc-metro` | `OPERATOR_UKC_METRO` | — | (required) Metro identifier |
+| `--metrics-addr` | — | `:8080` | Metrics endpoint address |
+| `--probe-addr` | — | `:8081` | Health probe address |
+| `--enable-leader-election` | — | false | Enable HA leader election |
 
 ## Resources
 

@@ -1,0 +1,15 @@
+---
+title: Live Migration
+navigation_icon: move
+---
+
+Live migration moves a running instance from one host to another with minimal downtime.
+
+![Live migration](/images/diagrams/live-migration.svg)
+
+Unikraft Cloud uses pre-copy migration: the platform iteratively transfers memory pages while the instance continues to run.
+During the final switchover, the platform pauses the instance for milliseconds (typically under 10ms) to transfer the remaining dirty pages and resume execution on the destination host.
+
+:::note
+This feature is in preview and isn't available on the public platform.
+:::

@@ -555,6 +555,78 @@ kraft cloud instance rm test-http-python-rom1 test-http-python-rom2
 
 </CodeTabs>
 
+{/* vale off */}
+## Inline ROMs
+{/* vale on */}
+
+Inline ROMs let you specify ROM contents directly in the API request, without pre-building and pushing a ROM image.
+Instead of providing an `image` reference on a ROM entry, you provide a `files` array.
+The `files` and `image` fields are mutually exclusive: each ROM entry must use one or the other.
+
+Each file object in the `files` array accepts the following fields:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | The filename inside the ROM. |
+| `data` | string | Yes | The file contents (plaintext or base64-encoded). |
+| `encoding` | string | No | `"plaintext"` (default) or `"base64"`. |
+
+Inline ROMs have the following limits:
+
+- Maximum of 16 files per ROM.
+- Maximum of 1024 bytes per file.
+
+Inline ROMs are ephemeral: Unikraft Cloud deletes them when the instance stops.
+You can combine inline ROMs with the `at` field for [automounting](#automounting).
+
+The following example creates an instance with an inline ROM containing a Python function:
+
+```json title="POST /instances"
+{
+  "image": "myuser/http-python:latest",
+  "memory_mb": 256,
+  "autostart": true,
+  "roms": [
+    {
+      "name": "python_function.py",
+      "at": "/tmp",
+      "files": [
+        {
+          "name": "rom.py",
+          "data": "def function():\n    return 'Hello from inline ROM!\\n'",
+          "encoding": "plaintext"
+        }
+      ]
+    }
+  ]
+}
+```
+
+## ROMs and snapshots
+
+ROMs are immutable once attached to an instance.
+Unikraft Cloud enforces the following rules for instances created from snapshots or templates:
+
+- You **can't delete or replace** ROMs that existed when the platform took the snapshot.
+The instance uses them and a state change could cause corruption.
+- You **can add new ROMs** to any instance, including those resumed from a snapshot.
+- Once you add a new ROM, you also **can't update or remove** it.
+
+If your data changes frequently, a ROM isn't the right choice.
+Use a [volume](/platform/volumes) instead.
+
+### Building template chains with ROMs
+
+You can layer ROMs across template chains.
+For example:
+
+1. Create a snapshotted template with ROM A.
+2. Create an instance from that template and add ROM B.
+3. Create a new template from that instance.
+
+You now have two templates: one with ROM A, another with ROMs A and B.
+You can start instances from either template.
+
 ## Learn more
 
 * The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).

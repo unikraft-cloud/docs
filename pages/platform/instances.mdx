@@ -132,6 +132,8 @@ A manual start or stop of the instance aborts the restart sequence and resets th
 
 ## Instance templates
 
+![Instance templating](/images/diagrams/templating.svg)
+
 An instance template is a snapshotted instance that acts as a source for cloning new instances.
 Cloning a template creates a new instance that resumes from the exact original system state. 
 It preserves memory contents, open files, and populated caches to bypass the standard boot sequence.
@@ -285,7 +287,63 @@ Otherwise, you will receive metrics in Prometheus text format, that you can pars
 ## Instance logs
 
 Use the [`GET /instances/logs`](/api/platform/v1/instances#get-instances-logs) endpoint to retrieve logs for one or more instances.
-The logs capture the instance's `stdout` and `stderr` output, and they're preserved across restarts and stops.
+The logs capture the instance's `stdout` and `stderr` output, and Unikraft Cloud preserves them across restarts and stops.
+
+### Log storage
+
+Unikraft Cloud stores instance logs in a `vm.log` file inside the instance's working directory.
+
+:::caution
+The platform doesn't enforce an upper size limit on log files.
+Logs grow indefinitely until storage space runs out.
+For long-running or verbose instances, consider implementing log rotation in your app or redirecting output to an external logging system.
+:::
+
+### Console redirection
+
+If the platform operator redirects instance logs to a Unix domain socket by configuring the default console, the `vm.log` file remains empty.
+In this case, the CLI `logs` command and the logs API endpoint don't return any output.
+Query the external logging system that receives the socket output instead.
+
+## Queued updates
+
+When you send a `PATCH` request to a running instance, Unikraft Cloud queues the updates instead of rejecting them.
+The queued updates apply automatically the next time the instance enters the `stopped` state.
+
+### Properties that support queuing
+
+The following properties queue when the instance isn't stopped:
+
+`image`, `args`, `memory_mb`, `vcpus`, `env`, `roms`, `dependencies`, `hostname`, `sched_priority`, `autokill`, `scale_to_zero`
+
+### Properties that always apply immediately
+
+The following properties take effect regardless of instance state:
+
+`tags`, `delete_lock`, `schedules`
+
+### Behavior
+
+If you send multiple `PATCH` requests that update the same property, Unikraft Cloud keeps only the last value.
+Failed updates retry up to 2 times before Unikraft Cloud removes them from the queue.
+
+The following example patches a running instance to change its memory on the next stop:
+
+```json title="PATCH /instances"
+{
+  "name": "my-instance",
+  "memory_mb": 1024
+}
+```
+
+Unikraft Cloud applies the new `memory_mb` value the next time `my-instance` enters the `stopped` state.
+
+### Resource controls
+
+:::note
+Unikraft Cloud supports cgroup-based resource controls for CPU and memory.
+This feature is in development.
+:::
 
 ## Learn more
 

@@ -298,6 +298,29 @@ kraft cloud volume remove <volume-name>
 
 The explicit volume detach command is only available in the legacy CLI.
 
+## Volume lifecycle with running instances
+
+Unikraft Cloud doesn't support hot-plugging volumes.
+The following rules apply:
+
+- You **can't attach a new volume** to a running instance.
+Instances resumed from a snapshot also count as running.
+- You **can't detach a volume** from a running instance.
+Snapshotted instances in standby also count as running for this purpose.
+- When you stop an instance and start it again, you can attach any volume from the start.
+This isn't hot-plugging because the instance boots with the volume already present.
+
+### Volumes and templates
+
+When you create a template from an instance with volumes, the platform also creates **volume templates** for each attached volume.
+Each instance you create from that template gets its own independent volume clone.
+
+:::note
+Unikraft Cloud is working on a feature to attach a new volume to an instance created from a template at creation time.
+:::
+
+If your workload needs to swap volumes frequently on running instances, consider designing your app to read from a fixed volume path and update the contents instead.
+
 ## Volume templates
 
 A volume template is a volume in the `TEMPLATE` state.
@@ -355,6 +378,21 @@ If the platform operator has registered more named filesystems, you can select o
   "filesystem": "virtiofs"
 }
 ```
+
+### Mount and unmount hooks
+
+Operators can configure mount and unmount scripts for custom filesystem types.
+Place executable scripts at `<fs_config_path>/mount` and `<fs_config_path>/unmount`.
+
+- The mount script runs before a volume attaches to an instance.
+- The unmount script runs after all instances detach from the volume.
+
+This enables remote storage (Network File System, iSCSI), encrypted volumes, and overlay filesystems.
+If an instance start aborts while a mount operation is pending, the unmount hook still runs to clean up resources.
+
+:::caution
+This is an advanced feature that's only available on the self-hosted platform.
+:::
 
 ### Managed volumes
 
