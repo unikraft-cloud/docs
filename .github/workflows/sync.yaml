@@ -32,6 +32,7 @@ jobs:
     - uses: actions/checkout@v4
       with:
         ref: ${{ inputs.docs_branch || 'main' }}
+        token: ${{ secrets.GH_PAT }}
 
     - name: Sync example READMEs
       shell: bash
