@@ -1,0 +1,164 @@
+---
+title: Metrics
+navigation_icon: chart-bar
+description: |
+  Retrieve runtime statistics for your Unikraft Cloud instances.
+---
+
+Unikraft Cloud exposes runtime metrics for each instance: CPU time, memory usage, network I/O, connection counts, and scale-to-zero wakeup latencies.
+
+## Endpoints
+
+```
+GET  /instances/{uuid}/metrics
+GET  /instances/metrics?uuid=<uuid>[,<uuid>…]
+POST /instances/metrics (UUIDs or names in request body)
+```
+
+With no identifiers, the platform returns metrics for all instances in your account.
+You can also pass a list of names or UUIDs in the `POST` body.
+
+## Response formats
+
+Set the `Accept` header to control the response format:
+
+| `Accept` header | Format |
+|-----------------|--------|
+| `application/json` | JSON object with an `instances` array. |
+| Any other value (or omitted) | Prometheus text exposition format. |
+
+## Response fields
+
+Each entry in the `instances` array contains the following fields:
+
+### Identity
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `uuid` | string | Instance UUID. |
+| `name` | string | Instance name. |
+
+### Lifecycle
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `state` | string | Current instance state. |
+| `start_count` | int | Number of times the instance has started. |
+| `restart_count` | int | Number of automatic restarts. Omitted if `0`. |
+| `started_at` | timestamp | Time of last start. Omitted if unset. |
+| `stopped_at` | timestamp | Time of last stop. Omitted if unset. |
+| `uptime_ms` | int64 | Current uptime in milliseconds. |
+
+### Boot timing
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `boot_time_us` | int | Time from boot trigger to app entry point, in microseconds. Omitted if `0`. |
+| `net_time_us` | int | Time to set up the network interface, in microseconds. Omitted if `0`. |
+
+### Resource usage
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `rss_bytes` | int64 | Resident set size: physical memory in use, in bytes. |
+| `cpu_time_ms` | int64 | Total CPU time consumed since last start, in milliseconds. |
+
+### Network throughput
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `rx_bytes` | int64 | Bytes received since last start. |
+| `rx_packets` | int64 | Packets received since last start. |
+| `tx_bytes` | int64 | Bytes transmitted since last start. |
+| `tx_packets` | int64 | Packets transmitted since last start. |
+
+### Connection activity
+
+These fields reflect the view from the Unikraft Cloud load balancer, not the instance itself.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `nconns` | int | Number of active TCP connections. |
+| `nreqs` | int | Number of active HTTP requests (non-zero only for HTTP-mode services). |
+| `nqueued` | int | Number of connections or requests waiting for acceptance. |
+| `ntotal` | int64 | Total connections or requests processed since last start. |
+
+### Wakeup latency histogram
+
+For instances with [scale-to-zero](/features/scale-to-zero) enabled, the `wakeup_latency` field contains a histogram of the time between an incoming connection and the instance resuming execution.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `wakeup_latency` | array | Histogram buckets. Each bucket has `bucket_ms` (upper bound in ms, or `null` for the overflow bucket) and `count` (number of wakeups in that bucket). |
+| `wakeup_latency_sum` | uint64 | Sum of all recorded wakeup latencies in milliseconds. |
+
+## Prometheus metrics
+
+When not requesting JSON, the endpoint returns standard Prometheus text format.
+The available metric names are:
+
+```
+instance_state
+instance_start_count
+instance_restart_count
+instance_started_at
+instance_stopped_at
+instance_uptime_s
+instance_boot_time_s
+instance_net_time_s
+instance_rss_bytes
+instance_cpu_time_s
+instance_rx_bytes
+instance_tx_bytes
+instance_rx_packets
+instance_tx_packets
+instance_nconns
+instance_nreqs
+instance_nqueued
+instance_ntotal
+instance_wakeup_latency_seconds  (histogram)
+```
+
+The platform labels all metrics with `uuid` and `name`.
+
+## Example
+
+Set `UKC_TOKEN` and `UKC_METRO` for the API call:
+
+```bash title=""
+curl -X GET \
+    -H "Authorization: Bearer $UKC_TOKEN" \
+    -H "Content-Type: application/json" \
+    "https://api.$UKC_METRO.unikraft.cloud/v1/instances/metrics?uuid=66d05e09-1436-4d1f-bbe6-6dc03ae48d7a"
+```
+
+```json title=""
+{
+  "instances": [
+    {
+      "uuid": "66d05e09-1436-4d1f-bbe6-6dc03ae48d7a",
+      "name": "nginx-1a747",
+      "state": "running",
+      "start_count": 3,
+      "uptime_ms": 42310,
+      "boot_time_us": 19810,
+      "rss_bytes": 12582912,
+      "cpu_time_ms": 14,
+      "rx_bytes": 4096,
+      "rx_packets": 8,
+      "tx_bytes": 8192,
+      "tx_packets": 12,
+      "nconns": 1,
+      "nreqs": 0,
+      "nqueued": 0,
+      "ntotal": 7
+    }
+  ]
+}
+```
+
+## Learn more
+
+* Unikraft Cloud's [REST API reference](/api/platform/v1)
+* [Instance states](/platform/instances#instance-states)
+* [Scale-to-zero](/features/scale-to-zero)

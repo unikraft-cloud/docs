@@ -4,32 +4,45 @@ navigation_icon: pause
 ---
 
 Unikraft Cloud supports the ability to deploy **stateful** apps.
-These apps can keep state across different [scale-to-zero](/docs/guides/features/scaletozero) incarnations.
+These apps can keep state across different [scale-to-zero](/features/scale-to-zero) incarnations.
 This mechanism also reduces app init time.
 Heavy-weight apps take a while to get started when cold started (for example, Spring Boot, Ruby on Rails, etc.).
-Taking a snapshot of the app memory and restoring it when the app starts again does this.
+You can reduce this initialization time by taking a snapshot of the app memory and restoring it when the app starts again.
 
 ## Setting it up
 
-The quickest way to set this up is via the `--scale-to-zero-stateful` flag of
-the `kraft cloud deploy` or `kraft cloud instance create` commands, for example:
+The quickest way to set this up is via the legacy CLI `--scale-to-zero-stateful` flag:
 
-```bash
+<CodeTabs>
+
+```bash title="kraft"
 kraft cloud deploy --metro fra --scale-to-zero-stateful .
 ```
 
+</CodeTabs>
+
 As an alternative, you can add a `label` to your example's `Kraftfile` as follows:
 
-```yaml
+```yaml title=""
 labels:
   cloud.unikraft.v1.instances/scale_to_zero.stateful: "true"
 ```
 
-You can see an example of such a `Kraftfile` and label in the [Spring Boot
-example](/docs/guides/springboot).
+You can see an example of such a `Kraftfile` and label in the [Spring Boot example](/guides/springboot).
 
-Once deployed, you can check that this mechanism is actually enabled for your
-app via the `kraft cloud instance get <instance name>` command:
+Once deployed, you can check whether this mechanism works for your app via the CLI:
+
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft instances get <instance-name>
+```
+
+```bash title="kraft"
+kraft cloud instance get <instance-name>
+```
+
+</CodeTabs>
 
 ```ansi
 stateful: [92menabled[0m
@@ -38,19 +51,18 @@ stateful: [92menabled[0m
 
 ## How it works
 
-With stateful enabled, when you first deploy your app Unikraft Cloud will bring it up
-normally and let it fully initialize (which may be fast, or take seconds or
-minutes, depending on your app's init time). Unikraft Cloud will wait until the app's port
-gets up, and then start the scale-to-zero process (assuming no traffic is coming
-to that port). At this point, Unikraft Cloud will save the state of your app, and set the
-app to standby (consuming no resources).
+When you enable stateful mode and first deploy your app, Unikraft Cloud brings it up normally and lets it fully initialize.
+This may be fast or take seconds or minutes, depending on your app's init time.
+Unikraft Cloud waits until the app's exposed port becomes available, and then starts the scale-to-zero process.
+This assumes no traffic is coming to that port.
+At this point, Unikraft Cloud saves the state of your app and sets the app to standby (consuming no resources).
 
-Next, when traffic arrives, Unikraft Cloud will bring up the app including its saved state,
-ensuring statefulness across different scale-to-zero and scale to one cycles,
-but also eliminating any long initialization times from heavyweight apps.
+Next, when traffic arrives, Unikraft Cloud brings up the app including its saved state.
+This ensures statefulness across scale-to-zero and scale-to-one cycles.
+It also eliminates long initialization times from heavyweight apps.
 
 
-## Learn More
+## Learn more
 
-* The `kraft cloud` [command-line tool reference](/docs/cli/), and in particular the `deploy` and `instance` subcommands.
-* Unikraft Cloud's [REST API reference](/docs/api/v1), and in particular the section on [stateful scale-to-zero](/docs/api/v1/instances/#scaletozero_stateful).
+* The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
+* Unikraft Cloud's [REST API reference](/api/platform/v1), and in particular the [scale-to-zero schema](/api/platform/v1/~schemas#instance-scale-to-zero).

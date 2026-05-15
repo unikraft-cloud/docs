@@ -1,0 +1,85 @@
+name: prod-staging
+
+on:
+  push:
+    branches: [prod-staging]
+    paths:
+    - '**'
+    - '!.github/workflows/**/*'
+    - '.github/workflows/prod-staging.yaml'
+    - '!README.md'
+
+env:
+  UKC_TOKEN: ${{ secrets.UKC_TOKEN }}
+  UKC_METRO: ${{ vars.UKC_METRO }}
+  KRAFTKIT_LOG_LEVEL: debug
+  KRAFTKIT_NO_CHECK_UPDATES: "true"
+
+permissions:
+  deployments: write
+  contents: read
+
+jobs:
+  deploy:
+    environment: prod-staging
+    runs-on: arc-ubuntu24.04-big
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Validate required secrets
+      shell: bash
+      run: |
+        if [[ -z "${{ vars.UKC_METRO }}" ]]; then
+          echo "Missing UKC_METRO variable" >&2
+          exit 1
+        fi
+
+
+    - name: Setup KraftKit
+      uses: ./.github/actions/setup-kraftkit
+
+    - name: Setup docs website
+      id: www
+      uses: ./.github/actions/setup-www
+      continue-on-error: true
+      with:
+        environment: prod-staging
+        name: com-docs-staging
+        metro: ${{ vars.UKC_METRO }}
+        log-level: trace
+        docs-channel: prod-staging
+
+    - uses: chrnorm/deployment-action@v2
+      name: Create GitHub deployment
+      if: always()
+      id: deploy-github
+      with:
+        token: '${{ github.token }}'
+        environment-url: 'https://com-docs-staging.ukp-stable.apw.unikraft.internal'
+        environment: prod-staging
+
+    - name: Update deployment status (success)
+      if: ${{ steps.www.outcome == 'success' }}
+      uses: chrnorm/deployment-status@v2
+      with:
+        token: '${{ github.token }}'
+        environment-url: 'https://com-docs-staging.ukp-stable.apw.unikraft.internal'
+        deployment-id: '${{ steps.deploy-github.outputs.deployment_id }}'
+        state: 'success'
+
+    - name: Update deployment status (failure)
+      if: ${{ steps.www.outcome == 'failure' }}
+      uses: chrnorm/deployment-status@v2
+      with:
+        token: '${{ github.token }}'
+        environment-url: 'https://com-docs-staging.ukp-stable.apw.unikraft.internal'
+        deployment-id: '${{ steps.deploy-github.outputs.deployment_id }}'
+        state: 'failure'
+
+    - name: Fail job if deploy failed
+      if: ${{ steps.www.outcome == 'failure' }}
+      shell: bash
+      run: |
+        exit 1

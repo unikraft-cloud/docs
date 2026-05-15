@@ -1,0 +1,563 @@
+---
+title: ROMs
+navigation_icon: hard-drive
+---
+
+:::caution[**DISCLAIMER**]
+The ROM feature isn't currently enabled for the public Unikraft Cloud offering.
+As such, the CLI can't entirely leverage this feature.
+For boxes where it's enabled, use it via the [Unikraft Cloud API](/api/platform/v1).
+:::
+
+Unikraft Cloud supports the ability to attach **Read-Only Memory (ROM)** blobs to instances.
+It allows you to create a general-purpose base image and then customize individual instances by attaching code or data as separate ROM blobs.
+This enables quick deployment of custom functionality to preexisting language environments without rebuilding the entire image.
+
+## Overview
+
+With ROMs, you can:
+
+- Deploy variations of an app from a single base image.
+- Update app code without rebuilding the base image.
+- Reduce image size and deployment time.
+
+The ROM workflow consists of two main components:
+
+1. **Base Image**: A general-purpose image containing the runtime environment (for example, Python interpreter, Node.js, etc.).
+1. **ROM Blobs**: Separate, lightweight images containing your app code or any other data you want to customize.
+
+This separation allows you to maintain one base image while deploying many different instances with different data.
+
+:::note
+By default, the app running inside the base image needs to mount the attached ROM device.
+ROM blobs appear as block devices at paths like `/dev/ukp_rom_<rom_name>`, where `<rom_name>` is the ROM name you specify when creating the instance.
+
+For convenience, you can use **automounting** by setting the `at` field on a ROM entry.
+When `at` is present, the platform automatically mounts the ROM at the given path before the instance starts, so your app can read files from it directly without any manual mount step.
+:::
+
+## Setup
+
+This example shows how to deploy Python functions using ROMs on Unikraft Cloud.
+Ensure you have the `kraft` CLI installed and configured with your Unikraft Cloud account.
+Set the following environment variables:
+
+```bash title=""
+export UKC_USER="<your-username>"
+export UKC_TOKEN="<your-api-token>"
+export UKC_METRO="fra" # or your preferred metro
+```
+
+### Base Image
+
+First, create a base image with a Python HTTP server that loads and executes custom Python programs from a ROM.
+
+<CodeTabs>
+
+```dockerfile title="Dockerfile"
+FROM python:3.12 AS build
+
+RUN set -xe; \
+    /usr/sbin/ldconfig /usr/local/lib
+
+FROM scratch
+
+# Python binary
+COPY --from=build /usr/local/bin/python3 /usr/bin/python3
+
+# System binaries
+COPY --from=build /usr/bin/mount /usr/bin/mount
+COPY --from=build /usr/bin/sh /usr/bin/sh
+COPY --from=build /usr/bin/mkdir /usr/bin/mkdir
+
+# System Libraries
+COPY --from=build /lib/x86_64-linux-gnu/libc.so.6 /lib/x86_64-linux-gnu/libc.so.6
+COPY --from=build /lib/x86_64-linux-gnu/libm.so.6 /lib/x86_64-linux-gnu/libm.so.6
+COPY --from=build /lib/x86_64-linux-gnu/libmount.so.1 /lib/x86_64-linux-gnu/libmount.so.1
+COPY --from=build /lib/x86_64-linux-gnu/libselinux.so.1 /lib/x86_64-linux-gnu/libselinux.so.1
+COPY --from=build /lib/x86_64-linux-gnu/libblkid.so.1 /lib/x86_64-linux-gnu/libblkid.so.1
+COPY --from=build /lib/x86_64-linux-gnu/libpcre2-8.so.0 /lib/x86_64-linux-gnu/libpcre2-8.so.0
+COPY --from=build /usr/lib/x86_64-linux-gnu/libz.so.1 /usr/lib/x86_64-linux-gnu/libz.so.1
+COPY --from=build /usr/lib/x86_64-linux-gnu/libcrypto.so.3 /usr/lib/x86_64-linux-gnu/libcrypto.so.3
+
+# Dynamic linker / loader
+COPY --from=build /lib64/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
+COPY --from=build /etc/ld.so.cache /etc/ld.so.cache
+
+# Python (and other) libraries
+COPY --from=build /usr/local/lib /usr/local/lib
+
+# Python app
+COPY ./wrapper.sh /wrapper.sh
+COPY ./server.py /src/server.py
+```
+```yaml title="Kraftfile"
+spec: v0.6
+
+runtime: base-compat:latest
+
+rootfs: ./Dockerfile
+
+cmd: [ "/wrapper.sh", "/usr/bin/python3", "/src/server.py" ]
+```
+
+```python title="server.py"
+import argparse
+import importlib.util
+import sys
+from http.server import HTTPServer, BaseHTTPRequestHandler
+
+rom_module = None
+
+def load_rom_module():
+    global rom_module
+    module_name = 'rom'
+    module_path = '/tmp/rom.py'
+
+    spec = importlib.util.spec_from_file_location(module_name, module_path)
+    rom_module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = rom_module
+    spec.loader.exec_module(rom_module)
+
+class MyServer(BaseHTTPRequestHandler):
+    global rom_module
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-type", "text/html")
+        self.end_headers()
+        msg = rom_module.function()
+        self.wfile.write(bytes(msg, "utf-8"))
+
+def main(args):
+    load_rom_module()
+    server = HTTPServer((args.host, args.port), MyServer)
+
+    print("starting server at %s:%s" % (args.host, args.port))
+
+    try:
+        server.serve_forever()
+
+    except KeyboardInterrupt:
+        pass
+
+    print("server stopped")
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--host", type=str, default="0.0.0.0")
+    parser.add_argument("--port", type=int, default=8080)
+    return parser.parse_args()
+
+if __name__ == "__main__":
+    main(parse_args())
+```
+
+```bash title="wrapper.sh"
+#!/usr/bin/sh
+
+/usr/bin/mkdir -p /tmp/
+/usr/bin/mount -t erofs /dev/ukp_rom_python_function.py /tmp/
+exec "$@"
+```
+</CodeTabs>
+
+:::tip
+If you use the `at` field when attaching the ROM (see [Automounting](#automounting)), the platform handles the mount for you and you can remove `wrapper.sh` and the `mount`/`mkdir` calls entirely.
+:::
+
+Ensure that the `wrapper.sh` script is executable:
+
+```bash title=""
+chmod a+x wrapper.sh
+```
+
+Package and push the base image:
+
+```bash title=""
+kraft pkg \
+  --plat kraftcloud \
+  --arch x86_64 \
+  --name "$UKC_USER"/http-python:latest \
+  --rootfs-type erofs \
+  --push .
+```
+
+Wait a few seconds for propagation and check that the image is present:
+
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft images list
+```
+
+```bash title="kraft"
+kraft cloud image ls
+```
+
+</CodeTabs>
+
+{/* vale off */}
+### ROM files
+{/* vale on */}
+
+To showcase the benefits of using ROMs, create two files, each containing a Python function that the base image will load and execute.
+Create a separate directory for each of the ROMs:
+
+```bash title=""
+mkdir -p rom1/fs rom2/fs
+```
+
+<CodeTabs>
+
+```python title="rom1/fs/rom.py"
+def function():
+    return "Hi from 1st ROM!\n"
+```
+
+```yaml title="rom1/Kraftfile"
+spec: v0.6
+
+roms:
+  - ./fs
+```
+
+```python title="rom2/fs/rom.py"
+def function():
+    return "Hi from 2nd ROM!\n"
+```
+
+```yaml title="rom2/Kraftfile"
+spec: v0.6
+
+roms:
+  - ./fs
+```
+</CodeTabs>
+
+Package and push the ROMs:
+
+```bash title=""
+cd rom1/
+kraft pkg \
+  --no-kernel \
+  --plat kraftcloud \
+  --arch x86_64 \
+  --name "$UKC_USER"/my-rom1:latest \
+  --rootfs-type erofs \
+  --push .
+
+cd ../rom2/
+kraft pkg \
+  --no-kernel \
+  --plat kraftcloud \
+  --arch x86_64 \
+  --name "$UKC_USER"/my-rom2:latest \
+  --rootfs-type erofs \
+  --push .
+```
+
+Wait a few seconds for propagation and check that the ROMs are present:
+
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft images list
+```
+
+```bash title="kraft"
+kraft cloud image ls
+```
+
+</CodeTabs>
+
+:::tip
+The `--no-kernel` flag tells `kraft` to package only the ROM files, without the kernel, since this is data that will get attached to another image.
+:::
+
+:::caution
+This example packages the ROMs as EROFS filesystems.
+If packaging the ROMs as a cpio archives (that is, `--rootfs-type cpio`), or as standalone files, you must align their size to 4096 bytes.
+:::
+
+### Instances
+
+Create two instances with the same base image and attach different ROMs:
+
+```bash title=""
+curl -X POST \
+  -H "Authorization: Bearer ${UKC_TOKEN}" \
+  -H "Content-Type: application/json" \
+  "${UKC_METRO}/instances" \
+  -d "[
+        {
+          'name': 'test-http-python-rom1',
+          'image': '${UKC_USER}/http-python:latest',
+          'service_group': {
+           'services': [
+              {
+                'port': 443,
+                'destination_port': 8080,
+                'handlers': ['tls', 'http']
+              }
+            ],
+            'domains': [
+              {
+                'name': 'test-http-python-rom1'
+              }
+            ]
+          },
+          'memory_mb': 512,
+          'scale_to_zero': {
+            'policy': 'on',
+            'stateful': false,
+            'cooldown_time_ms': 1000
+          },
+          'autostart': true,
+          'roms': [
+            {
+              'name': 'python_function.py',
+              'image': '$UKC_USER/my-rom1:latest'
+            }
+          ]
+        },
+        {
+          'name': 'test-http-python-rom2',
+          'image': '${UKC_USER}/http-python:latest',
+          'service_group': {
+           'services': [
+              {
+                'port': 443,
+                'destination_port': 8080,
+                'handlers': ['tls', 'http']
+              }
+            ],
+            'domains': [
+              {
+                'name': 'test-http-python-rom2'
+              }
+            ]
+          },
+          'memory_mb': 512,
+          'scale_to_zero': {
+            'policy': 'on',
+            'stateful': false,
+            'cooldown_time_ms': 1000
+          },
+          'autostart': true,
+          'roms': [
+            {
+              'name': 'python_function.py',
+              'image': '$UKC_USER/my-rom2:latest'
+            }
+          ]
+        }
+      ]"
+```
+
+Check that the instances are up:
+
+<CodeTabs syncKey="cli-tool">
+
+  ```bash title="unikraft"
+  unikraft instances get test-http-python-rom1
+  unikraft instances get test-http-python-rom2
+  ```
+
+  ```bash title="kraft"
+  kraft cloud instance get test-http-python-rom1
+  kraft cloud instance get test-http-python-rom2
+  ```
+
+</CodeTabs>
+
+Note the `roms` array in the instances configurations.
+Each ROM is available as a readable device at `/dev/ukp_rom_python_function.py` (in the form of an EROFS filesystem in this case), which the server program mounts at `/tmp/rom.py` and executes.
+
+## Inline ROMs
+
+Instead of pre-packaging and pushing a ROM image to a registry, you can provide file contents directly in the instance creation request.
+This is useful when you create instances from a template where the snapshot locks ENV and ARGS, but you still need to inject instance-specific data.
+
+### API format
+
+Add a `files` array to a ROM entry instead of an `image` field:
+
+```json title="POST /instances"
+{
+  "image": "myuser/my-base:latest",
+  "roms": [
+    {
+      "name": "my-rom",
+      "files": [
+        {
+          "path": "config/settings.json",
+          "encoding": "text",
+          "data": "{\"debug\": false, \"port\": 8080}"
+        },
+        {
+          "path": "certs/client.pem",
+          "encoding": "base64",
+          "data": "LS0tLS1CRUdJTi..."
+        }
+      ],
+      "at": "/roms/my-rom"
+    }
+  ]
+}
+```
+
+Each file in the `files` array has three fields:
+
+| Field | Description |
+|-------|-------------|
+| `path` | File path inside the ROM filesystem. The platform creates directories automatically. |
+| `encoding` | Either `text` (UTF-8 string) or `base64` (base64-encoded binary data). |
+| `data` | The file contents in the specified encoding. |
+
+The platform packages the provided files into an EROFS filesystem and attaches it as a ROM device, the same way image-based ROMs work.
+The `at` field is optional and works the same as for image-based ROMs—when present, the platform mounts the ROM at the given path automatically.
+
+### Combining with image-based ROMs
+
+You can mix inline ROMs and image-based ROMs in the same request:
+
+```json title="POST /instances"
+{
+  "image": "myuser/my-base:latest",
+  "roms": [
+    {
+      "name": "app-code",
+      "image": "myuser/my-rom:latest",
+      "at": "/app"
+    },
+    {
+      "name": "instance-config",
+      "files": [
+        {
+          "path": "config.json",
+          "encoding": "text",
+          "data": "{\"instance_id\": \"abc-123\"}"
+        }
+      ],
+      "at": "/config"
+    }
+  ]
+}
+```
+
+### Limits
+
+The platform enforces the following default limits on inline ROMs:
+
+| Limit | Default |
+|-------|---------|
+| ROMs per instance | 8 (inline and image-based combined) |
+| Files per inline ROM | 16 |
+| Total size per inline ROM | 1 MB (across all files) |
+| Max API request body | 8 MB |
+
+No per-file size limit exists.
+The total size limit applies to the combined size of all files in a single inline ROM.
+Since inline ROM data is base64-encoded in the JSON request body, the 8 MB request body limit is the practical upper bound on total data per API call.
+
+## Automounting
+
+Instead of mounting the ROM device manually inside the guest, you can set the optional `at` field on any ROM entry.
+The platform will then mount the ROM at the specified path before the instance starts.
+
+```json title="POST /instances"
+{
+  "image": "...",
+  "roms": [
+    {
+      "name": "python_function.py",
+      "image": "myuser/my-rom1:latest",
+      "at": "/tmp"
+    }
+  ]
+}
+```
+
+{/* vale off */}
+With this configuration the EROFS filesystem is mounted at `/tmp` automatically, so `/tmp/rom.py` is available to the app without any `mount` call in a wrapper script.
+In this case you can simplify or remove the `wrapper.sh` from the base image, since the platform handles the mount for you.
+{/* vale on */}
+
+The `at` field is optional--omitting it leaves the ROM as a raw block device at `/dev/ukp_rom_<name>` and the guest remains responsible for mounting it.
+
+## Inline ROMs
+
+Instead of referencing a pre-built image, you can supply file contents directly in the instance creation request using **inline ROMs**.
+You specify an inline ROM by a `files` array instead of an `image` field.
+Each entry in the array specifies the file `path` inside the ROM filesystem, the `encoding` of the provided data (`"base64"` or `"text"`), and the raw `data` string.
+
+```json title="POST /instances"
+{
+  "image": "...",
+  "roms": [
+    {
+      "name": "my-rom",
+      "files": [
+        {
+          "path": "test/file.txt",
+          "encoding": "base64",
+          "data": "VGhpcyBpcyBhIHRlc3QgZmlsZS4="
+        },
+        {
+          "path": "another-file.txt",
+          "encoding": "text",
+          "data": "This is another test file."
+        }
+      ],
+      "at": "/roms/my-rom"
+    }
+  ]
+}
+```
+
+Inline ROMs are particularly useful when working with **instances created from templates**, where you can't change the environment variables and startup arguments of the original template.
+By attaching an inline ROM you can inject configuration files, scripts, or other data into the instance at creation time without modifying the base image or the template.
+
+{/* vale off */}
+:::note
+An inline ROM is ephemeral: it's automatically deleted once the last reference to it is closed.
+:::
+{/* vale on */}
+
+### Testing
+
+Query the instances to call the Python function from the ROM.
+You should see different responses:
+
+```console title=""
+$ curl https://test-http-python-rom1.fra.kraft.cloud
+Hi from 1st ROM!
+```
+
+```console title=""
+$ curl https://test-http-python-rom2.fra.kraft.cloud
+Hi from 2nd ROM!
+```
+
+### Cleanup
+
+When done, remove the instances:
+
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft instances delete test-http-python-rom1 test-http-python-rom2
+```
+
+```bash title="kraft"
+kraft cloud instance rm test-http-python-rom1 test-http-python-rom2
+```
+
+</CodeTabs>
+
+## Learn more
+
+* The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
+* Unikraft Cloud's [REST API reference](/api/platform/v1), and in particular the [instances API](/api/platform/v1/instances).
+* The `kraft pkg` [command reference](https://unikraft.org/docs/cli/reference/kraft/pkg) for packaging images and ROMs.
+* The [systemd `mount` man page](https://www.man7.org/linux/man-pages/man8/mount.8.html) for filesystem mount options relevant to manual mounting scenarios.

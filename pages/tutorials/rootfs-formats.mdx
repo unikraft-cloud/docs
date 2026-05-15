@@ -1,0 +1,136 @@
+---
+title: Rootfs Formats
+navigation_icon: files
+---
+
+Every virtual machine consists of at least two components: a kernel, and a root file system.
+This tutorial focuses on the latter, the **rootfs** (also known as initrd).
+
+Currently, on the Unikraft Cloud platform, two types of file system archives are usable: `CPIO` (Copy In, Copy Out) and `EROFS` (Enhanced Read-Only File System).
+They're packaging formats used for loading the root file system in the instance.
+They consist mainly of metadata and file content without any advanced formatting to keep them as simple as possible.
+The kernel loads and mounts the data from them at boot time.
+
+## Getting started
+
+The main difference between the rootfs formats is performance-wise.
+
+### CPIO
+
+`CPIO` is a simple format which translates in the need to copy and unpack the entire archive into guest memory when starting the instance.
+This incurs a double memory usage during boot time, as the archive is first loaded into memory, then unpacked into a ramfs for the kernel to load.
+At runtime, the guest can reclaim the initial memory allocated for the archive, and will only use the unpacked ramfs.
+The boot times will still proportionally increase with the size of the `CPIO` archive.
+Another consequence of using a `CPIO` initrd is that [snapshots](/features/snapshots) must include them, since Unikraft Cloud can't track where they're stored in guest memory.
+
+### EROFS
+
+`EROFS` wins on startup efficiency by not needing to unpack the archive at all into guest memory.
+This means that you don't need to accomodate for double the memory usage during boot time, and boot times are faster as well.
+
+Another significant benefit of `EROFS` (although not available yet on public metros) is that Unikraft Cloud can enable `DAX` (Direct Access) on instances using `EROFS` rootfs.
+This means that the host side loads the initrd, and the guest gets a map (**not a copy**) of it into its memory.
+Thus, boot times aren't affected by the size of the rootfs at all.
+Memory usage is also drastically reduced at boot, and only increases as the guest accesses files.
+This also means that snapshots can exclude the original initrd.
+Writing to the rootfs is still possible, because Unikraft Cloud uses **overlayfs** to mount the ramfs.
+Any file changes are present in the snapshot.
+Finally, `DAX` enables sharing the same rootfs image between many instances, increasing scalability.
+
+## Packaging the Rootfs
+
+The legacy `kraft` CLI supports both formats out of the box.
+With it, you can package a rootfs from these sources:
+- a simple file
+- a directory
+- a Dockerfile
+- a remote OCI image
+
+If provided as a file, the CLI tool passes the file as-is, without any extra packaging.
+Otherwise, you need to package the rootfs into a supported format (either `CPIO` or `EROFS`).
+Already packaged archives with external tools (for example `mkfs.erofs`, `cpio`, `bsdcpio`) are also usable.
+Right now the default format for the CLI tool is `CPIO`, with `EROFS` being an alternative, as the former is simpler, widely adoped, and better tested.
+It's worth mentioning that after unpacking, there is no difference in the produced file contents between the formats.
+They may only differ metadata-wise, depending on the implementation.
+You may observe that a `CPIO` archive is typically smaller on disk than an `EROFS` one.
+The only effect this has is on the time it takes to push the image.
+
+Below are two attempts at creating and starting an instance from the same [image](https://github.com/unikraft-cloud/examples/tree/main/node-playwright-chromium), packaged using both formats.
+
+### EROFS deployment
+
+<CodeTabs>
+
+```bash title="kraft"
+kraft cloud deploy \
+    -p 443:8080 \
+    -M 900Mi \
+    --rootfs-type erofs \
+    --keep-file-owners \
+    demo/node-playwright-chromium
+```
+
+</CodeTabs>
+
+```ansi title="Create Instance EROFS"
+[90m[[0m[92m●[0m[90m][0m Deployed successfully!
+ [90m│[0m
+ [90m├[0m[90m──────────[0m [90mname[0m: node-playwright-chromium-q9ynl
+ [90m├[0m[90m──────────[0m [90muuid[0m: cb7a1770-6d6a-4f53-a98a-f021ae796313
+ [90m├[0m[90m─────────[0m [90mmetro[0m: fra
+ [90m├[0m[90m─────────[0m [90mstate[0m: [92mrunning[0m
+ [90m├[0m[90m────────[0m [90mdomain[0m: https://proud-dream-udqhbav3.fra.unikraft.app
+ [90m├[0m[90m─────────[0m [90mimage[0m: demo/node-playwright-chromium@sha256:056d5daa3e0f8a91ac18930a9a7714203515a6fae1244b1ecea831f64f593e79
+ [90m├[0m[90m─────[0m [90mboot time[0m: 191.55 ms
+ [90m├[0m[90m────────[0m [90mmemory[0m: 900 MiB
+ [90m├[0m[90m───────[0m [90mservice[0m: proud-dream-udqhbav3
+ [90m├[0m[90m────[0m [90mprivate ip[0m: 10.0.3.133
+ [90m└[0m[90m──────────[0m [90margs[0m: /usr/bin/wrapper.sh /usr/bin/node /app/server.js
+```
+
+### CPIO deployment
+
+<CodeTabs>
+
+```bash title="kraft"
+kraft cloud deploy \
+    -p 443:8080 \
+    -M 900Mi \
+    --rootfs-type cpio \
+    demo/node-playwright-chromium
+```
+
+</CodeTabs>
+
+```ansi title="Create Instance CPIO"
+[90m[[0m[92m●[0m[90m][0m Deployed successfully!
+ [90m│[0m
+ [90m├[0m[90m──────────[0m [90mname[0m: node-playwright-chromium-4rrxr
+ [90m├[0m[90m──────────[0m [90muuid[0m: aeff2d28-d718-4068-9e24-4e2bb203022c
+ [90m├[0m[90m─────────[0m [90mmetro[0m: fra
+ [90m├[0m[90m─────────[0m [90mstate[0m: [92mrunning[0m
+ [90m├[0m[90m────────[0m [90mdomain[0m: https://dry-fire-vhmh9z8u.fra.unikraft.app
+ [90m├[0m[90m─────────[0m [90mimage[0m: demo/node-playwright-chromium@sha256:57d1773398bc6d4ff94f063d6e9b7400dca66171d04ce78cd8a45789ba0a7d93
+ [90m├[0m[90m─────[0m [90mboot time[0m: 607.34 ms
+ [90m├[0m[90m────────[0m [90mmemory[0m: 2400 MiB
+ [90m├[0m[90m───────[0m [90mservice[0m: dry-fire-vhmh9z8u
+ [90m├[0m[90m────[0m [90mprivate ip[0m: 10.0.3.133
+ [90m└[0m[90m──────────[0m [90margs[0m: /usr/bin/wrapper.sh /usr/bin/node /app/server.js
+```
+
+The packaged archives have a size of around 750MiB each.
+The `EROFS`-packaged instance requires at least 900MiB to work, and the `CPIO` one requires 2400MiB.
+Simple arithmetic backs this.
+In the `CPIO` case, the kernel gets a copy of the archive in memory and needs to remove it into ramfs.
+This extraction process requires double the memory of the archive size.
+This means the instance needs at least an extra 750x2=1500MiB of memory compared to `EROFS` to boot.
+Finally, related to boot times, both cases have similar [warm boot](/features/snapshots) times, but the extra copies mentioned increase the cold boot time in the `CPIO` case.
+
+## Conclusion
+
+Bottom-line is, using `EROFS` is recommended in every case where possible, as the upsides definitely outweigh the small downsides.
+
+## Learn more
+
+* The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
+* The `kraft pkg` [command reference](https://unikraft.org/docs/cli/reference/kraft/pkg) for packaging images.

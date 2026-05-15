@@ -5,16 +5,16 @@ navigation_icon: ship-wheel
 
 Unikraft Cloud integrates seamlessly with any Kubernetes cluster through a virtual [kubelet](https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet/) known as **Kraftlet**.
 This is a lightweight Kubernetes node implementation which connects your cluster to Unikraft Cloud's high-performance compute instead of running real pods locally.
-This enables developers to deploy and manage Unikraft unikernels as if they were native Kubernetes pods.
+This enables developers to deploy and manage Unikraft microVMs as if they were native Kubernetes pods.
 
 This integration extends Kubernetes' scheduling and orchestration capabilities to the Unikraft Cloud platform.
-This allows workloads to take advantage of unikernel-level I/O performance, security, cold start and transparent scale-to-zero efficiency while retaining full compatibility with existing Kubernetes tooling.
+This allows workloads to take advantage of microVM-level I/O performance, security, cold start and transparent scale-to-zero efficiency while retaining full compatibility with existing Kubernetes tooling.
 
 Upon startup, Kraftlet will register itself as a worker node with the Kubernetes API.
 Once Kraftlet registers itself as a node, Kubernetes can schedule Pods onto it.
 
 Any Pod scheduled to the Kraftlet node won't run as a container within the cluster.
-Instead, it will run a highly optimized, ultra lightweight unikernel VM instance on Unikraft Cloud.
+Instead, it will run a highly optimized microVM on Unikraft Cloud.
 Kraftlet will manage the Pod lifecycle to make sure the apps are up and running.
 
 
@@ -29,6 +29,8 @@ $ helm install kraftlet \
   --set ukc.token=$UKC_TOKEN \
   oci://ghcr.io/unikraft-cloud/helm-charts/kraftlet
 ```
+The `UKC_METRO` and `UKC_TOKEN` variables are only for these values and the legacy CLI.
+The `unikraft` CLI uses profiles instead.
 
 You can check if Kraftlet is running by checking its pods:
 ```bash title=""
@@ -127,9 +129,17 @@ Your app is now managed from the Kubernetes cluster, but is actually running on 
 
 To check the instances, run:
 
-``` shell
+<CodeTabs syncKey="cli-tool">
+
+```shell title="unikraft"
+$ unikraft instances list
+```
+
+```shell title="kraft"
 $ kraft cloud instance list
 ```
+
+</CodeTabs>
 
 Which will return a list of instances created from pods above:
 
@@ -145,11 +155,19 @@ As you can see, all instances have the same FQDN.
 This is because Kraftlet created a corresponding Unikraft Cloud service for the Kubernetes service defined in YAML above.
 You can check the created service with the following command:
 
+<CodeTabs syncKey="cli-tool">
+
+```shell title="unikraft"
+$ unikraft services list
 ```
+
+```shell title="kraft"
 $ kraft cloud service list
 NAME        FQDN                                  SERVICES           INSTANCES                                                            CREATED AT     PERSISTENT
 my-service  my-service-orjlyrac.fra.unikraft.app  443:8080/tls+http  my-app-78c766fb67-k2dgk-nginx my-app-78c766fb67-tkkxq-nginx my-a...  6 minutes ago  true
 ```
+
+</CodeTabs>
 
 You can now manage your app running in Unikraft Cloud via Kubernetes resources!
 
@@ -185,11 +203,19 @@ my-claim   Bound    pv-7ab06383-ac03-4a81-968a-1b0cff03c23a   10Mi       RWO    
 
 Also, you can check the volumes on the Unikraft Cloud:
 
+<CodeTabs syncKey="cli-tool">
+
+```shell title="unikraft"
+$ unikraft volumes list
 ```
+
+```shell title="kraft"
 $ kraft cloud volume list
 NAME      CREATED AT     SIZE    ATTACHED TO  MOUNTED BY  STATE      PERSISTENT
 my-claim  5 minutes ago  10 MiB                           available  true
 ```
+
+</CodeTabs>
 
 At the moment, the volume isn't attached or mounted by an instance.
 To create an instance that would use the volume, you can create a Kubernetes Pod that would reference the PVC:
@@ -223,39 +249,121 @@ spec:
 
 If you check the instances again, you will see a new instance created from the Pod:
 
+<CodeTabs syncKey="cli-tool">
+
+```shell title="unikraft"
+$ unikraft instances list
 ```
+
+```shell title="kraft"
 $ kraft cloud instance list
 NAME             FQDN                                       STATE    STATUS      IMAGE                                      MEMORY   VCPUS  ARGS                                     BOOT TIME
 nginx-pod-nginx  fragrant-breeze-llesxdta.fra.unikraft.app  running  since 1min  nginx@sha256:49d8fb7a9934a87e93f9eb326...  128 MiB  1      /usr/bin/nginx -c /etc/nginx/nginx.conf  15.14 ms
 ```
 
+</CodeTabs>
+
 And if you check the volume now, you will see it's attached and mounted by the created instance:
 
+<CodeTabs syncKey="cli-tool">
+
+```shell title="unikraft"
+$ unikraft volumes list
 ```
+
+```shell title="kraft"
 $ kraft cloud volume list
 NAME      CREATED AT     SIZE    ATTACHED TO      MOUNTED BY       STATE    PERSISTENT
 my-claim  8 minutes ago  10 MiB  nginx-pod-nginx  nginx-pod-nginx  mounted  true
 ```
 
+</CodeTabs>
+
+## Kraftlet internals
+
+This section describes how Kraftlet translates Kubernetes objects into Unikraft Cloud resources.
+
+### Ports and handlers
+
+When Kraftlet maps a Kubernetes Service port to a Unikraft Cloud service, it derives the [handler](/platform/services#handlers) from the port number automatically:
+
+| Port | Handler applied |
+|------|-----------------|
+| `80` | `http` |
+| `443` | `tls + http` |
+| Any other port | `tls` |
+
+This is why the example above produces `443:8080/tls+http` in the service list.
+Kraftlet infers `tls+http` from port 443.
+
+### Multi-container pods
+
+Kraftlet maps each container in a pod to a **separate Unikraft Cloud instance**.
+When a Pod has a single container, the Unikraft Cloud service takes the Kubernetes Service name directly.
+When a Pod has more than one container, each container gets its own Unikraft Cloud service, named `<service>-<container>` (for example, `my-svc-app` and `my-svc-sidecar`).
+
+Kraftlet supports init containers.
+Kraftlet schedules both regular containers and init containers as Unikraft Cloud instances, and deletes them together when you delete the Pod.
+
+### Resource lifecycle
+
+When you delete a Kubernetes object, Kraftlet deletes the corresponding Unikraft Cloud resource:
+
+| Kubernetes object deleted | Unikraft Cloud resource deleted |
+|---|---|
+| Pod / Deployment replica | Instance (and service group if no other Pods are backing it) |
+| PersistentVolumeClaim | Unikraft Cloud volume |
+
 ## Notes
 
-* [**Instances**](https://unikraft.cloud/docs/api/v1/instances/)
+* [**Instances**](/platform/instances)
 
   For each Pod scheduled on Kraftlet, Kraftlet runs its containers as separate Unikraft Cloud instances rather than running them as containers.
   Kraftlet ensures it assigns instances to the correct Unikraft Cloud services and attaches them to the corresponding Unikraft Cloud volumes.
 
-* [**Services**](https://unikraft.cloud/docs/api/v1/services/)
+* [**Services**](/platform/services)
 
   When a Pod gets scheduled on the Kraftlet node, Kraftlet fetches the existing Kubernetes service that the given Pod is backing and **creates a corresponding Unikraft Cloud Service**.
   Kraftlet allows cluster admins to manage Unikraft Cloud Services by defining a Kubernetes service backed by Pods running on Kraftlet.
 
-* [**Volumes**](https://unikraft.cloud/docs/api/v1/volumes/)
+* [**Volumes**](/platform/volumes)
 
   Kraftlet listens for changes on [PersistentVolumeClaim objects](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) with storageClass `ukc-volume`.
   For each creation of such Persistent Volume Claim (PVC) object, the Kraftlet will create a corresponding Unikraft Cloud volume and a `PersistentVolume` object to bind the PVC object to.
   Kraftlet allows for volume management through Kubernetes clusters.
 
+## Platform features
 
-## Resources
+Kraftlet supports the following Unikraft Cloud platform features on Kraftlet-managed resources:
 
-- See [Unikraft public roadmap](https://roadmap.unikraft.com) for planned features or to suggest use cases and ideas.
+* [**Instance templates**](/platform/instances#instance-templates)
+
+  Frequently deployed workloads can go into instance templates.
+  Templates pre-warm the snapshot, reducing cold-start latency for every new instance created from the template.
+  When Kraftlet creates an instance from a Pod spec, you can pre-position an instance template to speed up scheduling.
+
+* [**Scale-to-zero**](/features/scale-to-zero)
+
+  Instances attached to a Unikraft Cloud service suspend automatically when idle.
+  Scale-to-zero runs by default for service-backed pods and you can configure it via Pod annotations (see [Annotations](#annotations) below).
+
+## Annotations
+
+Kraftlet reads the following annotations from Pod and Service objects to configure Unikraft Cloud resources.
+
+### Pod annotations
+
+| Annotation | Type | Default | Description |
+|---|---|---|---|
+| `cloud.unikraft.v1.instances/autostart` | boolean | `true` | Whether the instance starts automatically when Kraftlet schedules the Pod. |
+| `cloud.unikraft.v1.instances/template` | string | — | Name of a pre-existing Unikraft Cloud instance template to use instead of the container image. |
+| `cloud.unikraft.v1.instances/scale_to_zero.policy` | `on` \| `off` \| `idle` | `on` | Enables or disables scale-to-zero for service-backed instances. |
+| `cloud.unikraft.v1.instances/scale_to_zero.stateful` | boolean | `false` | When `true`, Kraftlet retains the instance state when scaling to zero. |
+| `cloud.unikraft.v1.instances/scale_to_zero.cooldown_time_ms` | integer | `1000` | Idle time in milliseconds before Kraftlet suspends the instance. |
+
+### Service annotations
+
+| Annotation | Type | Default | Description |
+|---|---|---|---|
+| `cloud.unikraft.v1.services/domain` | string | — | Custom domain for the Unikraft Cloud service. For multi-container pods, prefix with the container name (`cloud.unikraft.v1.services/domain.<containerName>`) to set a per-container domain, or use the global annotation to derive `<containerName>-<domain>` automatically. |
+

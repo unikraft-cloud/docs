@@ -1,0 +1,39 @@
+name: cleanup-www
+
+description: |
+  Destroys the Unikraft landing and docs website (www).
+
+inputs:
+  name:
+    required: true
+    description: Name of the service.
+  metro:
+    required: false
+    description: Unikraft Cloud Metro.
+    default: was1
+  delete-image:
+    required: false
+    description: Also delete the image.
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+  - name: Delete Service
+    if: always()
+    id: service
+    shell: bash
+    run: |
+      kraft cloud --metro "${{ inputs.metro }}" service remove \
+        --drain \
+        "${{ inputs.name }}" \
+      ;
+
+  - name: Delete Image
+    if: ${{ inputs.delete-image }}
+    id: image
+    shell: bash
+    run: |
+      kraft cloud --metro "${{ inputs.metro }}" image remove \
+        "${{ inputs.name }}" \
+      ;

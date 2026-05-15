@@ -6,12 +6,15 @@
 (?i)autoscale
 (?i)autoscaling
 (?i)FQDN
+FUSE
 (?i)just-in-time
 (?i)kraftkit
 (?i)maximum
 (?i)minimum
 (?i)namespaced?
 (?i)performant
+(?i)PIE
+(?i)ROM(s)?
 (?i)rootfs
 (?i)tokenizer
 (?i)unikraft
@@ -21,12 +24,14 @@
 (?i)webservers?
 ALIAS
 ANAME
+ASCII
 CNAME
 COPY
 DCO
 EOF
 FROM
 HIPPA
+HMR
 IATA
 ISO
 LLM
@@ -49,6 +54,10 @@ Unikraft Cloud
 POSIX
 PV
 PVC
+EROFS
+CPIO
+CDP
+FTP
 
 # ==============================================================================
 # NAMES OF THINGS
@@ -126,6 +135,7 @@ PVC
 (?i)GraphQL
 (?i)gui
 (?i)haproxy
+(?i)HDD(s)?
 (?i)Heroku
 (?i)Hightouch
 (?i)href
@@ -223,8 +233,10 @@ PVC
 (?i)Singleline
 (?i)Spring
 (?i)sql
+(?i)SSD(s)?
 (?i)ssh
 (?i)ssl
+(?i)SSR
 (?i)stderr
 (?i)stdin
 (?i)stdout
@@ -269,6 +281,7 @@ PVC
 (?i)vite
 (?i)VS Code
 (?i)vscode
+(?i)vsftpd
 (?i)Vue
 (?i)Vuex
 (?i)wagi

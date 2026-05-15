@@ -3,7 +3,7 @@ title: Load Balancing
 navigation_icon: split
 ---
 
-Load balancing in Unikraft Cloud is easy: as soon as you attach more than one instance to a [service](/docs/guides/features/service), Unikraft Cloud will automatically start balancing traffic between many instances.
+Load balancing in Unikraft Cloud is easy: as soon as you attach more than one instance to a [service](/platform/services), Unikraft Cloud will automatically start balancing traffic between many instances.
 The load balancing happens based on the number of connections (in TCP mode) or requests (in HTTP mode).
 More on that below.
 
@@ -11,16 +11,16 @@ Because of load balancing, instances in a service must be of the same kind (for 
 You can remove instances from a service at any time, and, when you do, Unikraft Cloud will immediately take the instance out of the load balancing service.
 
 
-## Soft-/hard-limits
+## Soft and hard limits
 
-[Services](/docs/platform/services) have soft and hard limits for the number of concurrent requests and connections.
+[Services](/platform/services) have soft and hard limits for the number of concurrent requests and connections.
 The limits apply **per instance**.
-For HTTP services (that is, using the `http` [handler](#handlers)) the system checks each individual in-flight request against the limit, but not the underlying TCP connection.
-For TCP services the individual open connections get counted.
+For HTTP services (that is, using the `http` [handler](/platform/services#handlers)), the system checks each individual in-flight request against the limit, but not the underlying TCP connection.
+For TCP services, the system counts the individual open connections.
 In the following, the term request refers to both requests and connections.
 
-The load balancer uses the soft limit to decide when to wake up another [standby](/docs/api/v1/instances#states) instance.
-For example, if you set the soft limit to 5 and the service consists of 2 standby instances, one of the instances receives up to 5 concurrent requests.
+The load balancer uses the soft limit to decide when to wake up another [standby](/platform/instances#instance-states) instance.
+For example, if you set the soft limit to 5 and the service consists of 2 standby instances, one of the instances can receive up to 5 concurrent requests.
 The 6th parallel request wakes up the second instance.
 If there are no more standby instances to wake up, the number of requests assigned to each instance will exceed the soft limit.
 The load balancer ensures that when the number of in-flight requests goes down again, instances go into standby as fast as possible.
@@ -32,14 +32,25 @@ In case there are no other instances available, the load balancer blocks excess 
 
 ## Setup
 
-To set load balancing up, first use `kraft cloud deploy` with the `-p` flag to create the service as part of the instance creation.
+To set load balancing up, first use the deploy or run flow with the publish flag to create the service as part of the instance creation.
 For example, use NGINX as the app:
 
-```bash title=""
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
 git clone https://github.com/unikraft-cloud/examples
 cd examples/nginx/
-kraft cloud deploy -p 443:8080 .
+unikraft build . --output <my-org>/nginx:latest
+unikraft run --metro=fra -p 443:8080/http+tls -m 256MiB --image=<my-org>/nginx:latest
 ```
+
+```bash title="kraft"
+git clone https://github.com/unikraft-cloud/examples
+cd examples/nginx/
+kraft cloud deploy -p 443:8080 -M 256 .
+```
+
+</CodeTabs>
 
 This single command will (a) create a service via the `-p` flag and (b) start an NGINX instance:
 
@@ -52,7 +63,7 @@ This single command will (a) create a service via the `-p` flag and (b) start an
  [90m├[0m[90m───────────[0m [90murl[0m: https://wandering-shape-n6mhimgn.fra.unikraft.app
  [90m├[0m[90m─────────[0m [90mimage[0m: nginx@sha256:269192f523dca7498423bc54676ab08e415e9c7442d1bd3d65f07ab5e50a43d
  [90m├[0m[90m─────[0m [90mboot time[0m: 20.18 ms
- [90m├[0m[90m────────[0m [90mmemory[0m: 128 Mi
+ [90m├[0m[90m────────[0m [90mmemory[0m: 256 MiB
  [90m├[0m[90m───────[0m [90mservice[0m: wandering-shape-n6mhimgn
  [90m├[0m[90m──[0m [90mprivate fqdn[0m: nginx-8ujeu.internal
  [90m├[0m[90m────[0m [90mprivate ip[0m: 172.16.6.7
@@ -61,20 +72,27 @@ This single command will (a) create a service via the `-p` flag and (b) start an
 
 With this in place, it's now time to start a second instance and attach it to the created service (in this case, named `wandering-shape-n6mhimgn`):
 
-```bash title=""
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
 cd examples/nginx/
-kraft cloud deploy --service wandering-shape-n6mhimgn .
+unikraft run --metro=fra --service wandering-shape-n6mhimgn -m 256MiB --image=<my-org>/nginx:latest
 ```
 
+```bash title="kraft"
+cd examples/nginx/
+kraft cloud deploy --service wandering-shape-n6mhimgn -M 256 .
+```
+
+</CodeTabs>
+
 :::tip
-
-If you get a prompt saying "deployment already exists: what would you like to do with the 1 existing instances," choose `keep`.
-
+If a prompt appears saying "deployment already exists: what would you like to do with the 1 existing instances," choose `keep`.
 :::
 
 The command's output should look like this:
 
-```ansi
+```ansi title=""
 [90m[[0m[92m●[0m[90m][0m Deployed successfully!
  [90m│[0m
  [90m├[0m[90m──────────[0m [90mname[0m: nginx-djta3
@@ -83,19 +101,27 @@ The command's output should look like this:
  [90m├[0m[90m───────────[0m [90murl[0m: https://wandering-shape-n6mhimgn.fra.unikraft.app
  [90m├[0m[90m─────────[0m [90mimage[0m: nginx@sha256:c00c11a5cbd6a3020dd4d9703fbeb2a2f2aab37f18f7a0ba9c66db5a71897c3a
  [90m├[0m[90m─────[0m [90mboot time[0m: 20.46 ms
- [90m├[0m[90m────────[0m [90mmemory[0m: 128 MiB
+ [90m├[0m[90m────────[0m [90mmemory[0m: 256 MiB
  [90m├[0m[90m______─[0m [90mservice[0m: wandering-shape-n6mhimgn
  [90m├[0m[90m──[0m [90mprivate fqdn[0m: nginx-djta3.internal
  [90m├[0m[90m────[0m [90mprivate ip[0m: 172.16.6.3
  [90m└[0m[90m──────────[0m [90margs[0m: /usr/bin/nginx -c /etc/nginx/nginx.conf
 ```
 
-Both the `url` and `service` fields in the 2 instances are the same, as they should be.
+Both the `url` and `service` fields in the 2 instances are the same.
 To check that it worked, run the following command:
 
-```bash title=""
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft services list
+```
+
+```bash title="kraft"
 kraft cloud service list -o list
 ```
+
+</CodeTabs>
 
 You should see output such as:
 
@@ -113,26 +139,30 @@ Note the two instances (their UUIDs) under the `instances` field.
 You're now load balancing across 2 NGINX instances!
 
 :::tip
-
-Currently it's impossible to set the service's name via `kraft cloud deploy`.
-If you'd like to set the service's name, first use the `kraft cloud service` command to create the service.
-You can use the `--service` flag of `kraft cloud deploy` to attach the instance to the service, as outlined in this [guide](/docs/guides/features/service)
-
+Currently it's impossible to set the service's name via the deploy or run flow.
+If you'd like to set the service's name, first use the CLI to create the service.
+You can use the `--service` flag to attach the instance to the service, as outlined in this [guide](/platform/services).
 :::
 
 :::tip
+To ensure that stopping an instance doesn't drop existing connections, use Unikraft Cloud's draining feature by stopping an instance with a drain timeout.
 
-If you want to ensure that no existing connections get dropped when stopping an instance, use Unikraft Cloud's draining feature by stopping an instance through `kraft cloud instance stop -w <TIMEOUT_MS>`
+<CodeTabs>
 
+```bash title="kraft"
+kraft cloud instance stop -w <TIMEOUT_MS>
+```
+
+</CodeTabs>
 :::
 
 ## Load balancing algorithm
 
 The load balancing algorithm is a variant of `least_conn`.
-For every instance, the number of current in-flight TCP connections (if in `tcp` [mode](/docs/cli/service/create)) or requests (if in `http` [mode](/docs/cli/service/create)).
+For every instance, the system tracks the number of current in-flight TCP connections (if in `tcp` [mode](/platform/services#handlers)) or requests (if in `http` [mode](/platform/services#handlers)).
 
 To select an instance, the system goes over all instances in the service.
-It finds the set of instances that have the least amount of in-flight requests/connections, and picks from that set.
+It finds the set of instances with the least amount of in-flight requests/connections, and picks from that set.
 
 To illustrate, imagine this scenario:
 
@@ -143,12 +173,12 @@ To illustrate, imagine this scenario:
 | `i-2`       | 2                 |
 | `i-3`       | 1                 |
 
-In this case, the algorithm would first choose instances `i-1` and `i-3`, since they both have the least number of connections at the moment (only 1 each).
-After that, the algorithm would choose between these 2 instances and assign the new connection to it.
-For example, if it chose `i-1`, the next new connection would go to `i-3`.
-This is because it would now be the only instance with only 1 connection (assuming none of the connections that the other instances handle close).
+In this case, the algorithm first chooses instances `i-1` and `i-3`, since they both have the least number of connections at the moment (only 1 each).
+After that, it chooses between these 2 instances and assigns the new connection to one of them.
+For example, if it chose `i-1`, the next new connection goes to `i-3`.
+This is because `i-3` now becomes the only instance with only 1 connection (assuming none of the connections that the other instances handle close).
 
 ## Learn more
 
-* The `kraft cloud` [command-line tool reference](/docs/cli/), and in particular the services subcommand.
-* Unikraft Cloud's [REST API reference](/docs/api/v1), and in particular the section on services.
+* The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
+* Unikraft Cloud's [REST API reference](/api/platform/v1), and in particular the section on services.

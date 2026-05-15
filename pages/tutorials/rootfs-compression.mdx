@@ -1,0 +1,186 @@
+---
+title: Rootfs Compression
+navigation_icon: file-archive
+---
+
+Compressing the root file system represents using an algorithm like `gzip`, `zstd`, etc. to reduce the size of the rootfs on disk.
+This has the added benefit of reducing the time it takes to push the image to the Unikraft Cloud platform, as you transfer less data.
+It also means that the size on disk on the host side reduces, which can be beneficial when dealing with many images or large images.
+This size can drop depending on the contents of the rootfs and the compression algorithm used.
+For example, text files often compress by up to 90% and more, whilst already compressed files like images or videos don't compress well at all.
+
+## Getting started
+
+The Unikraft Platform supports both compressed and uncompressed rootfses, but it's highly recommended to use uncompressed ones if size allows.
+Decompressing is a step done by the kernel at boot time, resulting in slower access times across the board.
+That's why the first attempt at using the platform should always be with uncompressed rootfses.
+
+Both formats, [`CPIO` and `EROFS`](/tutorials/rootfs-formats), support compression.
+`CPIO` does full file system compression (like running `zip` on the file).
+`EROFS` does per-block compression meaning that the system decompresses only the accessed blocks on-the-fly.
+Both of them support most compression algorithms, but the recommended ones are those that have fast decompression speeds like `lz4hc`.
+
+As presented in the [rootfs formats tutorial](/tutorials/rootfs-formats) and in the [FAQ](/faq), the performance characteristics of the two formats differ.
+When using compression, the system amplifies these differences further.
+For `CPIO`, the system must decompress the entire archive first before using it.
+This means that boot times increase further, and memory usage during boot is also higher negating the benefit of using compression in the first place.
+`EROFS` is better, as the system decompresses only the accessed blocks on-the-fly, meaning that boot times are less affected, and memory usage is also kept lower.
+This has the added downside that Direct Access (`DAX`) isn't possible when using compression, as the host side can't map a compressed image into guest memory.
+This caveat results in having to load the entire compressed rootfs into guest memory, increasing memory usage by at least the size of the compressed rootfs.
+Still, if many files aren't accessed in boot, the cold boot time might decrease compared to an uncompressed `EROFS` rootfs.
+
+## Packaging a Compressed rootfs
+
+Packaging a compressed rootfs is different depending on the format used.
+The legacy [`kraft` CLI](https://unikraft.org/docs/cli/install) implements `CPIO` compression directly, while `EROFS` compression must happen externally using the `mkfs.erofs` tool.
+
+### CPIO Compression
+
+To package a compressed `CPIO` rootfs using the legacy CLI, you can use the `--compress` flag when running the `kraft pkg` or `kraft cloud deploy` command.
+This uses `gzip` compression to compress the initrd file before packaging it into a `OCI` image and uploading it to the Unikraft Cloud platform.
+
+<CodeTabs>
+
+```bash title="kraft"
+kraft cloud deploy \
+    --rootfs-type cpio \
+    --compress \
+    ...
+```
+
+</CodeTabs>
+
+### EROFS Compression
+
+Currently, the legacy CLI has no direct support for compressing `EROFS` rootfses.
+To package a compressed `EROFS` rootfs, you need to use the `mkfs.erofs` tool before packaging it with `kraft`.
+
+To do this you will also have to first export the image built from the `Dockerfile` into a `tar` archive:
+
+```bash
+docker build -o type=tar,dest=rootfs -t my-docker-image -f Dockerfile .
+```
+
+You can then use the resulting `tar` archive to create a compressed `EROFS` rootfs using the following command.
+Note that you can change the compression algorithm and level by modifying the `-z` option.
+In this example the level is `9` (maximum) and the algorithm is `lz4hc` (high compression lz4):
+
+```bash
+mkfs.erofs --all-root -b 4096 -d2 -E noinline_data -z lz4hc,9 rootfs.erofs --tar=rootfs rootfs.tar
+```
+
+Finally, you can package and deploy the compressed EROFS rootfs using the legacy CLI:
+
+<CodeTabs>
+
+```bash title="kraft"
+kraft cloud deploy \
+    --rootfs-type erofs \
+    --rootfs ./rootfs.erofs \
+    ...
+```
+
+</CodeTabs>
+## Performance of Compressed rootfs vs. Uncompressed rootfs Images
+
+To illustrate the performance differences between compressed and uncompressed rootfses, below you can see the same [`node-22` image](https://github.com/unikraft-cloud/examples/tree/main/node-playwright-chromium) packaged and deployed four times:
+
+1. Uncompressed `CPIO`
+   ```ansi title="Uncompressed CPIO"
+   [90m[[0m[92m●[0m[90m][0m Deployed successfully!
+    [90m│[0m
+    [90m├[0m[90m───────[0m [90mname[0m: node-playwright-chromium-gjv31
+    [90m├[0m[90m───────[0m [90muuid[0m: 7ef181a3-8264-4418-82e9-4690ed75a030
+    [90m├[0m[90m──────[0m [90mmetro[0m: fra
+    [90m├[0m[90m──────[0m [90mstate[0m: [92mrunning[0m
+    [90m├[0m[90m─────[0m [90mdomain[0m: https://dark-feather-7drf2jvp.fra.unikraft.app
+    [90m├[0m[90m──────[0m [90mimage[0m: demo/node-playwright-chromium@sha256:eafb34e104efe139234f5aa753f3d380afea2c5b78a3011ccd2017a25a5172c0
+    [90m├[0m[90m──[0m [90mboot time[0m: 621.28 ms
+    [90m├[0m[90m─────[0m [90mmemory[0m: 2400 MiB
+    [90m├[0m[90m────[0m [90mservice[0m: dark-feather-7drf2jvp
+    [90m├[0m[90m─[0m [90mprivate ip[0m: 10.0.1.233
+    [90m└[0m[90m───────[0m [90margs[0m: /usr/bin/wrapper.sh /usr/bin/node /app/server.js
+   ```
+
+1. Compressed `CPIO`
+
+   ```ansi title="Compressed CPIO"
+   [90m[[0m[92m●[0m[90m][0m Deployed successfully!
+    [90m│[0m
+    [90m├[0m[90m───────[0m [90mname[0m: node-playwright-chromium-bt6r9
+    [90m├[0m[90m───────[0m [90muuid[0m: 1ebc4ee0-2fb1-4272-81d5-7adc76bfb566
+    [90m├[0m[90m──────[0m [90mmetro[0m: fra
+    [90m├[0m[90m──────[0m [90mstate[0m: [92mrunning[0m
+    [90m├[0m[90m─────[0m [90mdomain[0m: https://old-cloud-em09h6ue.fra.unikraft.app
+    [90m├[0m[90m──────[0m [90mimage[0m: demo/node-playwright-chromium@sha256:ac6cde1c766162a3c1bc376985c2442eafacd5b18b26b599a25d3095c0a5f5ed
+    [90m├[0m[90m──[0m [90mboot time[0m: 2079.74 ms
+    [90m├[0m[90m─────[0m [90mmemory[0m: 2400 MiB
+    [90m├[0m[90m────[0m [90mservice[0m: old-cloud-em09h6ue
+    [90m├[0m[90m─[0m [90mprivate ip[0m: 10.0.1.233
+    [90m└[0m[90m───────[0m [90margs[0m: /usr/bin/wrapper.sh /usr/bin/node /app/server.js
+   ```
+
+1. Uncompressed `EROFS`
+
+   ```ansi title="Uncompressed EROFS"
+   [90m[[0m[92m●[0m[90m][0m Deployed successfully!
+    [90m│[0m
+    [90m├[0m[90m───────[0m [90mname[0m: node-playwright-chromium-o4ds4
+    [90m├[0m[90m───────[0m [90muuid[0m: 967b66fd-f71c-4b2b-8982-88e4c0373d02
+    [90m├[0m[90m──────[0m [90mmetro[0m: fra
+    [90m├[0m[90m──────[0m [90mstate[0m: [92mrunning[0m
+    [90m├[0m[90m─────[0m [90mdomain[0m: https://damp-water-8ubacykw.fra.unikraft.app
+    [90m├[0m[90m──────[0m [90mimage[0m: cezar.unikraft.io/node-playwright-chromium@sha256:65bf231a557a0dd938592d0fd67f4d5f5e83c0df1ca27b8f8d8675253138ae4b
+    [90m├[0m[90m──[0m [90mboot time[0m: 121.75 ms
+    [90m├[0m[90m─────[0m [90mmemory[0m: 900 MiB
+    [90m├[0m[90m────[0m [90mservice[0m: damp-water-8ubacykw
+    [90m├[0m[90m─[0m [90mprivate ip[0m: 10.0.4.1
+    [90m└[0m[90m───────[0m [90margs[0m: /usr/bin/wrapper.sh /usr/bin/node /app/server.js
+   ```
+
+1. Compressed `EROFS`
+
+   ```ansi title="Compressed EROFS"
+   [90m[[0m[92m●[0m[90m][0m Deployed successfully!
+    [90m│[0m
+    [90m├[0m[90m──────[0m [90mname[0m: node-playwright-chromium-9yb9y
+    [90m├[0m[90m──────[0m [90muuid[0m: d7255b2c-394c-4578-a21b-2f879f823cd9
+    [90m├[0m[90m─────[0m [90mmetro[0m: fra
+    [90m├[0m[90m─────[0m [90mstate[0m: [92mrunning[0m
+    [90m├[0m[90m────[0m [90mdomain[0m: https://damp-dream-rpmyh0h0.fra.unikraft.app
+    [90m├[0m[90m─────[0m [90mimage[0m: cezar.unikraft.io/node-playwright-chromium@sha256:7a93fbfa414eb958cd4f61b9cbe4874eb4fe6836e74fb292bca3e2927df71a88
+    [90m├[0m[90m─[0m [90mboot time[0m: 92.36 ms
+    [90m├[0m[90m────[0m [90mmemory[0m: 900 MiB
+    [90m├[0m[90m───[0m [90mservice[0m: damp-dream-rpmyh0h0
+    [90m├[0m [90mprivate ip[0m: 10.0.3.253
+    [90m└[0m[90m──────[0m [90margs[0m: /usr/bin/wrapper.sh /usr/bin/node /app/server.js
+   ```
+
+### Results
+
+| rootfs Type | Compression | Image Size | Boot Time  | Instance Memory Usage |
+|---------------|-------------|------------|------------|-----------------------|
+| CPIO          | No          | 824 MiB    | 621.28 ms  | 2400 MiB              |
+| CPIO          | Yes (gzip)  | 299 MiB    | 2079.74 ms | 2400 MiB              |
+| EROFS         | No          | 830 MiB    | 121.75 ms  | 900 MiB               |
+| EROFS         | Yes (lz4hc) | 410 MiB    | 92.36 ms   | 900 MiB               |
+
+As expected from the previous assumptions, the compressed CPIO rootfs boots slower than the uncompressed one.
+This happens due to the need to decompress the entire archive before use.
+EROFS performs better in both compressed and uncompressed forms, compared to CPIO.
+The compressed EROFS rootfs boots even faster than the uncompressed one.
+This is likely due to the reduced amount of data that the system reads from disk, resulting in faster access times despite the decompression overhead.
+This only happens in the cold boot scenario.
+In [warm boots](/features/snapshots), the uncompressed EROFS rootfs tops the charts as the system needs no decompression at all on demand.
+
+## Conclusion
+
+As a rule of thumb, use uncompressed rootfses whenever possible and try to always use `EROFS` over `CPIO` for better performance.
+If limited by size constraints, try using compressed `EROFS` rootfses with a fast decompression algorithm like `lz4hc`.
+
+## Learn more
+
+* The [rootfs formats tutorial](/tutorials/rootfs-formats) for understanding the differences between `CPIO` and `EROFS`.
+* The [`mkfs.erofs` documentation](https://man.archlinux.org/man/extra/erofs-utils/mkfs.erofs.1.en) for more information on creating compressed `EROFS` file systems.
+* The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
+* The `kraft pkg` [command reference](https://unikraft.org/docs/cli/reference/kraft/pkg) for packaging images.

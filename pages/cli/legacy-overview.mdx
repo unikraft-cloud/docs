@@ -1,0 +1,96 @@
+---
+title: Kraft cloud CLI (legacy)
+description: Legacy Kraft cloud CLI installation and quick start
+---
+
+The **kraft cloud** CLI is part of the [KraftKit](https://github.com/unikraft/kraftkit) toolchain.
+While it remains fully supported with ongoing bug fixes, it won't receive any new functionality.
+New users should use the unikraft CLI instead.
+
+## Installation
+
+For Windows, KraftKit currently requires Windows Subsystem for Linux 2 (WSL2).
+Please ensure you set up WSL2 on your host (for example: run `wsl --install -d ubuntu` in PowerShell).
+
+<CodeTabs>
+
+```bash title="1-liner (macOS & Linux)"
+curl --proto '=https' --tlsv1.2 -sSf https://get.kraftkit.sh | sh
+```
+
+```bash title="macOS"
+brew install unikraft/tap/kraftkit
+```
+
+```bash title="Debian/Ubuntu"
+# Update and install dependencies
+sudo apt-get update
+sudo apt-get install \
+    ca-certificates \
+    curl \
+    gnupg \
+    lsb-release
+
+# Add Unikraft's official GPG key:
+sudo mkdir -p /etc/apt/keyrings
+curl -fsSL https://deb.pkg.kraftkit.sh/gpg.key | \
+  sudo gpg --dearmor -o /etc/apt/keyrings/unikraft.gpg
+
+# Use the following command to set up the APT repository:
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/unikraft.gpg] https://deb.pkg.kraftkit.sh /" | \
+  sudo tee /etc/apt/sources.list.d/unikraft.list > /dev/null
+
+# Update the APT package index, and install the latest version of kraftkit:
+sudo apt-get update
+sudo apt-get install kraftkit
+```
+
+```bash title="Fedora/RHEL/Rocky/Alma"
+# Add the Kraftkit repository
+sudo tee /etc/yum.repos.d/kraftkit.repo <<EOF
+[kraftkit]
+name=KraftKit Repo
+baseurl=https://rpm.pkg.kraftkit.sh
+enabled=1
+gpgcheck=0
+EOF
+
+# Install the CLI
+yum makecache
+yum install -y kraftkit
+```
+
+```bash title="Arch"
+git clone https://aur.archlinux.org/kraftkit-bin.git
+cd kraftkit-bin
+makepkg -si
+```
+
+```bash title="Nix"
+nix run github:unikraft/nur#kraftkit
+```
+</CodeTabs>
+
+## Quick start
+
+```sh
+# Deploy an instance
+kraft cloud deploy -p 443:8080/http+tls -M 512 .
+
+# List instances
+kraft cloud instance list
+```
+
+## Choosing a CLI
+
+| Feature | unikraft | kraft cloud |
+|---------|----------|-------------|
+| Recommended for new users | Yes | No |
+| Profile management | Yes | Limited |
+| Scale-to-zero support | Yes | Yes |
+| Compose support | No | Yes |
+
+If you are getting started with Unikraft Cloud, use the **unikraft** CLI.
+If you need Docker Compose-style workflows use the **kraft cloud** CLI.
+
+[Back to CLI overview](/docs/cli/overview)

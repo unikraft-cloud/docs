@@ -6,9 +6,9 @@ description: |
 ---
 
 This document describes the Unikraft Cloud Instances API (v1) for managing Unikraft instances.
-An *instance* is a Unikraft virtual machine running a single instance of your app.
+An *instance* is a MicroVM running a single instance of your app.
 
-### Instance states
+## Instance states
 
 An instance can be in one of the following states:
 
@@ -16,21 +16,20 @@ An instance can be in one of the following states:
 |------------|-------------|
 | `stopped`  | The instance isn't running and doesn't count against live resource quotas. Connections can't establish. |
 | `starting` | The instance is booting up. This typically takes just a few milliseconds. |
-| `running`  | Your app reaches its main entry point. |
+| `running`  | Your app reached its main entry point. |
 | `draining` | The instance is draining connections before shutting down. No new connections can establish. |
 | `stopping` | The instance is shutting down. |
 | `standby`  | The instance has scaled-to-zero. The instance isn't running, but will be automatically started when there are incoming requests. |
 
 Unikraft Cloud reports these as instance `state` values via the endpoints.
-LSB (least significant bit) is the lowest order bit in a binary number.
 
-### Stop reason
+## Stop reason
 
 To understand why Unikraft Cloud stopped an instance or is shutting it down, it provides information about the stop reason.
-You can retrieve this information via the [`GET /v1/instances`](#status) endpoint when an instance is in the `draining`, `stopping`, `stopped` or `standby` state.
+You can retrieve this information via the [`GET /instances`](/api/platform/v1/instances#list-instances) endpoint when an instance is in the `draining`, `stopping`, `stopped` or `standby` state.
 
 The `stop_reason` contains a bitmask that tells you the origin of the shutdown:
-| Bit  | 4 [F]                     | 3 [U]                      | 2 [P]                      | 1 [A]                              | 0 [K] (least significant bit, LSB)    |
+| Bit  | 4 [F]                     | 3 [U]                      | 2 [P]                      | 1 [A]                              | 0 [K]                                 |
 |------|---------------------------|----------------------------|----------------------------|------------------------------------|---------------------------------------|
 |Desc. | This was a force stop[^1] | Stop initiated by user[^2] | Stop initiated by platform | App exited - `exit_code` available | Kernel exited - `stop_code` available |
 
@@ -41,7 +40,7 @@ For example, the `stop_reason` has the following values in these scenarios:
 | `28`  | `11100`/`FUP--` | Forced user-initiated shutdown. |
 | `15`  | `01111`/`-UPAK` | Regular user-initiated shutdown. The app and kernel have exited. The `exit_code` and `stop_code` show if the app and kernel shut down cleanly. |
 | `13`  | `01101`/`-UP-K` | The user initiated a shutdown but the app was forcefully killed by the kernel during shutdown. This can be the case if the image doesn't support a clean app exit or the app crashed after receiving a termination signal. Unikraft Cloud ignores the `exit_code` in this scenario. |
-| `7`   | `00111`/`--PAK` | Unikraft Cloud initiated the shutdown (for example, due to [scale-to-zero](/docs/api/v1/autoscale#scaletozero)). The app and kernel have exited. The `exit_code` and `stop_code` show if the app and kernel shut down cleanly. |
+| `7`   | `00111`/`--PAK` | Unikraft Cloud initiated the shutdown (for example, due to [scale-to-zero](/features/scale-to-zero)). The app and kernel have exited. The `exit_code` and `stop_code` show if the app and kernel shut down cleanly. |
 | `3`   | `00011`/`---AK` | The app exited. The `exit_code` and `stop_code` show if the app and kernel shut down cleanly. |
 | `1`   | `00001`/`----K` | The instance likely experienced a fatal crash and the `stop_code` contains more information about the cause of the crash. |
 | `0`   | `00000`/`-----` | The stop reason is unknown. |
@@ -65,7 +64,7 @@ Unikraft Cloud defines the `stop_code` by the kernel and has the following encod
 |------|------------------|------------------|----------------|-----------------|----------------|
 | Desc.| Reserved[^3]     | `errno`          | `shutdown_bit` | `initlvl`       | `reason`       |
 
-### Reason
+#### Reason
 
 The `reason` can be any of the following values:
 
@@ -98,7 +97,7 @@ A level of `127` means the instance was executing the app.
 
 :::note
 For example, an out-of-memory (OOM) situation triggers a page fault `PGFAULT(4)` with `errno` set to `ENOMEM(12)`.
-In that case the `stop_code` is `0x000C7F04=818948` and the `stop_reason` is `----K(1)` if the stop occurred during app execution.
+In that case the `stop_code` is `0x000C7F04=818948` and the `stop_reason` is `----K (1)` if the stop occurred during app execution.
 :::
 
 
@@ -117,7 +116,8 @@ When an instance stops, Unikraft Cloud evaluates the stop reason and the restart
 It uses an exponential back-off delay (immediate, 5s, 10s, 20s, 40s, 5m) to slow down restarts in tight crash loops.
 If an instance runs without problems for 10s, Unikraft Cloud resets the back-off delay and the restart sequence ends.
 
-The `restart.attempt` value in [`GET /v1/instances`](#status) counts restarts in the current sequence.
+The `restart.attempt` value in [`GET /instances`](/api/platform/v1/instances#list-instances) counts restarts in the current sequence.
+The number of completed restarts is `restart_count`.
 The `restart.next_at` field indicates when the next restart occurs if a back-off delay is in effect.
 
 A manual start or stop of the instance aborts the restart sequence and resets the back-off delay.
@@ -129,3 +129,165 @@ A manual start or stop of the instance aborts the restart sequence and resets th
 [^2]: A stop command originating from the user travels through the platform controller.
       This is why bit 2 [P] will also always occur for user-initiated stops.
 [^3]: The system sets reserved bits to 0. Ignore them.
+
+## Instance templates
+
+An instance template is a snapshotted instance that acts as a source for cloning new instances.
+Cloning a template creates a new instance that resumes from the exact original system state. 
+It preserves memory contents, open files, and populated caches to bypass the standard boot sequence.
+Once you convert an instance into a template, you can't reverse the process.
+
+To transition an actively running instance into a template, from the guest write the value 1 to `/uk/libukp/template_instance`:
+
+```bash title="Convert instance to template"
+echo 1 > /uk/libukp/template_instance
+```
+
+This action instructs the controller to freeze running processes and save the instance as a reusable template.
+
+Templates support [delete locks](/platform/delete-locks), [tags](/platform/tagging), and [autokill](/features/autokill).
+The platform measures autokill on a template from the time of last clone, not from instance stop time.
+
+### Nested templates
+
+You can clone a template from another template, creating a hierarchy.
+Each clone inherits the parent's full state at clone time and can independently accumulate further state before you convert it into its own template.
+This enables layered configurations, for example a base template with a warm database connection pool, and child templates specialized for different query workloads.
+
+No depth limit applies to nesting, and circular references aren't possible because the template state is immutable once set.
+
+For more information, check out the API reference for instance templates [here](/api/platform/v1/instances#create-template-instances-from-instances).
+
+## Creating instances
+
+### Replicas
+
+The [`POST /instances`](/api/platform/v1/instances#create-instance) request accepts a `replicas` field (default 0) that creates more copies of the instance alongside the base one.
+
+| Value | Instances created |
+|-------|-------------------|
+| `0`   | 1 (the base instance) |
+| `1`   | 2 (base + 1 replica) |
+| `N`   | N + 1 |
+
+All instances share the same image, memory, arguments, and service group configuration.
+Replicas receive independent names and UUIDs.
+
+### Wait for running
+
+By default [`POST /instances`](/api/platform/v1/instances#create-instance) returns as soon as the platform queues the instance.
+Set `timeout_s` non-zero to block until the instance reaches the `running` state or the timeout expires.
+For example:
+
+```json title="POST /instances"
+{
+  ...
+  "image": "nginx:latest",
+  "memory_mb": 256,
+  "timeout_s": 10,
+  ...
+}
+```
+
+:::note
+`wait_timeout_ms` is a deprecated compatibility field.
+When set, the platform rounds the value up to the next full second.
+Use `timeout_s` instead.
+:::
+
+### Delete on stop
+
+Pass `delete-on-stop` in the features array to automatically delete the instance when it stops:
+
+```json title="POST /instances"
+{
+  ...
+  "image": "nginx:latest",
+  "memory_mb": 256,
+  "features": ["delete-on-stop"],
+  "restart_policy": "never",
+  ...
+}
+```
+
+This is useful for ephemeral workloads—batch jobs, one-shot tasks—where you don't need to keep the stopped instance.
+
+:::note
+To use the "delete-on-stop" feature, set the `restart_policy` to `never`.
+:::
+
+## Stopping instances
+
+### Drain timeout
+
+By default [`PUT /instances/stop`](/api/platform/v1/instances#stop-instances) stops the instance immediately.
+Set `drain_timeout_ms` to allow the instance to finish serving in-flight connections before it stops.
+
+| Value | Behaviour |
+|-------|-----------|
+| `0`   | Stop immediately (default). |
+| `-1`  | Use the platform's maximum drain timeout. |
+| `N`   | Drain for up to N milliseconds, then stop. |
+
+```json title="PUT /instances/stop"
+{
+  ...
+  "name": "my-instance",
+  "drain_timeout_ms": 5000,
+  ...
+}
+```
+
+While draining, the instance enters the `draining` state.
+The platform accepts no new connections.
+The instance stops once all connections close or the timeout elapses.
+
+:::note
+You can't combine `drain_timeout_ms` with `force: true`.
+Setting both returns a `400` error.
+:::
+
+## Instance metrics
+
+Use the [`GET /instances/metrics`](/api/platform/v1/instances#get-instances-metrics) endpoint to retrieve runtime statistics for one or more instances.
+With no identifiers, the platform returns metrics for all instances in your account.
+
+### Response format
+
+Include the header `Accept: application/json` to receive a JSON response.
+Otherwise, you will receive metrics in Prometheus text format, that you can parse with Prometheus client libraries.
+
+**JSON response**: each instance object contains:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `state` | string | Current instance state. |
+| `start_count` | int | Number of times the instance has started. |
+| `restart_count` | int | Number of restarts (omitted if 0). |
+| `started_at` | timestamp | Time of last start (omitted if unset). |
+| `stopped_at` | timestamp | Time of last stop (omitted if unset). |
+| `uptime_ms` | int64 | Current uptime in milliseconds. |
+| `boot_time_us` | int | Boot time in microseconds (omitted if 0). |
+| `net_time_us` | int | Network setup time in microseconds (omitted if 0). |
+| `rss_bytes` | int64 | Resident set size in bytes. |
+| `cpu_time_ms` | int64 | Consumed CPU time in milliseconds. |
+| `rx_bytes` | int64 | Bytes received over the network. |
+| `rx_packets` | int64 | Packets received from the network. |
+| `tx_bytes` | int64 | Bytes transmitted over the network. |
+| `tx_packets` | int64 | Packets transmitted over the network. |
+| `nconns` | int | Number of active connections. |
+| `nreqs` | int | Number of active HTTP requests. |
+| `nqueued` | int | Number of queued connections or requests. |
+| `ntotal` | int64 | Total connections or requests processed since start. |
+| `wakeup_latency` | array | Histogram buckets. Each bucket has `bucket_ms` (upper bound, or `null` for overflow) and `count`. |
+| `wakeup_latency_sum` | uint64 | Sum of all recorded wakeup latencies. |
+
+## Instance logs
+
+Use the [`GET /instances/logs`](/api/platform/v1/instances#get-instances-logs) endpoint to retrieve logs for one or more instances.
+The logs capture the instance's `stdout` and `stderr` output, and they're preserved across restarts and stops.
+
+## Learn more
+
+* The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
+* Unikraft Cloud's [REST API reference](/api/platform/v1), in particular the section on [instances](/api/platform/v1/instances).

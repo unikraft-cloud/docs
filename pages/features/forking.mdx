@@ -1,0 +1,136 @@
+---
+title: Instance Forking
+navigation_icon: git-fork
+---
+
+:::caution
+Instance forking is a preview feature and isn't yet available on stable.
+The interface described here reflects the current implementation and may change before general availability.
+:::
+
+Instance forking lets a running instance create an independent copy of itself at a snapshot boundary.
+Both the original instance (the **parent**) and the copy (the **child**) resume execution from the same memory state.
+This works like `fork(2)` in a POSIX process.
+
+The app inside an instance triggers the fork through a filesystem interface.
+
+## Filesystem interface
+
+The fork interface uses a FUSE (Filesystem in Userspace) filesystem mounted at `/uk/libukp` inside every instance.
+Apps trigger forks and track child instances by reading and writing (ASCII) files in this filesystem.
+
+The filesystem exposes the following top-level entries:
+
+| Path | Read | Write | Description |
+|------|------|-------|-------------|
+| `/uk/libukp/fork` | Returns the child UUID after a fork (for the parent), or empty (for the child). | Triggers a new fork operation. | Main entry point for forking. |
+| `/uk/libukp/vm/` | Directory listing of all child instance UUIDs. | — | Each child gets a subdirectory named by its UUID. |
+
+## Triggering a fork
+
+To fork the current instance, write any value to the `fork` file:
+
+```bash
+echo "1" > /uk/libukp/fork
+```
+
+The write blocks until the platform completes the fork.
+When it returns, the parent can read the child's UUID from the same file:
+
+```bash
+# Returns the UUID of the newly created child (parent only)
+# To support parallel forks, only the thread initiating the fork can read the return value from the file.
+cat /uk/libukp/fork
+```
+
+For the child instance, reading `/uk/libukp/fork` returns a zero UUID.
+This is how an app determines whether it's the parent or the child after a fork.
+
+### Concurrent fork requests
+
+The `ukp-fuse` daemon serializes fork operations.
+Only one fork can run at a time.
+If a second fork request arrives while one runs, the daemon queues it.
+If the queue fills up, the write returns `EBUSY`.
+
+The daemon processes queued requests in order once the current fork completes.
+
+## Tracking child instances
+
+After a fork, a new directory appears at `/uk/libukp/vm/<child-uuid>/` containing files that reflect the child's state:
+
+| File | Read | Write | Description |
+|------|------|-------|-------------|
+| `snapshot` | Snapshot UUID the child originates from. | — | Read-only. |
+| `creation_time` | Unix timestamp (seconds since epoch) of child creation. | — | Read-only. |
+| `status` | Current state: `Starting`, `Running`, `Draining`, `Stopping`, `Stopped`, or `Template`. | — | Read-only. |
+| `wait` | Exit code of the child (available once stopped). | Write any value to begin waiting for the child to stop. | Supports `poll()` for non-blocking use. Returns `POLLIN` when the exit code becomes available. |
+
+### Waiting for a child to stop
+
+To block until a child instance exits:
+
+```bash
+# Write to begin the wait, then read the exit code
+echo "1" > /uk/libukp/vm/<child-uuid>/wait
+cat /uk/libukp/vm/<child-uuid>/wait
+```
+
+The write to `wait` blocks until the child stops.
+After the write completes, reading `wait` returns the numeric exit code.
+
+If the child has already stopped by the time you write to `wait`, the write completes immediately.
+
+Many processes can wait on the same child concurrently.
+The daemon notifies each one when the child exits.
+
+For non-blocking usage, `poll()` on the `wait` file descriptor returns `POLLIN` when the exit status becomes available.
+
+### Checking child status
+
+To inspect a child's current state without blocking:
+
+```bash
+cat /uk/libukp/vm/<child-uuid>/status
+# Output: Running
+```
+
+The platform updates the status file in real time.
+
+Possible states and their numeric values:
+
+| State | Description |
+|-------|-------------|
+| `Stopped` | Instance has exited. |
+| `Starting` | Instance is booting. |
+| `Running` | Instance is running. |
+| `Draining` | Instance is draining connections before stopping. |
+| `Stopping` | Instance is shutting down. |
+| `Template` | Instance has become a template. |
+
+## Child lifecycle
+
+- Children have `delete-on-stop` enabled automatically.
+The platform removes them when they stop.
+- The child's `/uk/libukp/vm/` directory starts empty.
+The child doesn't inherit any children from the parent—it only sees children from forks it starts itself.
+- A parent can have many children alive at the same time.
+- A child can itself fork, becoming a parent to its own children.
+
+## Error handling
+
+| Error | Cause |
+|-------|-------|
+| `EBUSY` | Fork queue is full. |
+| `EIO` | Hardware signal to the platform failed, or the request belonged to a parent before a fork occurred. |
+| `ESTALE` | A child VM directory access occurred after the child's cleanup (for example, after the current instance became a child via fork). |
+
+## Constraints
+
+- The REST API and `kraft` can't trigger a fork.
+You must start it from within the instance via the `/uk/libukp/fork` file.
+
+## Learn more
+
+- [Instance templates](/platform/instances#instance-templates): a related snapshot-based feature for creating instances from a stopped template
+- [Instances](/platform/instances)

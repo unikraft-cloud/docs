@@ -1,0 +1,18 @@
+:2015
+
+header {
+  Server "UnikraftCloud"
+}
+
+redir / /docs
+
+handle /docs* {
+  root * /var/www
+  encode gzip
+  file_server
+  try_files {path}/index.html {path}.html {path}
+}
+
+handle {
+  respond 404
+}

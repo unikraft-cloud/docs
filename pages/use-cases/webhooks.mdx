@@ -1,0 +1,111 @@
+---
+title: Webhooks
+navigation_icon: plug
+---
+
+Webhooks, also known as reverse APIs, enable real-time, event-driven communication between services.
+Instead of constantly polling for updates, webhooks allow services to push data to your app the moment something happens.
+This could be when someone pushes a commit, processes a payment, or creates an issue.
+This makes webhooks essential for building reactive, event-driven architectures.
+
+With **Unikraft Cloud**, you can deploy webhook receivers that combine instant availability with scale-to-zero economics—paying only when events arrive, while maintaining millisecond-level response times.
+
+## Why run webhook receivers on Unikraft Cloud
+
+### ⚡ Instant wake-up for bursty events
+
+Webhooks are inherently sporadic—events can arrive in bursts or be silent for hours.
+Traditional servers waste resources running every day, waiting for events.
+Unikraft Cloud's microVM architecture provides:
+
+* Single-digit-millisecond cold starts ensure instant response when events arrive.
+* No noticeable delay for webhook senders, maintaining reliable integrations.
+* Minimal memory footprint allows running many specialized webhook receivers.
+
+### 🔒 Isolated and secure
+
+Webhook receivers often process sensitive data from external services.
+Unikraft Cloud provides VM-level isolation for each instance:
+
+* Strong isolation prevents cross-contamination between different webhook handlers.
+* Built-in HTTPS endpoints with automatic TLS certificate management.
+
+### 💸 Pay only for events
+
+Why pay for idle servers when webhooks only fire occasionally?
+With Unikraft Cloud:
+
+* Webhook receivers scale-to-zero when not processing events, costing nothing.
+* Instant wake-up ensures the system processes events immediately upon arrival.
+* Fine-grained billing means you only pay for actual event processing.
+
+
+## Getting started
+
+This guide shows you how to deploy a GitHub webhook receiver that listens for repository events.
+The example uses Node.js with Express and the official [Octokit webhooks library](https://www.npmjs.com/package/@octokit/webhooks).
+To run it, follow these steps:
+
+1. Install the [`kraft` CLI tool](https://unikraft.org/docs/cli/install) and a container runtime engine (for example, [Docker](https://docs.docker.com/engine/install/)).
+
+1. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/webhook-github-node/` directory:
+
+```bash
+git clone https://github.com/unikraft-cloud/examples
+cd examples/webhook-github-node/
+```
+
+Make sure to log into Unikraft Cloud by setting your token and a [metro](/platform/metros) close to you.
+This guide uses `fra` (Frankfurt, 🇩🇪):
+
+```bash
+# Set Unikraft Cloud access token
+export UKC_TOKEN=token
+# Set metro to Frankfurt, DE
+export UKC_METRO=fra
+```
+
+Follow the instructions in the example's README to set it up and grab the server's FQDN.
+After that, check that the service is up:
+
+```bash
+curl https://<your-server-fqdn>/health
+```
+
+```text
+{"status":"healthy","timestamp":"2025-12-17T14:55:20.953Z","uptime":0.063799807}
+```
+
+To create a webhook in GitHub, follow the [official documentation](https://docs.github.com/en/webhooks/using-webhooks/creating-webhooks) and the indications in the example's README.
+
+The example includes:
+
+* **Signature validation** using GitHub's webhook secret (via Octokit library).
+* **Event logging** with timestamps for debugging and auditing.
+* **Health check** endpoint for monitoring and load balancer integration.
+* **Scale-to-zero configuration** in the `Kraftfile`.
+
+To customize for other webhook sources ([Stripe](https://docs.stripe.com/webhooks), [Slack](https://docs.slack.dev/tools/node-slack-sdk/webhook/), [GitLab](https://docs.gitlab.com/user/project/integrations/webhooks/), etc.), it's best to refer to their specific libraries and signature validation methods.
+Webhooks aren't a standardized protocol, so each service has its own conventions.
+Also follow [Webhooks.fyi](https://webhooks.fyi/) for best practices.
+
+## Learn more
+
+Use the `--help` option for detailed information on using Unikraft Cloud:
+
+<CodeTabs syncKey="cli-tool">
+
+```bash title="kraft"
+kraft cloud --help
+```
+
+</CodeTabs>
+
+Or visit the [CLI Reference](/docs/cli/unikraft) or the [legacy CLI reference](/docs/cli/kraft/overview).
+
+For more information, check out these resources:
+
+* [Express Documentation](https://expressjs.com/).
+* [GitHub Webhooks Documentation](https://docs.github.com/en/webhooks).
+* [Securing GitHub Webhooks](https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries).
+* [Webhook Best Practices](https://webhooks.fyi/).

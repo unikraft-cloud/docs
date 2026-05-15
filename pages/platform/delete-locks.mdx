@@ -1,0 +1,170 @@
+---
+title: Delete Locks
+navigation_icon: lock
+---
+
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "zudoku/ui/Tabs"
+
+:::caution
+The [KraftKit CLI tool](/cli/) doesn't expose this feature to users yet.
+Use it via the [Unikraft Cloud API](/api/platform/v1).
+:::
+
+Delete locks prevent accidental deletion of instances and volumes.
+When you set a delete lock on a resource, any attempt to delete it returns an error until you remove it.
+
+Delete locks apply to:
+- Instances
+- Instance templates
+- Volumes
+- Volume templates
+
+## Enabling a delete lock
+
+You can set a delete lock on a resource via a `PATCH` operation.
+Set `UKC_TOKEN` and `UKC_METRO` for the API calls:
+
+<Tabs defaultValue="instance">
+  <TabsList>
+    <TabsTrigger value="instance">Instance</TabsTrigger>
+    <TabsTrigger value="instance-tpl">Instance Template</TabsTrigger>
+    <TabsTrigger value="volume">Volume</TabsTrigger>
+    <TabsTrigger value="volume-tpl">Volume Template</TabsTrigger>
+  </TabsList>
+  <TabsContent value="instance">
+```bash title="Locking an instance"
+curl -X PATCH \
+    -H "Authorization: Bearer $UKC_TOKEN" \
+    -H "Content-Type: application/json" \
+    "https://api.$UKC_METRO.unikraft.cloud/v1/instances" \
+    -d "[{
+        'name': '<instance-name>',
+        'prop': 'delete_lock',
+        'op': 'set',
+        'value': true 
+    }]"
+```
+  </TabsContent>
+  <TabsContent value="instance-tpl">
+```bash title="Locking an instance template"
+curl -X PATCH \
+    -H "Authorization: Bearer $UKC_TOKEN" \
+    -H "Content-Type: application/json" \
+    "https://api.$UKC_METRO.unikraft.cloud/v1/instance/templates" \
+    -d "[{
+        'name': '<instance-template-name>',
+        'prop': 'delete_lock',
+        'op': 'set',
+        'value': true 
+    }]"
+```
+  </TabsContent>
+  <TabsContent value="volume">
+```bash title="Locking a volume"
+curl -X PATCH \
+    -H "Authorization: Bearer $UKC_TOKEN" \
+    -H "Content-Type: application/json" \
+    "https://api.$UKC_METRO.unikraft.cloud/v1/volumes" \
+    -d "[{
+        'name': '<volume-name>',
+        'prop': 'delete_lock',
+        'op': 'set',
+        'value': true 
+    }]"
+```
+  </TabsContent>
+  <TabsContent value="volume-tpl">
+```bash title="Locking a volume template"
+curl -X PATCH \
+    -H "Authorization: Bearer $UKC_TOKEN" \
+    -H "Content-Type: application/json" \
+    "https://api.$UKC_METRO.unikraft.cloud/v1/volume/templates" \
+    -d "[{
+        'name': '<volume-template-name>',
+        'prop': 'delete_lock',
+        'op': 'set',
+        'value': true 
+    }]"
+```
+  </TabsContent>
+</Tabs>
+
+## Removing a delete lock
+
+Before you can delete a resource, you need to remove the delete lock by setting its value to `false`:
+
+<Tabs defaultValue="instance">
+  <TabsList>
+    <TabsTrigger value="instance">Instance</TabsTrigger>
+    <TabsTrigger value="instance-tpl">Instance Template</TabsTrigger>
+    <TabsTrigger value="volume">Volume</TabsTrigger>
+    <TabsTrigger value="volume-tpl">Volume Template</TabsTrigger>
+  </TabsList>
+  <TabsContent value="instance">
+```bash title="Unlocking an instance"
+curl -X PATCH \
+    -H "Authorization: Bearer $UKC_TOKEN" \
+    -H "Content-Type: application/json" \
+    "https://api.$UKC_METRO.unikraft.cloud/v1/instances" \
+    -d "[{
+        'name': '<instance-name>',
+        'prop': 'delete_lock',
+        'op': 'set',
+        'value': false 
+    }]"
+```
+  </TabsContent>
+  <TabsContent value="instance-tpl">
+```bash title="Unlocking an instance template"
+curl -X PATCH \
+    -H "Authorization: Bearer $UKC_TOKEN" \
+    -H "Content-Type: application/json" \
+    "https://api.$UKC_METRO.unikraft.cloud/v1/instance/templates" \
+    -d "[{
+        'name': '<instance-template-name>',
+        'prop': 'delete_lock',
+        'op': 'set',
+        'value': false 
+    }]"
+```
+  </TabsContent>
+  <TabsContent value="volume">
+```bash title="Unlocking a volume"
+curl -X PATCH \
+    -H "Authorization: Bearer $UKC_TOKEN" \
+    -H "Content-Type: application/json" \
+    "https://api.$UKC_METRO.unikraft.cloud/v1/volumes" \
+    -d "[{
+        'name': '<volume-name>',
+        'prop': 'delete_lock',
+        'op': 'set',
+        'value': false 
+    }]"
+```
+  </TabsContent>
+  <TabsContent value="volume-tpl">
+```bash title="Unlocking a volume template"
+curl -X PATCH \
+    -H "Authorization: Bearer $UKC_TOKEN" \
+    -H "Content-Type: application/json" \
+    "https://api.$UKC_METRO.unikraft.cloud/v1/volume/templates" \
+    -d "[{
+        'name': '<volume-template-name>',
+        'prop': 'delete_lock',
+        'op': 'set',
+        'value': false 
+    }]"
+```
+  </TabsContent>
+</Tabs>
+
+## Behaviour
+
+- **Deletion blocked**: Any `DELETE` request on a locked resource returns an error.
+- **Autokill skipped**: The [autokill](/features/autokill) subsystem skips instances and service groups that have a delete lock set.
+- **Templates**: Delete locks are independently configurable on instance templates and volume templates via their respective `PATCH` endpoints.
+
+## Learn more
+
+* The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
+* Unikraft Cloud's [REST API reference](/api/platform/v1), in particular the sections on [instances](/api/platform/v1/instances) and [volumes](/api/platform/v1/volumes).

@@ -1,0 +1,431 @@
+---
+title: Serverless Functions
+navigation_icon: function-square
+---
+
+Serverless functions let you deploy small pieces of business logic without managing servers or runtimes.
+They're ideal for event-driven pipelines, API backends, and dynamic code execution—but traditional function-as-a-service platforms often suffer from cold-start penalties and opaque sandboxing.
+
+With **Unikraft Cloud**, you can run serverless functions inside microVMs: instant availability, VM-level isolation, and true scale-to-zero economics.
+The ROM (Read-Only Memory) model goes one step further—package your function code independently of the runtime image, and swap it in at instance creation time.
+
+## Why run serverless functions on Unikraft Cloud
+
+### ⚡ Millisecond cold starts with instance templates
+
+Unikraft Cloud's [instance templates](/platform/instances#instance-templates) pre-initialize a runtime once, then stamp out new instances from that snapshot.
+Combined with stateful scale-to-zero, instances resume from a warm snapshot rather than booting from scratch:
+
+* Single-digit-millisecond wake-ups, even under burst traffic.
+* No re-execution of startup logic between requests.
+
+### 🔒 Strong isolation per function
+
+Every function instance runs in its own microVM.
+No shared kernel, no noisy-neighbour risk, and no container escape surface.
+Sensitive business logic stays protected even when other tenants share the same platform.
+
+### 💸 Pay only for execution
+
+Functions are inherently bursty.
+Scale-to-zero means an idle function costs nothing.
+The ROM model makes this even leaner: you package the base runtime image once, and only the lightweight function ROM changes per deployment.
+
+### 🔄 Decouple runtime from function code
+
+ROMs separate the runtime image (Node.js, Python, etc.) from the function payload:
+
+* Update function code by pushing a new ROM—no runtime rebuild required.
+* Run many specialised functions from a single base image.
+* Instant rollback by pointing an instance at a previous ROM version.
+
+## Getting started
+
+This guide uses the [`node-code-execution`](https://github.com/unikraft-cloud/examples/tree/main/node-code-execution) example.
+It deploys a Node.js runtime as the base image, then attaches JavaScript or TypeScript function ROMs to instances of that runtime.
+
+### Prerequisites
+
+1. Install the CLI:
+   Use the [unikraft CLI](/docs/cli/unikraft) or the legacy [kraft CLI](https://unikraft.org/docs/cli/install).
+   You need a [BuildKit](https://github.com/moby/buildkit) builder—the easiest way is via [Docker](https://docs.docker.com/engine/install/).
+
+1. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/node-code-execution` directory:
+
+```bash
+git clone https://github.com/unikraft-cloud/examples
+cd examples/node-code-execution/
+```
+
+Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
+This guide uses `fra` (Frankfurt, 🇩🇪):
+
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft login
+```
+
+```bash title="kraft"
+# Set Unikraft Cloud access token
+export UKC_TOKEN=token
+# Set metro to Frankfurt, DE
+export UKC_METRO=fra
+```
+
+</CodeTabs>
+
+### Step 1: Package and push the base runtime image
+
+The base image contains a Node.js server (`server.ts`) that loads a function from the attached ROM and executes it on each HTTP request.
+Right before starting the server, it writes `1` to `/uk/libukp/template_instance`, which triggers Unikraft Cloud to convert the running instance into a [template](/platform/instances#instance-templates).
+
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft build . --output <my-org>/node-code-exec:latest
+```
+
+```bash title="kraft"
+kraft pkg \
+   --name index.unikraft.io/<my-org>/node-code-exec:latest \
+   --plat kraftcloud \
+   --arch x86_64 \
+   --rootfs-type erofs \
+   --push \
+   .
+```
+
+</CodeTabs>
+
+### Step 2: Create a template from the base image
+
+Boot a short-lived instance from the base image without any ROM attached.
+The instance self-converts into a template and exits:
+
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft run --metro fra \
+  --name node-exec \
+  -m 512M \
+  --image <my-org>/node-code-exec:latest
+```
+
+```bash title="kraft"
+kraft cloud instance create \
+  --start \
+  --name node-exec \
+  -M 512Mi \
+  <my-org>/node-code-exec:latest
+```
+
+</CodeTabs>
+
+The output shows the instance details:
+
+<CodeTabs syncKey="cli-tool">
+
+```ansi title="unikraft"
+metro:        fra
+name:         node-exec
+uuid:         96608ed2-45e0-4c8f-8269-5d8cd3e4b41a
+state:        [92mstarting[0m
+image:        <my-org>/node-code-exec
+resources:
+  memory:     512MiB
+  vcpus:      1
+networks:
+- uuid:       6f7a8b9c-0d1e-2f3a-4b5c-f6a7b8c9d0e1
+  private-ip: 10.0.5.4
+  mac:        12:b0:6c:3e:ab:95
+timestamps:
+  created:    just now
+```
+
+```ansi title="kraft"
+[90m[[0m[92m●[0m[90m][0m Deployed successfully!
+ [90m│[0m
+ [90m├[0m[90m─────────[0m [90mname[0m: node-exec
+ [90m├[0m[90m─────────[0m [90muuid[0m: 96608ed2-45e0-4c8f-8269-5d8cd3e4b41a
+ [90m├[0m[90m────────[0m [90mmetro[0m: https://api.fra.unikraft.cloud/v1
+ [90m├[0m[90m────────[0m [90mstate[0m: [92mstarting[0m
+ [90m├[0m[90m────────[0m [90mimage[0m: oci://unikraft.io/<my-org>/node-code-exec@sha256:71487fd6196987cf65fb89eb84405cb796677aba177dabacf391f09618313328
+ [90m├[0m[90m───────[0m [90mmemory[0m: 512 MiB
+ [90m├[0m[90m─[0m [90mprivate fqdn[0m: node-exec.internal
+ [90m└[0m[90m───[0m [90mprivate ip[0m: 10.0.5.4
+```
+
+</CodeTabs>
+
+This instance is short-lived, since right before the server starts, it triggers a conversion into a template.
+To confirm the template is ready:
+
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft instances templates list
+```
+
+```bash title="kraft"
+kraft cloud instance template list
+```
+
+</CodeTabs>
+
+<br/>
+
+<CodeTabs syncKey="cli-tool">
+
+```ansi title="unikraft"
+[1mMETRO[0m  [1mNAME[0m       [1mSTATE[0m     [1mIMAGE[0m                    [1mARGS[0m  [1mMEMORY[0m  [1mVCPUS[0m  [1mCREATED[0m
+fra    node-exec  [94mtemplate[0m  <my-org>/node-code-exec        512MiB  1      just now
+```
+
+```ansi title="kraft"
+[1mNAME[0m       [1mIMAGE[0m                                                                                                              [1mARGS[0m  [1mCREATED AT[0m
+node-exec  oci://unikraft.io/<my-org>/node-code-exec@sha256:71487fd6196987cf65fb89eb84405cb796677aba177dabacf391f09618313328        20 seconds ago
+```
+
+</CodeTabs>
+
+
+### Step 3: Package and push the function ROMs
+
+ROMs package only the function source files—no runtime needed.
+Package both example functions:
+
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft build rom1/ --output <my-org>/node-rom1:latest
+unikraft build rom2/ --output <my-org>/node-rom2:latest
+```
+
+```bash title="kraft"
+kraft pkg \
+   --rom ./fs \
+   --rom-type erofs \
+   --plat kraftcloud \
+   --arch x86_64 \
+   --name index.unikraft.io/<my-org>/node-rom1:latest \
+   --push \
+   rom1/
+kraft pkg \
+   --rom ./fs \
+   --rom-type erofs \
+   --plat kraftcloud \
+   --arch x86_64 \
+   --name index.unikraft.io/<my-org>/node-rom2:latest \
+   --push \
+   rom2/
+```
+
+</CodeTabs>
+
+### Step 4: Create instances from the template with ROMs attached
+
+Stamp out instances from the template, each with a different ROM.
+New instances skip the cold-start initialization phase because they restore from the template snapshot.
+
+Create the first instance with the JavaScript ROM attached:
+
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft run --metro fra \
+  --name node-exec-rom1 \
+  -p 443:8080/tls+http \
+  --scale-to-zero policy=on,cooldown-time=1000,stateful=true \
+  --rom image=<my-org>/node-rom1:latest,at=/rom \
+  --template node-exec
+```
+
+```bash title="kraft"
+# kraft does not support creating instances with attached ROMs, but you can use the API directly
+curl -X POST "$UKC_METRO/instances" \
+   -H "Accept: application/json" \
+   -H "Authorization: Bearer $UKC_TOKEN" \
+   -H "Content-Type: application/json" \
+   -d '{
+   "name": "node-exec-rom1",
+   "template": {
+      "name": "node-exec"
+   },
+   "autostart": true,
+   "service_group": {
+      "services": [
+         {
+            "port": 443,
+            "destination_port": 8080,
+            "handlers": ["tls", "http"]
+         }
+      ]
+   },
+   "scale_to_zero": {
+      "policy": "on",
+      "stateful": true,
+      "cooldown_time_ms": 1000
+   },
+   "roms": [
+      {
+         "name": "js_function",
+         "image": "index.unikraft.io/<my-org>/node-rom1:latest",
+         "at": "/rom"
+      }
+   ]
+}'
+```
+
+</CodeTabs>
+
+Create the second instance with the TypeScript ROM attached:
+
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft run --metro fra \
+  --name node-exec-rom2 \
+  -p 443:8080/tls+http \
+  --scale-to-zero policy=on,cooldown-time=1000,stateful=true \
+  --rom image=<my-org>/node-rom2:latest,at=/rom \
+  --template node-exec
+```
+
+```bash title="kraft"
+# kraft does not support creating instances with attached ROMs, but you can use the API directly
+curl -X POST "$UKC_METRO/instances" \
+   -H "Accept: application/json" \
+   -H "Authorization: Bearer $UKC_TOKEN" \
+   -H "Content-Type: application/json" \
+   -d '{
+   "name": "node-exec-rom2",
+   "template": {
+      "name": "node-exec"
+   },
+   "autostart": true,
+   "service_group": {
+      "services": [
+         {
+            "port": 443,
+            "destination_port": 8080,
+            "handlers": ["tls", "http"]
+         }
+      ]
+   },
+   "scale_to_zero": {
+      "policy": "on",
+      "stateful": true,
+      "cooldown_time_ms": 1000
+   },
+   "roms": [
+      {
+         "name": "ts_function",
+         "image": "index.unikraft.io/<my-org>/node-rom2:latest",
+         "at": "/rom"
+      }
+   ]
+}'
+```
+
+</CodeTabs>
+
+Both instances run the same base Node.js runtime but execute different function code—without any rebuild of the runtime image.
+
+List the instances and note their FQDN values:
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft instances list
+```
+
+```bash title="kraft"
+kraft cloud instance list
+```
+
+</CodeTabs>
+
+<br/>
+
+<CodeTabs syncKey="cli">
+
+```ansi title="unikraft"
+[1mMETRO[0m  [1mNAME[0m            [1mSTATE[0m    [1mIMAGE[0m                    [1mARGS[0m  [1mMEMORY[0m  [1mVCPUS[0m  [1mFQDN[0m                                      [1mCREATED[0m
+fra    node-exec-rom2  [94mstandby[0m  <my-org>/node-code-exec        512MiB  1      nameless-wood-gw7pbnls.fra.unikraft.app   2 minutes ago
+fra    node-exec-rom1  [94mstandby[0m  <my-org>/node-code-exec        512MiB  1      sparkling-dawn-syowlbtj.fra.unikraft.app  3 minutes ago
+```
+
+```ansi title="kraft"
+[1mNAME[0m            [1mFQDN[0m                                      [1mSTATE[0m    [1mSTATUS[0m   [1mIMAGE[0m                                                       [1mMEMORY[0m   [1mVCPUS[0m  [1mARGS[0m  [1mBOOT TIME[0m
+node-exec-rom2  nameless-wood-gw7pbnls.fra.unikraft.app   [94mstandby[0m  standby  oci://unikraft.io/<my-org>/node-code-exec@sha256:71487f...  512 MiB  1            6.98 ms
+node-exec-rom1  sparkling-dawn-syowlbtj.fra.unikraft.app  [94mstandby[0m  standby  oci://unikraft.io/<my-org>/node-code-exec@sha256:71487f...  512 MiB  1            7.86 ms
+```
+
+</CodeTabs>
+
+Test both instances using the FQDNs from the listing:
+
+```bash
+curl https://sparkling-dawn-syowlbtj.fra.unikraft.app
+curl https://nameless-wood-gw7pbnls.fra.unikraft.app
+```
+
+```text
+Bye, World!
+Auf Wiedersehen!
+```
+
+## How it works
+
+The ROM deployment model has three layers:
+
+1. **Base runtime image**: A generic Node.js server that loads and executes code from a well-known path (`/rom/rom.js` or `/rom/rom.ts`).
+   Push it once; it changes infrequently.
+
+1. **Function ROM**: A read-only filesystem image containing only the function source file.
+   Lightweight, fast to build and push.
+   Attached to an instance at creation time and mounted at `/rom`.
+
+1. **Instance template**: A pre-initialized snapshot of the runtime, created automatically when the base image boots without a ROM.
+   New instances boot from this snapshot, skipping initialization and reducing cold-start latency to milliseconds.
+
+## Cleanup
+
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft instances delete node-exec-rom1 node-exec-rom2
+unikraft instances template delete node-exec
+```
+
+```bash title="kraft"
+kraft cloud instance remove node-exec-rom1 node-exec-rom2
+kraft cloud instance template remove node-exec
+```
+
+</CodeTabs>
+
+## Learn more
+
+Use the `--help` option for detailed information on using Unikraft Cloud:
+
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft --help
+```
+
+```bash title="kraft"
+kraft cloud --help
+```
+
+</CodeTabs>
+
+Or visit the [CLI Reference](/docs/cli/unikraft) or the [legacy CLI reference](/docs/cli/kraft/overview).
+
+For more on the ROM and template features:
+
+* [Instance templates](/platform/instances#instance-templates)
+* [ROMs](/platform/instances#roms)
+* [`node-code-execution` example](https://github.com/unikraft-cloud/examples/tree/main/node-code-execution)

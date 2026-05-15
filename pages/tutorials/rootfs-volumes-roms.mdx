@@ -1,0 +1,203 @@
+---
+title: Rootfses, Volumes and ROMs
+navigation_icon: square-stack
+---
+
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "zudoku/ui/Tabs"
+
+Rootfses, volumes and ROMs (Read-Only Memory) are storage types that share many similarities, but have different use cases and results.
+Below, this tutorial discusses each one of them and how to use them, and then does a quick comparison between the three.
+
+## Storage types
+
+### Rootfses
+
+The rootfs, also known as the initrd, is the main component in any instance running on Unikraft Cloud, and any UNIX-based operating system.
+It's used for configuring its default behaviour and contains all files needed for it to boot.
+On Unikraft Cloud it's used to also start a default app (without any specific configuration).
+When booting, the system loads rootfs pages in memory, which incurs a small access time characteristic to RAM read/write operations.
+
+At the same time, because the rootfs resides in volatile memory, changes aren't persistent across reboots.
+Because of this it's best to put only essential information in there to keep the size down (1-2GB maximum), to save on boot times and on used RAM.
+For persistent storage, consider using [volumes](/platform/volumes) instead.
+
+A rootfs can be of two types: `CPIO` or `EROFS`.
+Each type has its own advantages and disadvantages, but overall `EROFS` is better suited for Unikraft Cloud.
+The [rootfs formats](/tutorials/rootfs-formats) documentation page details both types.
+You can create a rootfs with the legacy [`kraft` CLI](https://unikraft.org/docs/cli/install) for both types, for example (legacy CLI only):
+
+<Tabs defaultValue="erofs">
+    <TabsList>
+        <TabsTrigger value="cpio">CPIO</TabsTrigger>
+        <TabsTrigger value="erofs">EROFS</TabsTrigger>
+    </TabsList>
+    <TabsContent value="cpio">
+    ```bash
+    kraft cloud deploy \
+        -p 443:8080 \
+        -M 900Mi \
+        --rootfs-type cpio \
+        demo/node-playwright-chromium
+    ```
+    </TabsContent>
+    <TabsContent value="erofs">
+    ```bash
+    kraft cloud deploy \
+        -p 443:8080 \
+        -M 900Mi \
+        --rootfs-type erofs \
+        --keep-file-owners \
+        demo/node-playwright-chromium
+    ```
+    </TabsContent>
+</Tabs>
+
+### Volumes
+
+[Volumes](/platform/volumes) are a non-essential, persistent, large storage component on Unikraft Cloud.
+You attach volumes to stopped instances or before you create them through the [API](/api/platform/v1/volumes#create-volume).
+They're automatically mounted in the instance at the specified path either `RW` (Read-Write) or `RO` (Read-Only).
+They're backed up on SSD (Solid State Drive) disks and offer redundancy without compromising on access latency.
+As such you can use them for persistent data, secrets, storage, logs, and more, and you can share them between instances.
+
+To create and use a volume, you can use the CLI volume commands.
+For example, you need to first create a volume:
+
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft volumes create \
+    --set name=my-volume \
+    --set size=100 \
+    --set metro=fra
+```
+
+```bash title="kraft"
+kraft cloud volume create --size 100 --name my-volume
+```
+
+</CodeTabs>
+
+Then you can optionally populate it with local data:
+
+<CodeTabs>
+
+```bash title="kraft"
+kraft cloud volume import --volume my-volume --source my-data/
+```
+
+</CodeTabs>
+
+Finally, when you deploy an instance you can attach the volume to it:
+
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft run --metro=fra -m 512MiB -p 443:8080/http+tls -v my-volume:/mnt --image=my-app:latest
+```
+
+```bash title="kraft"
+kraft cloud deploy \
+    -M 512 \
+    -p 443:8080 \
+    --volume my-volume:/mnt \
+    .
+```
+
+</CodeTabs>
+
+### ROMs
+
+[ROMs](/features/roms) are an extension of the rootfs concept and a good way to customize generic rootfses for many instances.
+They're attached on stopped instances, but aren't mounted automatically on boot as they can have any format (`ext4`, `cpio`, `erofs`, `xfs`, `ntfs`, etc).
+They're not persistent and are `RO` (Read-Only), and as such should contain only custom rootfs code/data.
+They're intended to be small, fast, and flexible as opposed to volumes.
+
+For example, you can use ROMs in the context of a web server that offers different index pages based on the ROM attached for localization.
+By using ROMs, you can have a single slim image to which you can attach different ROMs depending on the language you want to serve.
+Finally, it's considered good practice to keep ROMs small and focused, and the instance shouldn't depend on them to boot correctly.
+
+You need to first package ROMs as an OCI image and push them to the registry.
+They show up as any other image in the registry, but don't have a kernel.
+To package them you can either use `kraft`, or package it yourself and pass it to `kraft` for pushing:
+
+```bash title="Kraft Packaging and Pushing"
+kraft pkg \
+    --plat kraftcloud \
+    --arch x86_64 \
+    --name function-hello:latest \
+    --rootfs-type erofs \
+    --push \
+    .
+```
+
+You can then specify ROMs through the API when creating or updating an instance:
+
+<Tabs defaultValue="patch">
+    <TabsList>
+        <TabsTrigger value="patch">Update Instance</TabsTrigger>
+        <TabsTrigger value="create">Create Instance</TabsTrigger>
+    </TabsList>
+    <TabsContent value="patch">
+    ```bash title="Updating Instance with ROMs"
+    curl -X PATCH "$UKC_METRO/instances/$id" \
+    -H "Authorization: Bearer $UKC_TOKEN" \
+    -d '{
+            "prop": "roms",
+            "op": "add",
+            "value": [
+                {
+                    "name": "function-hello",
+                    "image": "demo/function-hello:latest"
+                }
+            ]
+        }'
+    ```
+    </TabsContent>
+    <TabsContent value="create">
+    ```json title="Creating Instance with ROMs"
+    ...
+            "roms": [
+                {
+                    "name": "function-hello",
+                    "image": "demo/function-hello:latest"
+                }
+            ],
+    ...
+    ```
+    </TabsContent>
+</Tabs>
+
+Finally, in the instance you need to mount them like any other disk and you can find them under `/dev/` with their specified name:
+
+```bash title="Mounting ROMs in Instance"
+mkdir /mnt/rom
+mount -t erofs /dev/function-hello /mnt/rom
+```
+
+## Comparison
+
+| Type / Metric | Rootfses | Volumes | ROMs |
+|---------------|----------|---------|------|
+| I/O Speed | Fast | Decent  | Fast |
+| I/O Latency | Small | Noticeable  | Small  |
+| Storage Medium | RAM | SSD/HDD | RAM |
+| Intended Size | Medium | (up to) Large  | Small |
+| File System | `CPIO`/`EROFS` | `ext4`/`virtio-fs` | Any |
+| Mounting | Automatic | Automatic | Manual |
+| Persistence | No | Yes | No |
+| Mandatory | Yes | No | No |
+
+## Conclusion
+
+As expected, each storage type has its own advantages and disadvantages.
+Rootfses are mandatory and fast, but you should keep them small and only contain essential information.
+Volumes are persistent and large, but have noticeable access latency.
+ROMs are a flexible way to customize rootfses, but you should also keep them small and not be essential for booting.
+
+## Learn more
+
+* [Volumes](/platform/volumes) and how to use them.
+* [Rootfs formats](/tutorials/rootfs-formats) and how to create them.
+* The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
+* The `kraft pkg` [command reference](https://unikraft.org/docs/cli/reference/kraft/pkg) for packaging images.

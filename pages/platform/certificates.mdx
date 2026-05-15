@@ -3,9 +3,19 @@ title: Certificates
 navigation_icon: shield-check
 ---
 
-To use a custom certificate instead of the automatically generated one from the default public certificate authority, run the `create` command:
+To use a custom certificate instead of the automatically generated one from the default public certificate authority, create a certificate with the CLI:
 
-```ansi title=""
+<CodeTabs syncKey="cli-tool">
+
+```ansi title="unikraft"
+unikraft certificates create \
+  --cn *.mydomain.com \
+  --name mydomain-cert \
+  --pkey /path/to/private.key \
+  --chain /path/to/chain.pem
+```
+
+```ansi title="kraft"
 kraft cloud cert create \
   --cn *.mydomain.com \
   --name mydomain-cert \
@@ -13,15 +23,25 @@ kraft cloud cert create \
   --chain /path/to/chain.pem
 ```
 
+</CodeTabs>
+
 The provided common name (CN) must match the one for which Unikraft Cloud issued the certificate.
 It can also be a wildcard domain.
 
-Use the `kraft cloud cert` command to view and manage certificates.
-For example, to list certificates, run:
+Use the CLI to view and manage certificates.
+For example, to list certificates:
 
-```bash title=""
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft certificates list
+```
+
+```bash title="kraft"
 kraft cloud cert ls
 ```
+
+</CodeTabs>
 
 You should see output like:
 
@@ -33,9 +53,17 @@ mydomain-cert       valid  *.mydomain.com  2 days ago
 
 Retrieve full information about a certificate with:
 
-```bash title=""
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft certificates get mydomain.com-sa4x9
+```
+
+```bash title="kraft"
 kraft cloud cert get mydomain.com-sa4x9
 ```
+
+</CodeTabs>
 
 You should see output like:
 
@@ -56,12 +84,20 @@ serial number: 0455BBAEC140EACBA5FEEAE6D817E73EF266
 To remove a certificate, first remove any instances from the relevant service and then remove the service.
 Remove the certificate with:
 
-```bash title=""
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft certificates delete mydomain.com-sa4x9
+```
+
+```bash title="kraft"
 kraft cloud cert rm mydomain.com-sa4x9
 ```
 
+</CodeTabs>
+
 ## Learn more
 
-* The `kraft cloud` [CLI reference](/docs/cli/)
-* Unikraft Cloud's [REST API reference](/docs/api/v1)
-* Many more guides [here](/docs/guides)
+* The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
+* Unikraft Cloud's [REST API reference](/api/platform/v1).
+* Many more guides [here](/guides/bun).

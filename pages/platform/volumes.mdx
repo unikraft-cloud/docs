@@ -3,32 +3,55 @@ title: Volumes
 navigation_icon: cylinder
 ---
 
-A volume is a persistent storage device that keeps data across restarts.
+A volume is a persistent storage device that keeps data across restarts and even redeployments.
 
-In this guide you will create a volume, attach it to a web server instance, and write to it.
+This documents presents a guide where you will create a volume, attach it to a web server instance, and write to it.
 Then you will detach it, remove that instance, attach it to a new instance, and confirm the data persisted.
-Finally, the guide covers how to share volumes across instances (read-only at present).
+
+Then, it presents some features of volumes. 
+
+## Volume workflow
 
 :::note
-
-You can also share a volume across many instances as a read-only mount (read-write sharing is in progress).
-
+You can create an instance with attached volumes in the same call - see the `volumes` field for the [`POST /instances`](/api/platform/v1/instances#create-instance) endpoint.
+In this case, the volume's lifetime is tied to the instance - when you delete the instance, the volume disappears.
 :::
 
-## Setting up the volume
+### Setting up the volume
 
-To start, create the volume via `kraft cloud volume`, with size in MBs and name `my-volume`:
+To start, create the volume with the CLI, with size in MBs and name `my-volume`:
 
-```bash title=""
-kraft cloud volume create --size 100 --name my-volume
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft volumes create \
+  --set name=my-volume \
+  --set size=100 \
+  --set metro=fra
 ```
+
+```bash title="kraft"
+kraft cloud volume create \
+  --size 100 \
+  --name my-volume
+```
+
+</CodeTabs>
 
 The command should return the volume's UUID, and you can check the operation
 worked via:
 
-```bash title=""
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft volumes list
+```
+
+```bash title="kraft"
 kraft cloud volume list
 ```
+
+</CodeTabs>
 
 which should output something like:
 
@@ -39,14 +62,18 @@ my-volume  15 seconds ago  100 MiB               available  true
 
 The `ATTACHED TO` field is empty because the platform hasn't attached it to any instance yet.
 
-## Populating the volume with local data (Optional)
+### Populating the volume with local data (optional)
 
-If you'd like to populate your empty volume with local data, you can use the `kraft cloud volume import` command.
+To populate an empty volume with local data, use the legacy CLI volume import command.
 For example, assuming the volume's name is `my-volume` and that the data you want to import are in your `my-data` directory, you would run:
 
-```bash title=""
+<CodeTabs>
+
+```bash title="kraft"
 kraft cloud volume import --volume my-volume --source my-data
 ```
+
+</CodeTabs>
 
 You should see output like:
 
@@ -55,11 +82,11 @@ You should see output like:
 [+] Spawning temporary volume data import instance... done!                 [0.1s]
 [+] Importing data (256 B) ••••••••••••••••••••••••••••••••••••••••••• 100% [0.1s]
 
-[●] Import complete
- │
- ├─── volume: my-volume
- ├─ imported: 256 B
- └─ capacity: 100 MiB
+[90m[[0m[92m●[0m[90m][0m Import complete
+ [90m│[0m
+ [90m├[0m[90m───[0m [90mvolume[0m: my-volume
+ [90m├[0m[90m─[0m [90mimported[0m: 256 B
+ [90m└[0m[90m─[0m [90mcapacity[0m: 100 MiB
 ```
 
 ## Setting up the web server
@@ -111,11 +138,20 @@ On every request, this simple server will write a timestamp to a file on the
 mounted persistent volume and print out the current contents of the file.
 
 Start the Flask web server, create a
-[service](/docs/platform/services) for it via the `-p` flag, and mount the `my-volume` volume at `/mnt`:
+[service](/platform/services) for it via the publish flag, and mount the `my-volume` volume at `/mnt`:
 
-```bash title=""
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft build . --output <my-org>/http-python312-flask30:latest
+unikraft run --metro=fra -m 512MiB -p 443:8080/http+tls -v my-volume:/mnt --image=<my-org>/http-python312-flask30:latest
+```
+
+```bash title="kraft"
 kraft cloud deploy -M 512 -p 443:8080 --volume my-volume:/mnt .
 ```
+
+</CodeTabs>
 
 You should see output like:
 
@@ -137,9 +173,17 @@ You should see output like:
 
 To confirm that the platform attached the volume, run:
 
-```bash title=""
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft volumes get my-volume
+```
+
+```bash title="kraft"
 kraft cloud volume get my-volume
 ```
+
+</CodeTabs>
 
 You should see output like:
 
@@ -148,7 +192,7 @@ NAME       CREATED AT      SIZE     ATTACHED TO                   STATE    PERSI
 my-volume  34 minutes ago  100 MiB  http-python312-flask30-2h608  mounted  true
 ```
 
-## Testing it
+## Testing the server
 
 The Flask server writes the time and date to `/mnt/log.txt` for each request.
 Test it by running `curl` several times.
@@ -173,17 +217,37 @@ Log file created.
 
 To test data persistence, first stop the instance, detach the volume, and remove the instance:
 
-```bash title=""
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft instances stop http-python312-flask30-2h608
+unikraft instances delete http-python312-flask30-2h608
+```
+
+```bash title="kraft"
 kraft cloud instance stop http-python312-flask30-2h608
 kraft cloud volumes detach my-volume
 kraft cloud instance rm http-python312-flask30-2h608
 ```
 
+</CodeTabs>
+
+The explicit volume detach command is only available in the legacy CLI.
+
 Now start another instance and, like before, mount the same volume:
 
-```bash title=""
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft build . --output <my-org>/http-python312-flask30:latest
+unikraft run --metro=fra -m 512MiB -p 443:8080/http+tls -v my-volume:/mnt --image=<my-org>/http-python312-flask30:latest
+```
+
+```bash title="kraft"
 kraft cloud deploy -M 512 -p 443:8080 --volume my-volume:/mnt .
 ```
+
+</CodeTabs>
 
 This should output something like:
 
@@ -207,7 +271,7 @@ Run one final `curl` to this new address.
 You should see the previous contents plus a new entry at the bottom:
 
 ```bash title=""
-$ curl https://holy-bonobo-px345skl.fra.unikraft.app
+$ curl https://winter-field-v6m37jgs.fra.unikraft.app
 Log file created.
 2024-02-24 08:15:32
 2024-02-24 08:15:34
@@ -219,12 +283,105 @@ Log file created.
 
 To clean up, first detach the volume from all instances and then remove it:
 
-```bash title=""
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft volumes delete <volume-name>
+```
+
+```bash title="kraft"
 kraft cloud volume detach <volume-name>
 kraft cloud volume remove <volume-name>
 ```
 
+</CodeTabs>
+
+The explicit volume detach command is only available in the legacy CLI.
+
+## Volume templates
+
+A volume template is a volume in the `TEMPLATE` state.
+Once a volume transitions to template state, it's immutable: you can clone it but not write to it or delete it while active clones exist.
+
+The platform creates volume templates automatically when you convert an instance into an [instance template](/platform/instances#instance-templates): the platform converts all volumes attached to that instance into volume templates as an atomic operation.
+
+Volume templates have their own create, read, update, and delete endpoints at [`/volumes/templates`](/api/v1/volumes#create-template-volumes).
+They support [delete locks](/platform/delete-locks) and [tags](/platform/tagging).
+
+## Volume cloning
+
+A volume clone is an independent copy of an existing volume.
+The clone operation is **asynchronous**: the platform creates the new volume immediately in a pending state, and the data copy completes in the background.
+To clone one or more volumes, you can use the [`POST /volumes/clone`](/api/v1/volumes#clone-volumes) endpoint.
+
+The platform also clones volumes implicitly when you clone an instance or create one from a template.
+It clones each attached volume and attaches the clone to the new instance.
+
+You can't delete a source volume or template while it has active clones.
+
+## Shared volumes
+
+More than one instance can mount the same volume simultaneously as long as all mounts are in *read-only* mode.
+Read-only sharing is always permitted regardless of how many other instances have the volume mounted.
+
+A *read-write* mount is **exclusive**.
+You can't add one while any other mount exists on that volume, and a volume can't have two *read-write* mounts at once.
+
+Specify `readonly: true` when attaching a volume at instance creation or via the attach endpoint:
+
+```json title="POST /instances"
+{
+  ...
+  "volumes": [
+    {
+      "name": "my-shared-volume",
+      "at": "/data",
+      "readonly": true
+    }
+  ],
+  ...
+}
+```
+
+## Custom filesystems
+
+By default, volumes use a platform-configured filesystem (typically `ext4` for block volumes and `virtiofs` for hosted volumes).
+If the platform operator has registered more named filesystems, you can select one by passing its name in the `filesystem` field when creating a volume:
+
+```json title="POST /volumes"
+{
+  "name": "my-volume",
+  "size_mb": 512,
+  "filesystem": "virtiofs"
+}
+```
+
+### Managed volumes
+
+:::caution
+This is an advanced feature that's only available on the self-hosted platform.
+Quotas aren't yet enforced by the platform for managed volumes, so use them with caution to avoid filling up your host's disk.
+:::
+
+A managed volume points to an existing directory on the host rather than a platform-allocated storage file.
+
+Create a managed volume with a `host_path` field instead of `size_mb`:
+
+```json title="POST /volumes"
+{
+  "name": "my-managed-volume",
+  "host_path": "/srv/data/mydir",
+  "uid": 1000,
+  "gid": 1000
+}
+```
+
+- `host_path` must be an absolute, normalised path to an existing directory on the host (no `.`, `..`, or `:` components).
+- `uid` and `gid` set the ownership used when accessing the volume from the guest. Both default to `0` if not specified.
+- `size_mb` and `template` are mutually exclusive with `host_path`.
+- The platform doesn't create, format, resize, or delete the backing directory for managed volumes.
+
 ## Learn more
 
-* The `kraft cloud` [CLI reference](/docs/cli/), in particular the [deploy](/docs/cli/deploy) and [volumes](/docs/cli/volume) subcommands
-* Unikraft Cloud's [REST API reference](/docs/api/v1), in particular the section on [volumes](/docs/api/v1/volumes)
+* The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
+* Unikraft Cloud's [REST API reference](/api/platform/v1), in particular the section on [volumes](/api/platform/v1/volumes).

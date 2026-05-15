@@ -3,6 +3,8 @@ title: Services
 navigation_icon: group
 ---
 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "zudoku/ui/Tabs"
+
 On creation, Unikraft Cloud assigns each instance a private IP address and private FQDN for internal connectivity.
 It connects them to the Internet through a *service*: create a service and attach instances to it.
 
@@ -10,38 +12,60 @@ It connects them to the Internet through a *service*: create a service and attac
 
 A service defines how to reach a group of instances from the outside world.
 It maps an external FQDN port to an internal port common to all instances.
-The platform [load balances](/docs/guides/features/lb/) incoming connections across instances.
+The platform [load balances](/features/load-balancing) incoming connections across instances.
 Avoid placing apps that expose different ports in the same service.
 :::
 
 
-If you use the `kraft cloud deploy` command, part of the output lists a service, for example:
+If you use the deploy or run flow, part of the output lists a service, for example:
 
 ```ansi title=""
  [90m├[0m[90m─[0m [90mservice[0m: frosty-sky-vz8kwsm
  ```
 
-Because `kraft cloud deploy` is a single command to deploy a service, it automatically creates a service and attaches the new instance to it.
-The rest of this guide shows how to create a service first, then use `kraft cloud deploy` to create and attach instances to it.
+Because the deploy or run flow is a single command to deploy a service, it automatically creates a service and attaches the new instance to it.
+The rest of this guide shows how to create a service first, then use the CLI to create and attach instances to it.
 
-First, create a new service with the `kraft cloud service` command:
+First, create a new service with the CLI:
 
-```bash title=""
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft services create \
+  --set name=my-service \
+  --set metro=fra \
+  --set services=443:8080/tls+http
+```
+
+```bash title="kraft"
 kraft cloud service create --name my-service 443:8080/http+tls
 ```
+
+</CodeTabs>
 
 This creates a new service named `my-service` listening on port 443.
 Unikraft Cloud terminates TLS and sends HTTP to port 8080.
 This example assumes that the app opens port 8080.
 
-Now use `kraft cloud deploy` with the `--service` flag to attach the instance to the `my-service` service.
-For example, from the [Go web server guide](/docs/guides/go) (see all guides [here](/docs/guides/)):
+Now use the CLI with the service flag to attach the instance to the `my-service` service.
+For example, from the [Go web server guide](/guides/go):
 
-```bash title=""
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
 git clone https://github.com/unikraft-cloud/examples
 cd examples/http-go1.21/
-kraft cloud deploy --service my-service .
+unikraft build . --output <my-org>/http-go121:latest
+unikraft run --metro=fra --service my-service -m 256MiB --image=<my-org>/http-go121:latest
 ```
+
+```bash title="kraft"
+git clone https://github.com/unikraft-cloud/examples
+cd examples/http-go1.21/
+kraft cloud deploy --service my-service -M 256 .
+```
+
+</CodeTabs>
 
 This creates a new Go web server instance and immediately attaches it to the `my-service` service.
 The output shows the instance address and other details:
@@ -55,7 +79,7 @@ The output shows the instance address and other details:
  [90m├[0m[90m───────────[0m [90murl[0m: https://my-service-rrtckyyi.fra.unikraft.app
  [90m├[0m[90m─────────[0m [90mimage[0m: http-go121@sha256:4d536236d226781874c3ad930dbc936c4f407aa3483a1f8e961ba63a7a72c78d
  [90m├[0m[90m─────[0m [90mboot time[0m: 17.14 ms
- [90m├[0m[90m────────[0m [90mmemory[0m: 128 MiB
+ [90m├[0m[90m────────[0m [90mmemory[0m: 256 MiB
  [90m├[0m[90m───────[0m [90mservice[0m: my-service
  [90m├[0m[90m──[0m [90mprivate fqdn[0m: http-go121-fkt1x.internal
  [90m├[0m[90m────[0m [90mprivate ip[0m: 172.16.6.6
@@ -78,7 +102,7 @@ hello, world!
 
 :::tip
 
-If you specify a port with the `-p` option when using `kraft cloud deploy`, the command creates a service automatically.
+If you specify a port with the publish flag when using the deploy or run flow, the command creates a service automatically.
 In that case the platform deletes the service when the instance ends, and you can't define the service name.
 
 :::
@@ -87,11 +111,161 @@ That's it.
 
 In the end, if you want to remove a service, use:
 
-```bash title=""
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft services delete my-service
+```
+
+```bash title="kraft"
 kraft cloud service remove my-service
 ```
 
+</CodeTabs>
+
+## Handlers
+
+Handlers define how the service will handle incoming connections and forward traffic from the Internet to your app.
+For example, you can configure a service to end TLS connections, redirect HTTP traffic, or enable HTTP mode for load balancing.
+You configure the handlers for every published service port individually.
+
+Currently, there are 3 supported handlers:
+
+<Tabs defaultValue="tls">
+  <TabsList>
+    <TabsTrigger value="tls">tls</TabsTrigger>
+    <TabsTrigger value="http">http</TabsTrigger>
+    <TabsTrigger value="redirect">redirect</TabsTrigger>
+  </TabsList>
+  <TabsContent value="tls">
+    Terminate the TLS connection at the Unikraft Cloud gateway using the wildcard certificate issued for the `unikraft.cloud` domain.
+    The gateway forwards the unencrypted traffic to your app.
+  </TabsContent>
+  <TabsContent value="http">
+    Enable HTTP mode on the load balancer to load balance on the level of individual HTTP requests.
+    In this mode, the load balancer accepts only HTTP connections.
+    If you don't set this option, the load balancer works in TCP mode and distributes TCP connections.
+  </TabsContent>
+  <TabsContent value="redirect">
+    Redirect traffic from the source port to the destination port.
+  </TabsContent>
+</Tabs>
+
+:::note
+The following set of constraints apply when publishing ports:
+- Port 80: **must** have `http` and **must not** have `tls` set.
+- Port 443: **must** have `http` and `tls` set.
+- You can only set the `redirect` handler on port 80 (HTTP) to redirect to
+  port 443 (HTTPS).
+- All other ports **must** have `tls` and **must not** have `http` set.
+:::
+
+For example, the following creates the service `my-service` with three published ports:
+- Port 443 with both `http` and `tls` handlers (HTTP mode).
+- Port 80 with the `http` and `redirect` handlers (HTTP mode).
+- Port 10000 with only the `tls` handler (TCP mode).
+
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft services create \
+  --set name=my-service \
+  --set metro=fra \
+  --set services=443:8080/tls+http \
+  --set services=80:8080/http+redirect \
+  --set services=10000:10000/tls
+```
+
+```bash title="kraft"
+kraft cloud service create --name my-service 443:8080/http+tls 80:8080/http+redirect 10000:10000/tls
+```
+
+</CodeTabs>
+
+## `UDP` Support
+
+`UDP` is a defined service protocol alongside `TCP`.
+Unikraft Cloud stores and reports it in the `protocol` field of each published port.
+
+You can use `UDP` for both internal VM-to-VM traffic and external traffic.
+
+### External `UDP` requirements
+
+To expose `UDP` externally for an user, the box must have an assigned IP address (primary or another assigned IP).
+That IP must appear in the `addresses` array in `users.json` for that user:
+
+```json title="users.json"
+{
+  [
+    "name": "user",
+    "addresses": [
+      {
+        "ip": "a.b.c.d",
+        "internal_ip": "x.y.z.w",
+        "host": "host_name"
+      }
+    ]
+  ]
+}
+```
+
+The `internal_ip` field is optional and used when the box routes traffic through an internal IP.
+
+You must also list the `UDP` IPs in the `additional_ip_addresses` directive in `nginx.conf.template` (space-separated).
+
+### Creating a `UDP` service
+
+To create a `UDP` service, set both `protocol` and `ip`:
+
+```json title="POST /services"
+{
+  "services": [
+    {
+      "port": 7777,
+      "destination_port": 8080,
+      "protocol": "udp",
+      "ip": "a.b.c.d"
+    }
+  ]
+}
+```
+
+The service `ip` must match an `addresses[].ip` value in `users.json` for the user.
+
+## Connection limits
+
+Every service group has a soft and a hard connection limit that the load balancer enforces.
+
+| Field | Default | Range | Description |
+|-------|---------|-------|-------------|
+| `soft_limit` | `1` | 1–65535 | The load balancer starts queuing new connections once the number of active connections reaches this value. |
+| `hard_limit` | `65535` | 1–65535 | The load balancer rejects new connections once the number of active connections reaches this value. |
+
+`soft_limit` must be less than or equal to `hard_limit`.
+Setting `soft_limit > hard_limit` returns a `400` error.
+
+You can set both fields at service group creation time and update them later with `PATCH /services/{name}`.
+
+```json title="POST /services"
+{
+  "name": "my-service",
+  "soft_limit": 100,
+  "hard_limit": 500
+}
+```
+
+## Persistent service groups
+
+A service group is **persistent** when your user account owns it rather than a specific instance.
+
+- A service group created with the CLI (or `POST /services`) is persistent.
+  It survives independently of any instances attached to it.
+- A service group created implicitly via the publish flag on instance creation belongs to the instance.
+  The platform deletes it when you delete that instance.
+
+The `GET /services/{name}` response includes a `persistent` field (`bool`) that indicates which case applies.
+
 ## Learn more
 
-* The `kraft cloud` [CLI reference](/docs/cli/), in particular the services subcommand
-* Unikraft Cloud's [REST API reference](/docs/api/v1), in particular the section on services
+* The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
+* Unikraft Cloud's [REST API reference](/api/platform/v1), in particular the section on [service groups](/api/platform/v1/service-groups).

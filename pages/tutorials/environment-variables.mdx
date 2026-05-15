@@ -1,0 +1,130 @@
+---
+title: Environment Variables
+navigation_icon: cog
+---
+
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "zudoku/ui/Tabs"
+
+Environment variables are a common way to configure applications at runtime.
+Unikraft Cloud supports passing environment variables to instances during deployment through many methods.
+This tutorial discusses each below and orders them by superseeding precedence (from most powerful to weakest).
+
+## Setting environment variables
+
+Below are all the ways you can set environment variables for your Unikraft Cloud instances.
+The order they're presented is from the least precedence to the highest precedence.
+
+### Dockerfile ENV
+
+:::caution
+At the moment environment variables from the `Dockerfile` are passed in the image but not read by the Unikraft Cloud platform.
+Please use the other methods described below in the meantime.
+:::
+
+You can set environment variables in your `Dockerfile` using the `ENV` instruction in your target `FROM` stage.
+The CLI automatically reads them when building the image and sets them in the resulting packaged image.
+
+```dockerfile
+# ...
+FROM ubuntu:latest
+ENV MY_ENV_VAR=my_value
+# ...
+```
+
+### Kraftfile env
+
+:::caution
+At the moment environment variables from the `Kraftfile` are passed in the image but not read by the Unikraft Cloud platform.
+Nonetheless, the legacy deploy command can still read them and set them in the instance.
+For other use cases, please use the other methods described below in the meantime.
+:::
+
+You can set environment variables in your `Kraftfile` using the `env` field.
+`kraft` automatically reads them when building the image and sets them in the resulting packaged image.
+
+```yaml
+# ...
+env:
+  MY_ENV_VAR: my_value
+```
+
+:::tip
+This method takes precedence over the `Dockerfile`.
+It will override environment variables with the same name set in the `Dockerfile`.
+:::
+
+### Kraft flags
+
+When deploying an instance, you can pass environment variables using the `--env` (or `-e`) flag.
+You can specify many environment variables by using the flag many times.
+The flag works similarly to the `docker run -e` flag.
+
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft run --metro=fra -e MY_ENV_VAR=my_value --image=my-app:latest
+```
+
+```bash title="kraft"
+kraft cloud deploy my-app --env MY_ENV_VAR=my_value
+```
+
+</CodeTabs>
+
+:::tip
+This method takes precedence over the `Dockerfile` and `Kraftfile`.
+It will override environment variables with the same name set in the previous two methods.
+:::
+
+### Wrapper script
+
+Create a wrapper script that sets the environment variables before executing the main app.
+Check what the original entrypoint of your app is and call it after setting the variables.
+For example, if the original entrypoint is `/entrypoint.sh`, you can create a new script `wrapper.sh` like this:
+
+```bash
+#!/bin/sh
+
+export MY_ENV_VAR="my_value"
+
+exec /entrypoint.sh "$@"
+```
+
+Then you change either your `Dockerfile` or `Kraftfile` to use this wrapper script as the entrypoint:
+
+<Tabs defaultValue="dockerfile">
+    <TabsList>
+    <TabsTrigger value="dockerfile">Dockerfile</TabsTrigger>
+    <TabsTrigger value="kraftfile">Kraftfile</TabsTrigger>
+    </TabsList>
+    <TabsContent value="dockerfile">
+    ```Dockerfile
+    # ...
+    COPY wrapper.sh /wrapper.sh
+    RUN chmod +x /wrapper.sh
+    ENTRYPOINT ["/wrapper.sh"]
+    ```
+    </TabsContent>
+    <TabsContent value="kraftfile">
+    ```yaml
+    # ...
+    cmd: "/wrapper.sh"
+    ```
+    </TabsContent>
+</Tabs>
+
+:::tip
+This method has the highest precedence and will override environment variables set in the cli, `Dockerfile`, or `Kraftfile` as it hardcodes them in the script.
+Thus it's recommended to do this only for variables that you set and don't change.
+:::
+
+## Conclusion
+
+Out of the four ways to set environment variables in Unikraft Cloud instances you should pick the ones that work best for you.
+Consider that the `Dockerfile` and `Kraftfile` can set variables for the image itself, while the CLI and wrapper script set them at runtime.
+
+## Learn more
+
+* The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
+* The [Dockerfile reference](https://docs.docker.com/reference/dockerfile/) for understanding how to set environment variables in Dockerfiles.
+* The [Kraftfile reference](https://unikraft.org/docs/cli/reference/kraftfile) for understanding how to set environment variables in Kraftfiles.

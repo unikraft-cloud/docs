@@ -3,11 +3,10 @@ title: Introduction
 navigation_icon: book-check
 ---
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "zudoku/ui/Tabs"
 
-Unikraft is a from-first-principles virtualization solution and cloud platform based on **unikernels** which provides best-in-class performance, security, and scalability.
+Unikraft Cloud is a from-first-principles virtualization solution and cloud platform based on **MicroVMs** which provides best-in-class performance, security, and scalability.
 
-Running your app on Unikraft is like running a container but with hardware isolation, millisecond cold starts, and stateful scale-to-zero.
+Running your app on Unikraft Cloud is like running a container but with hardware isolation, millisecond cold starts, and stateful scale-to-zero.
 
 Expect higher server density, cost-savings, I/O performance boosts, active vCPU pricing and _much more_.
 
@@ -17,68 +16,71 @@ Expect higher server density, cost-savings, I/O performance boosts, active vCPU 
 
 1. [Create a free account](https://console.unikraft.cloud/signup).
 
-1. Install the `kraft` CLI.
-    <Tabs defaultValue="shell">
-      <TabsList>
-        <TabsTrigger value="shell">Shell 1-liner</TabsTrigger>
-        <TabsTrigger value="macos">macOS</TabsTrigger>
-        <TabsTrigger value="debian">Debian/Ubuntu</TabsTrigger>
-      </TabsList>
-      <TabsContent value="shell">
-      ```bash title="Run on any *NIX shell"
-      curl -sSfL https://get.kraftkit.sh | sh
-      ```
-      </TabsContent>
-      <TabsContent value="macos">
-        ```bash title="Shell"
-        brew install unikraft/cli/kraftkit
-        ```
-      </TabsContent>
-      <TabsContent value="debian">
-        ```bash
-        sudo apt-get update
-        sudo apt-get install \
-            ca-certificates \
-            curl \
-            gnupg \
-            lsb-release
-        ```
+1. Install the Unikraft CLI.
 
-        Add Unikraft's official GPG key:
+   <CodeTabs>
 
-        ```bash
-        sudo mkdir -p /etc/apt/keyrings
-        curl -fsSL https://deb.pkg.kraftkit.sh/gpg.key | \
-          sudo gpg --dearmor -o /etc/apt/keyrings/unikraft.gpg
-        ```
-
-        Use the following command to set up the APT repository:
-
-        ```bash
-        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/unikraft.gpg] https://deb.pkg.kraftkit.sh /" | \
-          sudo tee /etc/apt/sources.list.d/unikraft.list > /dev/null
-        ```
-
-        Update the APT package index, and install the latest version of `kraftkit`:
-
-        ```bash
-        sudo apt-get update
-        sudo apt-get install kraftkit
-        ```
-      </TabsContent>
-   </Tabs>
-
-   See [alternative installation instructions](/docs/cli/install) for other
-   platforms.
-
-1. Login to your account by setting your access token (received via email):
-   ```bash
-   export UKC_TOKEN=
+   ```bash title="1-liner (macOS & Linux)"
+   curl --proto '=https' --tlsv1.2 -fsSL https://unikraft.com/cli/install.sh | sh
    ```
 
-1. Deploy your first scale-to-zero, serverless app with Unikraft Cloud:
+   ```bash title="macOS"
+   brew install unikraft/cli/unikraft
+   ```
+
+   ```bash title="Debian/Ubuntu"
+   # Update and install dependencies
+   sudo apt update
+   sudo apt install ca-certificates curl
+
+   # Download and add the GPG key
+   sudo install -d -m 0755 /etc/apt/keyrings
+
+   sudo curl -fsSL \
+     -o /etc/apt/keyrings/unikraft-cli.gpg \
+     https://pkg.unikraft.com/debian/cli-apt/keys/cli-apt.gpg
+
+   sudo tee /etc/apt/sources.list.d/unikraft-cli.sources <<EOF
+   Types: deb
+   URIs: https://pkg.unikraft.com/debian/cli-apt/
+   Suites: $(. /etc/os-release && echo "$VERSION_CODENAME")
+   Components: stable
+   Signed-By: /etc/apt/keyrings/unikraft-cli.gpg
+   EOF
+
+   # Update and install
+   sudo apt-get update
+   sudo apt-get install unikraft-cli
+   ```
+
+   ```bash title="Fedora/RHEL/Rocky/Alma"
+   # Add the Unikraft CLI repository
+   sudo tee /etc/yum.repos.d/unikraft-cli-rpm.repo <<EOF
+   [unikraft-cli]
+   name=unikraft-cli
+   baseurl=https://pkg.unikraft.com/rpm/cli-rpm/
+   gpgcheck=0
+   enabled=1
+   EOF
+
+   # Install the CLI at the specific pre-release version
+   yum install unikraft-cli
+   ```
+
+   </CodeTabs>
+
+   See [alternative installation instructions](https://github.com/unikraft/cli/?tab=readme-ov-file#installation) for other platforms.
+
+1. Authenticate with your account.
+
    ```bash
-   kraft cloud deploy -p 443:8080 nginx:latest
+   unikraft login
+   ```
+
+1. Deploy your first scale-to-zero, serverless app with Unikraft Cloud.
+
+   ```bash
+   unikraft run --metro=fra -p 443:8080/http+tls --image=nginx:latest
    ```
 
 </Stepper>

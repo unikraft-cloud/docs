@@ -1,0 +1,133 @@
+name: setup-www
+
+description: |
+  Deploys the Unikraft landing and docs website (www).
+
+inputs:
+  environment:
+    required: true
+    description: The environment to use.
+  name:
+    required: true
+    description: Name of the service.
+  domain:
+    required: false
+    description: The domain to use for the deployment.
+  metro:
+    required: false
+    description: Unikraft Cloud Metro.
+    default: http://api.dal2.unikraft.cloud/v1
+  memory:
+    required: false
+    description: Set the memory size.
+    default: 1Gi
+  args:
+    required: false
+    description: Optional arguments you pass to kraft cloud deploy.
+  port:
+    required: false
+    description: The port the service listens on.
+    default: "2015"
+  log-level:
+    required: false
+    default: error
+    description: Set the logging level.
+  posthog-host:
+    required: false
+    description: The host address for the PostHog API.
+  posthog-key:
+    required: false
+    description: The key to authenticate with PostHog.
+  docs-channel:
+    required: false
+    default: prod-staging
+    description: The docs channel to use for the OpenAPI spec.
+
+outputs:
+  domain:
+    description: |
+      Either the input domain if set or the automatically generated value
+      otherwise.
+    value: ${{ steps.service.outputs.domain }}
+
+runs:
+  using: composite
+  steps:
+  - name: Create Deployment
+    uses: bobheadxi/deployments@v1
+    id: init-deploy
+    with:
+      step: start
+      token: ${{ github.token }}
+      env: ${{ inputs.environment }}
+
+  - name: Create Service Group
+    id: service
+    shell: bash
+    run: |
+      set -e;
+
+      # Create the service if it does not exist.
+      _SVC=$(kraft cloud --metro "${{ inputs.metro }}" service get "${{ inputs.name }}" -o raw | jq -r '.data.service_groups[].error')
+      if [[ "${_SVC}" == "8" ]]; then
+        if [[ "${{ inputs.domain }}" == "" ]]; then
+          kraft cloud --metro "${{ inputs.metro }}" service create \
+            --subdomain "${{ inputs.name }}" \
+            --name "${{ inputs.name }}" \
+            "443:${{ inputs.port }}" \
+          ;
+        else
+          kraft cloud --metro "${{ inputs.metro }}" service create \
+            --domain "${{ inputs.domain }}" \
+            --name "${{ inputs.name }}" \
+            "443:${{ inputs.port }}" \
+          ;
+        fi
+      fi
+
+      # Save the generated domain as an output variable
+      echo "domain=$(kraft cloud --metro ${{ inputs.metro }} service get ${{ inputs.name }} -o raw | jq -r '.data.service_groups[0].domains[0].fqdn')" >> $GITHUB_OUTPUT
+
+  - name: Deploy
+    id: deploy
+    shell: bash
+    run: |
+      kraft cloud deploy \
+        --rollout remove \
+        --rollout-qualifier all \
+        --build-arg API_URL="https://${{ steps.service.outputs.domain }}" \
+        --build-arg PUBLIC_API_URL="https://${{ steps.service.outputs.domain }}" \
+        --build-arg VITE_PUBLIC_SITE_URL="https://${{ steps.service.outputs.domain }}" \
+        --build-arg PUBLIC_STATUS_PAGE_SUMMARY_URL="https://status.unikraft.cloud/api/v1/summary" \
+        --build-arg PUBLIC_POSTHOG_HOST="${{ inputs.posthog-host }}" \
+        --build-arg PUBLIC_POSTHOG_KEY="${{ inputs.posthog-key }}" \
+        --build-arg DOCS_CHANNEL="${{ inputs.docs-channel }}" \
+        --memory "${{ inputs.memory }}" \
+        --service "${{ inputs.name }}" \
+        --image "${{ inputs.name }}" \
+        --as kraftfile-runtime \
+        .;
+
+  - name: Test liveliness
+    id: liveliness
+    continue-on-error: true
+    shell: bash
+    run: |
+      sleep 10;
+      curl -Lk --fail "https://${{ steps.service.outputs.domain }}/"
+
+  - name: Dump instance logs on failure
+    if: ${{ steps.liveliness.outcome == 'failure' }}
+    shell: bash
+    run: |
+      kraft cloud service logs "${{ inputs.name }}"
+      exit 1
+
+  - name: Update Deployment
+    uses: bobheadxi/deployments@v1
+    with:
+      step: finish
+      token: ${{ github.token }}
+      env: ${{ inputs.environment }}
+      deployment_id: ${{ steps.init-deploy.outputs.deployment_id }}
+      status: ${{ job.status }}

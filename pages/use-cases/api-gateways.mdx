@@ -7,16 +7,16 @@ API Gateways are the critical entry point to your services.
 They manage authentication, routing, rate-limiting, observability, and security at the edge of your infrastructure.
 In modern architectures—especially microservices and serverless platforms—the API Gateway is the first line of defence and performance optimisation.
 
-With **Unikraft Cloud**, API Gateways gain advantage from a unikernel-based, scale-to-zero infrastructure that delivers the performance of specialised systems with the flexibility of serverless deployment.
+With **Unikraft Cloud**, API Gateways gain advantage from a microVM-based, scale-to-zero infrastructure that delivers the performance of specialised systems with the flexibility of serverless deployment.
 
 ## Why run an API gateway on Unikraft Cloud
 
 ### ⚡ Ultra-low latency
 
-Unikernels remove the overhead of general-purpose operating systems by compiling only the required OS components alongside the API Gateway app.
+MicroVMs remove the overhead of general-purpose operating systems by compiling only the required OS components alongside the API Gateway app.
 This results in:
 
-* Sub-millisecond cold-start times (perfect for bursty API traffic).
+* Single-digit-millisecond cold-start times (perfect for bursty API traffic).
 * Minimal memory footprint, allowing more requests per node.
 * Consistent, predictable response latency at scale.
 
@@ -25,7 +25,7 @@ This results in:
 The open internet exposes API Gateways, making them often the most attacked component.
 Unikraft Cloud isolates each instance at the virtual machine level while keeping footprint minimal:
 
-* Immutable, single-purpose unikernel images reduce attack surface.
+* Immutable, single-purpose microVM images reduce attack surface.
 * Strong VM-level isolation without container overhead.
 * Built-in memory safety and image signing to ensure trust at deployment.
 
@@ -35,8 +35,8 @@ Traffic to APIs often fluctuates—peaking during business hours, quiet overnigh
 Traditional gateway clusters waste resources when idle.
 With Unikraft Cloud:
 
-* API Gateways use scale-to-zero when not in use, reducing idle costs to **zero**.
-* Instant cold-starts ensure gateways are ready in microseconds when traffic resumes.
+* API Gateways scale-to-zero when not in use, reducing idle costs to **zero**.
+* Instant cold-starts ensure gateways are ready in milliseconds when traffic resumes.
 * Fine-grained billing: pay only for requests and runtime, not for idle VMs.
 
 ### 🔄 Serverless-ready
@@ -59,36 +59,44 @@ It offers open standards, scalability, governance, and AI-ready features for API
 
 To run it, follow these steps:
 
-1. Install the [`kraft` CLI tool](/install) and a container runtime engine (for example, Docker).
+1. Install the [`kraft` CLI tool](https://unikraft.org/docs/cli/install) and a container runtime engine (for example, [Docker](https://docs.docker.com/engine/install/)).
 
-1. Clone the [`examples` repository](https://github.com/kraftcloud/examples) and `cd` into the `examples/tyk/` directory:
+1. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/tyk/` directory:
 
 ```bash title=""
-git clone https://github.com/kraftcloud/examples
+git clone https://github.com/unikraft-cloud/examples
 cd examples/tyk/
 ```
 
-Make sure to log into Unikraft Cloud by setting your token and a [metro](/metros#available) close to you.
+Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪):
 
-```bash title=""
+<CodeTabs syncKey="cli-tool">
+
+```bash title="kraft"
 # Set Unikraft Cloud access token
 export UKC_TOKEN=token
 # Set metro to Frankfurt, DE
 export UKC_METRO=fra
 ```
 
+</CodeTabs>
+
 Then invoke:
 
-```bash title=""
+<CodeTabs>
+
+```bash title="kraft"
 kraft cloud compose up
 ```
+
+</CodeTabs>
 
 After deploying, you can query the service using the provided address.
 Use the `/hello` path after the address, such as below:
 
 ```bash title=""
-curl https://<NAME>.<METRO>.kraft.host/hello | jq
+curl https://<service-fqdn>/hello | jq
 ```
 ```json title=""
 {
@@ -105,3 +113,16 @@ curl https://<NAME>.<METRO>.kraft.host/hello | jq
 }
 ```
 
+## Learn more
+
+Use the `--help` option for detailed information on using Unikraft Cloud:
+
+<CodeTabs syncKey="cli-tool">
+
+```bash title="kraft"
+kraft cloud --help
+```
+
+</CodeTabs>
+
+Or visit the [CLI Reference](/docs/cli/unikraft) or the [legacy CLI reference](/docs/cli/kraft/overview).

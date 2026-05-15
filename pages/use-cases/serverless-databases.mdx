@@ -3,27 +3,25 @@ title: Serverless Databases
 navigation_icon: database-zap
 ---
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "zudoku/ui/Tabs"
-
 Databases are central to modern apps, but they're notoriously resource-hungry, slow to scale, and costly to operate at low utilisation.
 Traditional VM- or container-based solutions keep idle resources running, resulting in waste and inefficiency.
-With **Unikraft Cloud**, serverless databases gain the advantages of **unikernels**, combining **extreme performance** with **true scale-to-zero efficiency**.
+With **Unikraft Cloud**, serverless databases gain the advantages of **microVMs**, combining **extreme performance** with **true scale-to-zero efficiency**.
 
 ## Why run serverless databases on Unikraft Cloud
 
 ### ⚡ Instant boot, millisecond latency
 
-Unikraft unikernels start in milliseconds, enabling databases to **scale up instantly** when requests arrive and **shut down to zero** when idle.
+Unikraft microVMs start in milliseconds, enabling databases to **scale up instantly** when requests arrive and **shut down to zero** when idle.
 This ensures the system uses resources **only when needed**, without cold-start penalties.
 
 ### 🔒 Stronger security by design
 
-Each database instance runs as a **specialised, single-process unikernel**, drastically reducing the attack surface compared to general-purpose OSes.
+Each database instance runs as a **specialised, single-process microVM**, drastically reducing the attack surface compared to general-purpose OSes.
 This isolation protects customer data with **built-in, lightweight security**.
 
 ### 💰 Cost-efficient scale-to-zero
 
-Unikraft's unikernel architecture allows serverless databases to **consume no resources when idle** and scale to thousands of instances under load.
+Unikraft's microVM architecture allows serverless databases to **consume no resources when idle** and scale to thousands of instances under load.
 You pay only for active queries, making it ideal for **spiky workloads, dev/test environments, and SaaS platforms**.
 
 ### 🛠 Seamless serverless integration
@@ -33,54 +31,69 @@ Databases can integrate with API gateways, event triggers, and headless services
 
 ### 📈 Performance without trade-offs
 
-Unlike traditional serverless platforms where databases often suffer from high overhead, unikernel-based instances deliver **bare-metal-like throughput and predictable latency**.
+Unlike traditional serverless platforms where databases often suffer from high overhead, microVM-based instances deliver **bare-metal-like throughput and predictable latency**.
 These instances optimise both Online Transaction Processing (OLTP) and Online Analytical Processing (OLAP) workloads.
 
+### 📸 Checkpoints for point-in-time recovery
+
+**Checkpointing** saves the complete state of a running microVM at any time, **without interrupting execution**.
+Checkpoints are incremental, fast, and keep a history, so you can restore the database to any previous checkpoint to recover from a failed migration or an erroneous write.
+
+### 🔀 Instance branching for instant clones
+
+Unikraft Cloud lets you **branch** a running instance, creating an identical, **independent copy in milliseconds** while leaving the original untouched.
+Test your migrations or destructive changes on a byte-for-byte copy of production before applying them, so you can proceed with confidence.
 
 ## Getting started
 
 This guide shows you how to use [PostgreSQL](https://www.postgresql.org/), a powerful, open source object-relational database system, in a serverless fashion.
-With Unikraft Cloud, you can run PostgreSQL in a lightweight virtual machine, with minimal overhead and millisecond fast startup times.
-The instance will [scale-to-zero](/docs/features/scale-to-zero) when not in use.
+With Unikraft Cloud, you can run PostgreSQL in a lightweight virtual machine, with minimal overhead and millisecond-fast startup times.
+The instance will [scale-to-zero](/features/scale-to-zero) when not in use.
 
 To run it, follow these steps:
 
-1. Install the [`kraft` CLI tool](/install) and a container runtime engine (for example, Docker).
+1. Install the [`kraft` CLI tool](https://unikraft.org/docs/cli/install) and a container runtime engine (for example, [Docker](https://docs.docker.com/engine/install/)).
 
-1. Clone the [`examples` repository](https://github.com/kraftcloud/examples) and
+1. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and
    `cd` into the `examples/postgres/` directory:
 
 ```bash
-git clone https://github.com/kraftcloud/examples
+git clone https://github.com/unikraft-cloud/examples
 cd examples/postgres/
 ```
 
-Make sure to log into Unikraft Cloud by setting your token and a [metro](/metros#available) close to you.
+Make sure to log into Unikraft Cloud by setting your token and a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪):
 
-```bash
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft login
+unikraft build . --output <my-org>/postgres:latest
+unikraft run --metro=fra -e POSTGRES_PASSWORD=unikraft -p 5432:5432/tls -m 1Gi --image=<my-org>/postgres:latest
+```
+
+```bash title="kraft"
 # Set Unikraft Cloud access token
 export UKC_TOKEN=token
 # Set metro to Frankfurt, DE
 export UKC_METRO=fra
+kraft cloud deploy -e POSTGRES_PASSWORD=unikraft -p 5432:5432/tls -M 1Gi .
 ```
 
-When done, invoke the following command to deploy this app on Unikraft
-Cloud:
+</CodeTabs>
 
-```bash
-kraft cloud deploy -e POSTGRES_PASSWORD=unikraft -p 5432:5432/tls -M 1024 .
-```
+The `UKC_TOKEN` and `UKC_METRO` environment variables are only supported by the legacy CLI.
 
 The output shows the instance address and other details:
 
 ```ansi
-[90m[[0m[92m●[0m[90m][0m Deployed successfully!
- [90m│[0m
- [90m├[0m[90m──────────[0m [90mname[0m: postgres-saan9
- [90m├[0m[90m──────────[0m [90muuid[0m: 3a1371f2-68c6-4187-84f8-c080f2b028ca
- [90m├[0m[90m─────────[0m [90mstate[0m: [92mstarting[0m
- [90m├[0m[90m──────────[0m [90mfqdn[0m: young-thunder-fbafrsxj.fra.unikraft.app
+[90m[[0m[92m●[0m[90m][0m Deployed successfully!
+ [90m│[0m
+ [90m├[0m[90m──────────[0m [90mname[0m: postgres-saan9
+ [90m├[0m[90m──────────[0m [90muuid[0m: 3a1371f2-68c6-4187-84f8-c080f2b028ca
+ [90m├[0m[90m─────────[0m [90mstate[0m: [92mstarting[0m
+ [90m├[0m[90m──────────[0m [90mfqdn[0m: young-thunder-fbafrsxj.fra.unikraft.app
  [90m├[0m[90m─────────[0m [90mimage[0m: postgres@sha256:2476c0373d663d7604def7c35ffcb4ed4de8ab231309b4f20104b84f31570766
  [90m├[0m[90m────────[0m [90mmemory[0m: 1024 MiB
  [90m├[0m[90m───────[0m [90mservice[0m: young-thunder-fbafrsxj
@@ -92,7 +105,7 @@ The output shows the instance address and other details:
 In this case, the instance name is `postgres-saan9` and the service `young-thunder-fbafrsxj`.
 They're different for each run.
 
-If you use port 5432/tls according to the example above you can now directly connect to postgres:
+If you use port `5432/tls`, according to the example above, you can now directly connect to postgres:
 
 ```console
 psql -U postgres -h young-thunder-fbafrsxj.fra.unikraft.app
@@ -114,19 +127,18 @@ postgres=#
 Use SQL and `psql` commands for your work.
 
 :::tip[Idle scale-to-zero]
-This example uses the [`idle` scale-to-zero policy](/docs/api/v1/instances#scaletozero_policy) by default (see the `labels` section in the `Kraftfile`).
+This example uses the [`idle` scale-to-zero policy](/features/scale-to-zero) by default (see the `labels` section in the `Kraftfile`).
 This means that the instance will use scale-to-zero even in the presence of `psql` connections.
 
 The PostgreSQL example makes use of scale-to-zero app support.
 This ensures that the instance isn't put into standby even for long running queries (during which the connections are also idle).
-To this end, the [`pg_ukc_scaletozero`](https://github.com/kraftcloud/pg_ukc_scaletozero) module is loaded into Postgres.
+To this end, the [`pg_ukc_scaletozero`](https://github.com/unikraft-cloud/pg_ukc_scaletozero) module is loaded into Postgres.
 This module suspends scale-to-zero during query processing.
 You can see this in action by running `SELECT pg_sleep(10);` and verifying that the instance keeps on running.
 :::
 
 :::note
-If you'd like to use a port other than `5432/tls` you'll need to use the `kraft cloud tunnel` command to connect to Postgres.
-See [the tunneling guide](/docs/guides/features/tunnel) for more information.
+If you'd like to use a port other than `5432/tls`, you'll need to use the legacy [CLI tunnel](/docs/cli/kraft/tunnel) command to connect to Postgres.
 
 You need to explicitly disable scale-to-zero.
 You can do this by either changing the label in the `Kraftfile` or by using `--scale-to-zero off` in the deploy command.
@@ -134,9 +146,17 @@ You can do this by either changing the label in the `Kraftfile` or by using `--s
 
 At any time, you can list information about the instance:
 
-```bash
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft instances list
+```
+
+```bash title="kraft"
 kraft cloud instance list
 ```
+
+</CodeTabs>
 
 ```text
 NAME              FQDN                                     STATE    CREATED AT     IMAGE                                   MEMORY   ARGS                                      BOOT TIME
@@ -145,25 +165,90 @@ postgres-saan9    young-thunder-fbafrsxj.fra.unikraft.app  running  6 minutes ag
 
 When done, you can remove the instance:
 
-```bash
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft instances delete postgres-saan9
+```
+
+```bash title="kraft"
 kraft cloud instance remove postgres-saan9
 ```
 
+</CodeTabs>
+
 ### Using volumes
 
-You can use [volumes](/docs/guides/features/volumes) for data persistence for your PostgreSQL instance.
+You can use [volumes](/platform/volumes) for data persistence for your PostgreSQL instance.
 
 For that you would first create a volume:
 
-```console
+<CodeTabs syncKey="cli-tool">
+
+```console title="unikraft"
+unikraft volumes create \
+  --set name=postgres \
+  --set size=200 \
+  --set metro=fra
+```
+
+```console title="kraft"
 kraft cloud volume create --name postgres --size 200
 ```
 
+</CodeTabs>
+
 Then start the PostgreSQL instance and mount that volume:
 
-```console
-kraft cloud deploy -e POSTGRES_PASSWORD=unikraft -e PGDATA=/volume/postgres -v postgres:/volume -p 5432:5432/tls -M 1024 .
+<CodeTabs syncKey="cli-tool">
+
+```console title="unikraft"
+unikraft build . --output <my-org>/postgres:latest
+unikraft run --metro=fra -p 5432:5432/tls -m 1Gi -e POSTGRES_PASSWORD=unikraft -e PGDATA=/volume/postgres -v postgres:/volume --image=<my-org>/postgres:latest
 ```
+
+```console title="kraft"
+kraft cloud deploy -p 5432:5432/tls -M 1Gi -e POSTGRES_PASSWORD=unikraft -e PGDATA=/volume/postgres -v postgres:/volume .
+```
+
+</CodeTabs>
+
+### Using checkpoints
+
+:::note
+Checkpointing is coming soon.
+Full documentation will follow once the interface is available.
+:::
+
+### Using instance branching
+
+:::note
+Instance branching is a preview feature and isn't yet available on stable.
+The interface described here reflects the current implementation and may change before general availability.
+:::
+
+You can branch a running PostgreSQL instance to create an independent copy with the exact same state.
+The source instance keeps running unaffected.
+
+To create a branch, pass `--branch` with the source instance name to `unikraft run`:
+
+<CodeTabs syncKey="cli-tool">
+```console title="unikraft"
+unikraft run --metro=fra -p 5432:5432/tls --branch <source-instance>
+```
+</CodeTabs>
+
+The branch boots immediately from the same state as the source.
+Connect to it like any other instance.
+Whatever you do, the source instance remains unaffected.
+
+When you're done, remove the branch:
+
+<CodeTabs syncKey="cli-tool">
+```console title="unikraft"
+unikraft instances delete <branch-name>
+```
+</CodeTabs>
 
 ### Customize your deployment
 
@@ -175,7 +260,7 @@ For that you use a different `POSTGRES_PASSWORD` environment variable when start
 
 You could also use a different location to mount your volume or set more configuration options.
 
-And, you can use the PostgreSQL instance in conjunction with a frontend service, [see the guide here](/docs/guides/features/idns).
+And, you can use the PostgreSQL instance in conjunction with a frontend service, [see the guide here](/platform/services).
 But, in that case make sure to disable scale-to-zero if you plan to use the DB internally.
 
 :::note
@@ -189,8 +274,16 @@ Support for scale-to-zero for internal instances is coming soon.
 
 Use the `--help` option for detailed information on using Unikraft Cloud:
 
-```bash
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft --help
+```
+
+```bash title="kraft"
 kraft cloud --help
 ```
 
-Or visit the [CLI Reference](/docs/cli).
+</CodeTabs>
+
+Or visit the [CLI Reference](/docs/cli/unikraft) or the [legacy CLI reference](/docs/cli/kraft/overview).

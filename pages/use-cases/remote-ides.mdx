@@ -5,19 +5,19 @@ navigation_icon: square-chevron-right
 
 Remote Integrated Development Environments (IDEs) have become essential for cloud-native development, collaboration, and education.
 But traditional setups often suffer from **slow startup times, high idle costs, and complex resource management**.
-With **Unikraft Cloud**, remote IDEs gain the advantages of **unikernels**, making them **fast, secure, and truly serverless**.
+With **Unikraft Cloud**, remote IDEs gain the advantages of **microVMs**, making them **fast, secure, and truly serverless**.
 
 ## Why run remote IDEs on Unikraft Cloud
 
 ### ⚡ Instant developer environments
 
-Unikraft unikernels boot in milliseconds, enabling **instant spin-up of full-featured IDEs** on demand.
+Unikraft microVMs boot in milliseconds, enabling **instant spin-up of full-featured IDEs** on demand.
 Developers start coding immediately without waiting for heavy VMs or containers to initialise.
 
 
 ### 🔒 Secure, isolated workspaces
 
-Each IDE runs as a **dedicated unikernel instance**, ensuring strong workload isolation and reducing the risk of cross-tenant data leaks.
+Each IDE runs as a **dedicated microVM instance**, ensuring strong workload isolation and reducing the risk of cross-tenant data leaks.
 Sensitive code stays protected in a **minimal, hardened environment**.
 
 
@@ -34,7 +34,7 @@ Perfect for **pair programming, CI/CD pipelines, or education platforms**.
 
 ### 🚀 High performance with low overhead
 
-Unikernels run closer to bare metal than containers, providing developers with
+MicroVMs run closer to bare metal than containers, providing developers with
 **snappy, low-latency environments** that feel as fast as local coding—without
 sacrificing portability or scalability.
 
@@ -48,28 +48,47 @@ When not in use, the instance will [scale-to-zero](/docs/features/scale-to-zero)
 
 To run it, follow these steps:
 
-1. Install the [`kraft` CLI tool](/install) and a container runtime engine (for example, Docker).
+1. Install the [`kraft` CLI tool](https://unikraft.org/docs/cli/install) and a container runtime engine (for example, [Docker](https://docs.docker.com/engine/install/)).
 
-1. Clone the [`examples` repository](https://github.com/kraftcloud/examples) and `cd` into the `examples/code-server/` directory:
+1. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/code-server/` directory:
 
 ```bash
-git clone https://github.com/kraftcloud/examples
+git clone https://github.com/unikraft-cloud/examples
 cd examples/code-server/
 ```
 
-Make sure to log into Unikraft Cloud by setting your token and a [metro](/metros#available) close to you.
-This guide uses `fra` (Frankfurt, 🇩🇪):
+Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
+This guide uses `fra` (Frankfurt, 🇩🇪).
 
-```bash
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft login
+```
+
+```bash title="kraft"
 # Set Unikraft Cloud access token
 export UKC_TOKEN=token
 # Set metro to Frankfurt, DE
 export UKC_METRO=fra
 ```
 
+</CodeTabs>
+
+The `UKC_TOKEN` and `UKC_METRO` environment variables are only supported by the legacy CLI.
+
 When done, invoke the following command to deploy this app on Unikraft Cloud:
 
-```bash
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft volumes create \
+    --set name=code-workspace \
+    --set size=1024 \
+    --set metro=fra
+```
+
+```bash title="kraft"
 kraft cloud volume create \
     --name code-workspace \
     --size 1Gi
@@ -78,9 +97,9 @@ kraft cloud deploy \
     --scale-to-zero on \
     --scale-to-zero-stateful \
     --scale-to-zero-cooldown 4s \
-    -M 2048 \
     --name code-server \
     -p 443:8443 \
+    -M 2Gi \
     -v code-workspace:/workspace \
     -e PGUID=0 \
     -e PGID=0 \
@@ -90,14 +109,42 @@ kraft cloud deploy \
     .
 ```
 
+</CodeTabs>
+
 Now, you can access the Code Server in the browser, at the provided address.
 
 ### Volume
 
 This deployment creates a volume for data persistence: `code-workspace`.
-Upon deleting the instance (for example, `kraft cloud instance rm code-server`), this volume will persist, allowing you to create another instance without losing data.
+Upon deleting the instance, this volume will persist, allowing you to create another instance without losing data.
 To remove the volume, you can use:
 
-```bash
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft volumes delete code-workspace
+```
+
+```bash title="kraft"
 kraft cloud volume rm code-workspace
 ```
+
+</CodeTabs>
+
+## Learn more
+
+Use the `--help` option for detailed information on using Unikraft Cloud:
+
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft --help
+```
+
+```bash title="kraft"
+kraft cloud --help
+```
+
+</CodeTabs>
+
+Or visit the [CLI Reference](/docs/cli/unikraft) or the [legacy CLI reference](/docs/cli/kraft/overview).

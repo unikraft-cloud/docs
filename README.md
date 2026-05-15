@@ -5,7 +5,6 @@ This repository contains the markdown contents of the documentation site at http
 ## Contributing to the docs
 
 Contributions to the documentation are welcome!
-If you're looking to file an issue or bug report for anything other than these documentations, please [visit the roadmap](https://roadmap.unikraft.com/).
 
 ### Table of contents
 

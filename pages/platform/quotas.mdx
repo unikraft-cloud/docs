@@ -1,0 +1,127 @@
+---
+title: Quotas
+navigation_icon: gauge
+description: |
+  Understand and track your Unikraft Cloud resource quotas.
+---
+
+Unikraft Cloud enforces per-account resource quotas to govern how many instances, service groups, volumes, and compute resources you can provision.
+Use the quotas endpoint to inspect your current usage and limits.
+
+## Endpoints
+
+```
+GET /users/quotas
+GET /users/{uuid}/quotas
+```
+
+`GET /users/quotas` (no UUID) returns the quota for the authenticated user.
+
+## Response structure
+
+The response contains a top-level `quotas` array.
+Each element has three sections: `used`, `hard`, and `limits`.
+
+### `used`: Current resource usage
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `instances` | int | Total number of instances (stopped + running). |
+| `live_instances` | int | Number of currently running instances. |
+| `live_vcpus` | int | Number of vCPUs in use across running instances. |
+| `live_memory_mb` | int | Memory (MB) in use across running instances. |
+| `service_groups` | int | Number of allocated service groups. |
+| `services` | int | Number of allocated services (published ports). |
+| `volumes` | int | Number of allocated volumes. |
+| `total_volume_mb` | int | Total volume storage in use (MB). |
+
+### `hard`: Maximum allowed allocations
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `instances` | int | Maximum number of instances. |
+| `live_vcpus` | int | Maximum vCPUs running simultaneously. |
+| `live_memory_mb` | int | Maximum memory (MB) running simultaneously. |
+| `service_groups` | int | Maximum number of service groups. |
+| `services` | int | Maximum number of services. |
+| `volumes` | int | Maximum number of volumes. |
+| `total_volume_mb` | int | Maximum total volume storage (MB). |
+
+### `limits`: Per-resource range constraints
+
+These define the minimum and maximum values you can specify when creating individual resources.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `min_memory_mb` | int | Minimum memory (MB) per instance. |
+| `max_memory_mb` | int | Maximum memory (MB) per instance. |
+| `min_vcpus` | int | Minimum vCPUs per instance. |
+| `max_vcpus` | int | Maximum vCPUs per instance. |
+| `min_volume_mb` | int | Minimum volume size (MB). |
+| `max_volume_mb` | int | Maximum volume size (MB). |
+| `min_autoscale_size` | int | Minimum autoscale group size. |
+| `max_autoscale_size` | int | Maximum autoscale group size. |
+
+## Example
+
+Set `UKC_TOKEN` and `UKC_METRO` for the API call:
+
+```bash title=""
+curl -X GET \
+    -H "Authorization: Bearer $UKC_TOKEN" \
+    -H "Content-Type: application/json" \
+    "https://api.$UKC_METRO.unikraft.cloud/v1/users/quotas"
+```
+
+```json title=""
+{
+  "quotas": [
+    {
+      "status": "ok",
+      "uuid": "a1b2c3d4-...",
+      "used": {
+        "instances": 3,
+        "live_instances": 2,
+        "live_vcpus": 2,
+        "live_memory_mb": 512,
+        "service_groups": 2,
+        "services": 4,
+        "volumes": 1,
+        "total_volume_mb": 512
+      },
+      "hard": {
+        "instances": 50,
+        "live_vcpus": 16,
+        "live_memory_mb": 4096,
+        "service_groups": 20,
+        "services": 40,
+        "volumes": 20,
+        "total_volume_mb": 20480
+      },
+      "limits": {
+        "min_memory_mb": 16,
+        "max_memory_mb": 4096,
+        "min_vcpus": 1,
+        "max_vcpus": 8,
+        "min_volume_mb": 128,
+        "max_volume_mb": 10240,
+        "min_autoscale_size": 0,
+        "max_autoscale_size": 10
+      }
+    }
+  ]
+}
+```
+
+:::note
+The `hard.live_instances` field is a compatibility alias for `hard.live_vcpus`.
+It's kept for backward compatibility and the platform may drop it in a future API version.
+Prefer `hard.live_vcpus`.
+:::
+
+## Learn more
+
+* Unikraft Cloud's [REST API reference](/api/platform/v1)
+* [Instances](/platform/instances)
+* [Volumes](/platform/volumes)
+* [Services](/platform/services)

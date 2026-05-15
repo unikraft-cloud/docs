@@ -1,0 +1,91 @@
+---
+title: Tagging
+navigation_icon: tag
+---
+
+Tags are labels that you can attach to instances, volumes, instance templates, and volume templates to organize and filter your resources.
+
+Don't confuse them with image tags which serve a different purpose (see [images](/api/platform/v1/images)).
+
+## Tag format
+
+Tags can be up to 256 characters long and may contain alphanumeric characters plus `-`, `+`, `_`, `.`, `:`, and `=`.
+Each resource (instance, volume, instance template, volume template) can have up to 16 tags.
+You can currently only manage tags via the API.
+Kraftkit neither displays them nor allows you to edit them.
+
+## Adding tags
+
+Add tags to a resource at creation time:
+
+```json title="POST /instances"
+{
+  "image": "...",
+  "memory_mb": ...,
+  "tags": [ "production", "customer_A" ]
+}
+```
+
+Add tags to an existing resource (`"op": "set"` will replace all existing tags):
+
+```json title="PATCH /instances"
+{
+  "name": "example-instance",
+  "prop": "tags",
+  "op": "set",
+  "value": ["testsystem", "customer_B"]
+}
+```
+
+:::note
+Use `/volumes` for volumes, `/instances/templates` for instance templates, and `/volumes/templates` for volume templates.
+:::
+
+Add tags to a resource without replacing existing ones (`"op": "add"`):
+
+```json title="PATCH /instances"
+{
+  "name": "example-instance",
+  "prop": "tags",
+  "op": "add",
+  "value": ["legacy"]
+}
+```
+
+:::note
+Tags are automatically deduplicated.
+Repeating the same tag adds it only once.
+Adding a tag already attached to a resource has no effect.
+:::
+
+## Removing tags
+
+Remove specific tags from a resource (`"op": "del"`):
+
+```json title="PATCH /instances"
+{
+  "name": "example-instance",
+  "prop": "tags",
+  "op": "del",
+  "value": ["legacy"]
+}
+```
+
+## Filtering by tag
+
+Filter the instance list, volume list, instance template list, or volume template list by one or more tags.
+Only resources that have _all_ the specified tags appear in the results.
+
+```
+GET /instances?tags=production,customer_A
+```
+
+Separate tags by commas (`,`).
+
+## Tags in API responses
+
+Each instance, volume, instance template, or volume template status response includes a `tags` array if at least one tag is present.
+
+## Learn more
+
+* Unikraft Cloud's [REST API reference](/api/platform/v1), in particular the sections on [instances](/api/platform/v1/instances) and [volumes](/api/platform/v1/volumes)

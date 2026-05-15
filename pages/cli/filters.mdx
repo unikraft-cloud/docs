@@ -1,0 +1,163 @@
+---
+title: Filters
+description: Filter expression language for the --filter and --until flags
+navigation_icon: filter
+---
+
+The `unikraft` CLI's `--filter` and `--until` flags accept filter expressions that match resources based on their field values.
+These flags are available on `list`, `wait`, and `delete` subcommands throughout the `unikraft` CLI.
+They aren't available in the legacy `kraft cloud` CLI.
+
+The syntax extends the [containerd filter grammar](https://github.com/containerd/containerd/blob/main/pkg/filters/filter.go) with negated regex matching, wildcards, and alternative quoting.
+
+## Grammar
+
+```
+expression := selector ( "," selector )*
+selector   := fieldpath [ operator value ]
+           |  fieldpath? "*" ( "." selector | operator value )?
+fieldpath  := field ( "." field )*
+field      := quoted-string | identifier
+identifier := [A-Za-z] [A-Za-z0-9_]+
+operator   := "=" | "==" | "!=" | "!==" | "~=" | "!~="
+value      := quoted-string | regex-string | unquoted-string
+```
+
+A **quoted-string** uses Go string syntax (double quotes with standard
+backslash escapes: `\n`, `\t`, `\\`, `\"`, `\xNN`, `\uNNNN`, `\UNNNNNNNN`,
+octal `\NNN`).
+
+A **regex-string** may only appear after `~=` or `!~=`.
+You can delimit it with `/` or `|` instead of `"`, which is convenient when the pattern contains double-quotes or backslashes (for example, `name~=/[abc]{0,2}/` or `path~=|foo/bar|`).
+
+An **unquoted-string** is any run of non-whitespace, non-comma characters.
+
+## Operators
+
+| Operator | Alias | Description                       | Example           |
+| -------- | ----- | --------------------------------- | ----------------- |
+| `==`     | `=`   | Equals                            | `state==running`  |
+| `!=`     | `!==` | Not equals                        | `state!=stopped`  |
+| `~=`     |       | Matches regular expression        | `name~="^web-.*"` |
+| `!~=`    |       | Doesn't match regular expression | `name!~="^test-"` |
+| _(none)_ |       | Field is present and non-empty    | `description`     |
+
+Regular expressions use Go `regexp` syntax.
+
+## Field paths
+
+Fields use their output name (the name shown in `kv` or `table` output).
+Nested fields use dot-separated paths.
+
+```
+name                        # top-level field
+settings.bar                # nested field
+timestamps.created-at       # hyphenated field name
+labels."my complex key"     # quoted path segment
+```
+
+### Wildcards
+
+A `*` in a field path iterates over all entries of a map or array field.
+The wildcard can appear at any level, and you can chain wildcards.
+
+```
+labels.*                     # true if any label entry exists
+labels.*==value              # true if any label entry equals "value"
+authors.*.email==a@b.com     # true if any author's email matches
+nested.*.*==true             # double wildcard
+```
+
+**Negation semantics with wildcards:** positive operators (`==`, `~=`) match if
+**any** entry meets the condition.
+Negated operators (`!=`, `!~=`) match only if **all** entries meet the condition (that is, no entry matches the negated pattern).
+
+### Indexed access
+
+You can also access array elements by zero-based numeric index.
+
+```
+authors.0.name==Alice        # first author's name
+authors.1.email==b@b.com     # second author's email
+```
+
+## Combining expressions
+
+### And (comma-separated within one flag)
+
+Comma-separated selectors within a single `--filter` value must **all** match for the filter to include a resource.
+
+```bash
+--filter 'state==running,name~="^web"'
+```
+
+### Or (repeated flags)
+
+When you specify `--filter` several times, the filter includes a resource if it matches **any** of the expressions.
+
+```bash
+--filter 'state==running' --filter 'state==stopped'
+```
+
+### Combining both operators
+
+The two mechanisms compose:
+
+```bash
+--filter 'state==running,metro==fra0' --filter 'state==stopped,metro==was1'
+```
+
+This matches resources that are (running in fra0) **or** (stopped in was1).
+
+## The `--until` flag
+
+The `--until` flag uses the same expression syntax as `--filter`.
+It's available on `wait` subcommands (and aliases to `--filter` there).
+The command polls until every targeted resource matches the expression.
+
+```bash
+unikraft instance wait my-instance --until state==running
+```
+
+## Special fields
+
+The `metro` field receives special handling: when present in a filter, it restricts which metros the CLI queries rather than filtering results after the fact.
+This means `--filter metro==fra0` avoids fetching data from other metros entirely.
+
+## Examples
+
+```bash
+# List only running instances
+unikraft instance list --filter state==running
+
+# List instances NOT in the "stopped" state
+unikraft instance list --filter 'state!=stopped'
+
+# List images whose ref contains "nginx"
+unikraft image list --filter 'ref~="/nginx"'
+
+# Exclude images matching a pattern
+unikraft image list --filter 'ref!~="test"'
+
+# Regex with slash delimiters (avoids escaping issues)
+unikraft image list --filter 'ref~=/nginx[0-9]{1,3}/'
+
+# Wait for an instance to reach the running state
+unikraft instance wait my-instance --until state==running
+
+# Delete all stopped instances (with confirmation)
+unikraft instance remove --filter state==stopped
+
+# Combine filters: running instances in fra0, OR stopped in was1
+unikraft instance list --filter 'state==running,metro==fra0' \
+                       --filter 'state==stopped,metro==was1'
+
+# Filter on nested fields
+unikraft instance list --filter 'settings.autoscale==true'
+
+# Filter using array wildcard
+unikraft instance list --filter 'volumes.*.name==data'
+
+# Check that no label matches a pattern (all must satisfy !=)
+unikraft instance list --filter 'labels.*!=temporary'
+```

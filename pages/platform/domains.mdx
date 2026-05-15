@@ -8,7 +8,7 @@ This guide shows how to deploy an app and link it to a domain you own (for examp
 :::note
 Unikraft Cloud can take a few seconds before issuing the certificate.
 If there are misconfigurations or DNS changes that your external DNS provider hasn't propagated yet, this can take much longer.
-You can check the validation status of the certificate with `kraft cloud cert get` (more on this command below).
+You can check the validation status of the certificate with the CLI (more on this below).
 The controller retries at these intervals: [1,5,10,30] minutes, then [1,6,12,24] hours, then it fails.
 :::
 
@@ -31,13 +31,25 @@ ALIAS (apex alias) and ANAME (authoritative alias) are DNS record types some pro
   If the provider doesn't support these record types, add an A record pointing to the metro IP address.
 
 :::tip
-You can find information about the Unikraft Cloud metros available to you, as well as their IP addresses, via the cmd `kraft cloud metro ls`.
+You can find information about the Unikraft Cloud metros available to you, as well as their IP addresses, via the CLI.
+
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft metros list
+```
+
+```bash title="kraft"
+kraft cloud metro ls
+```
+
+</CodeTabs>
 :::
 
 :::note
 You can have many domains for the same service.
 Unikraft Cloud also supports wildcard domains.
-See the [certificates API](/docs/api/v1/certificates)) for details.
+See the [certificates API](/api/platform/v1/certificates) for details.
 :::
 
 ## Launching your app
@@ -49,23 +61,42 @@ git clone https://github.com/unikraft-cloud/examples
 cd examples/nginx
 ```
 
-Log into Unikraft Cloud by setting your token and a [metro](/metros#available) close to you.
+Log into Unikraft Cloud and select a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪).
 Set the following:
 
-```bash title=""
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft login
+```
+
+```bash title="kraft"
 # Set Unikraft Cloud access token
 export UKC_TOKEN=token
 # Set metro to Frankfurt, DE
 export UKC_METRO=fra
 ```
 
-With this in place, use the `kraft cloud deploy` command to create an instance of the web server and to link it to a custom name.
-Unikraft Cloud does this through the `-d` flag:
+</CodeTabs>
 
-```bash title=""
+The `UKC_TOKEN` and `UKC_METRO` environment variables are only supported by the legacy CLI.
+
+With this in place, use the CLI to create an instance of the web server and link it to a custom name.
+Unikraft Cloud does this through the domain flag:
+
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft build . --output <my-org>/nginx:latest
+unikraft run --metro=fra -p 443:8080/http+tls --domain mydomain.com --image=<my-org>/nginx:latest
+```
+
+```bash title="kraft"
 kraft cloud deploy -p 443:8080 -d mydomain.com .
 ```
+
+</CodeTabs>
 
 The resulting output of the `deploy` command should be like:
 
@@ -85,13 +116,13 @@ The resulting output of the `deploy` command should be like:
  [90m└[0m[90m──────────[0m [90margs[0m: /usr/bin/nginx -c /etc/nginx/nginx.conf
 ```
 
-When you issue the `-d` flag, Unikraft Cloud requests a
+When you issue the domain flag, Unikraft Cloud requests a
 new certificate from the public certificate authority.
 
 :::note
 Issuing the certificate can take a few seconds.
 If there are misconfigurations or pending DNS changes, it can take longer.
-Check the validation status with `kraft cloud cert get` (more on this command below).
+Check the validation status with the CLI (more on this command below).
 The Unikraft Cloud controller retries at these intervals: [1,5,10,30] minutes, then [1,6,12,24] hours, then it fails.
 :::
 
@@ -101,3 +132,8 @@ Test the deployment with `curl`:
 ```bash
 curl https://mydomain.com
 ```
+
+## Learn more
+
+* The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
+* Unikraft Cloud's [REST API reference](/api/platform/v1), in particular the sections on [instances](/api/platform/v1/instances) and [service groups](/api/platform/v1/service-groups).

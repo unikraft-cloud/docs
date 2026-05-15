@@ -1,0 +1,183 @@
+---
+title: "Guides Overview"
+---
+
+This page lists all available guides for deploying applications and services on Unikraft Cloud, grouped by category.
+These guides mimic the [examples](https://github.com/unikraft-cloud/examples) repository, and are constantly updated with new content.
+
+:::note
+Unikraft Cloud can run any workload—define it in a Dockerfile and it will run it.
+These guides are here to make that journey as fast as possible for you.
+:::
+
+{/* vale off */}
+
+## HTTP Servers
+
+Deploy HTTP servers written in your language of choice on Unikraft Cloud.
+
+### C / C++
+
+- [C HTTP Server](/guides/httpserver-gcc13.2)
+- [C++ HTTP Server](/guides/httpserver-gpp13.2)
+- [C++ Boost HTTP Server](/guides/httpserver-boost1.74-gpp13.2)
+- [SSH and HTTP Server with C and Debugging Tools](/guides/httpserver-c-debug)
+
+### .NET
+
+- [.NET HTTP Server](/guides/httpserver-dotnet10.0)
+
+### Elixir / Erlang
+
+- [Elixir HTTP Server](/guides/httpserver-elixir1.16)
+- [Erlang HTTP Server](/guides/httpserver-erlang26.2)
+
+### Go
+
+- [Go HTTP Server](/guides/httpserver-go1.21)
+
+### Java
+
+- [Java HTTP Server](/guides/httpserver-java21)
+- [Spring Boot HTTP Server](/guides/httpserver-java17-springboot3.5.x)
+- [Spring Petclinic](/guides/httpserver-java17-spring-petclinic)
+
+### JavaScript / TypeScript
+
+- [Node HTTP Server](/guides/httpserver-node25)
+- [Bun HTTP Server](/guides/httpserver-bun)
+- [Express HTTP Server](/guides/httpserver-expressjs4.18-node21)
+- [Puppeteer HTTP Server](/guides/httpserver-node-express-puppeteer)
+- [Prisma HTTP Server](/guides/httpserver-prisma-expressjs4.19-node18)
+- [Next.js HTTP Server](/guides/httpserver-node21-nextjs)
+- [Remix HTTP Server](/guides/httpserver-node21-remix)
+- [SolidJS HTTP Server](/guides/httpserver-node21-solid-start)
+- [SvelteKit HTTP Server](/guides/httpserver-node21-sveltekit)
+- [Vite HTTP Server (Nginx)](/guides/httpserver-nginx-vite-vanilla)
+- [Vite HTTP Server (Node)](/guides/httpserver-node-vite-vanilla)
+- [Vite SSR HTTP Server (Node)](/guides/httpserver-node-vite-ssr-vanilla)
+
+### Lua
+
+- [Lua HTTP Server](/guides/httpserver-lua5.1)
+
+### Perl
+
+- [Perl HTTP Server](/guides/httpserver-perl5.42)
+
+### PHP
+
+- [PHP HTTP Server](/guides/httpserver-php8.2)
+
+### Python
+
+- [Python HTTP Server](/guides/httpserver-python3.12)
+- [Django HTTP Server](/guides/httpserver-python3.12-django5.0)
+- [FastAPI HTTP Server](/guides/httpserver-python3.12-fastapi-0.121.3)
+- [Flask HTTP Server](/guides/httpserver-python3.12-flask3.0)
+- [Flask and SQLite HTTP Server](/guides/httpserver-python3.12-flask3.0-sqlite)
+
+### Ruby
+
+- [Ruby HTTP Server](/guides/httpserver-ruby3.2)
+
+### Rust
+
+- [Rust HTTP Server](/guides/httpserver-rust1.91)
+- [Rust (Actix Web) HTTP Server](/guides/httpserver-rust1.87-actix-web4)
+- [Rust (Leptos + Trunk) HTTP Server](/guides/httpserver-rust-trunkrs-leptos)
+- [Rust (Rocket) HTTP Server](/guides/httpserver-rust1.81-rocket0.5)
+- [Rust (Tokio) HTTP Server](/guides/httpserver-rust1.75-tokio)
+
+## Web Servers & Reverse Proxies
+
+Serve static content or route traffic with popular web server and proxy tools.
+
+- [Nginx](/guides/nginx)
+- [Caddy](/guides/caddy2.7-go1.21)
+- [HAProxy](/guides/haproxy)
+- [Skipper](/guides/skipper0.18)
+- [Traefik](/guides/traefik)
+
+## Databases & Caching
+
+Run databases and caching layers on Unikraft Cloud.
+
+- [DragonflyDB](/guides/dragonflydb)
+- [DuckDB with Go](/guides/duckdb-go1.21)
+- [MariaDB](/guides/mariadb)
+- [Memcached](/guides/memcached1.6)
+- [MongoDB](/guides/mongodb)
+- [PostgreSQL](/guides/postgres)
+- [Redis](/guides/redis7.2)
+
+## Storage & Media
+
+Host object storage and image processing services.
+
+- [MinIO](/guides/minio)
+- [Imaginary](/guides/imaginary)
+
+## WebAssembly Runtimes
+
+Run WebAssembly workloads on Unikraft Cloud.
+
+- [Spin](/guides/spin-wagi-http)
+- [Wazero](/guides/wazero-import-go)
+
+## AI & MCP Servers
+
+Deploy Model Context Protocol (MCP) servers and AI-enabled services.
+
+- [Simple MCP Server](/guides/mcp-server-simple)
+- [ArXiv MCP Server](/guides/mcp-server-arxiv)
+
+## Observability & Monitoring
+
+Collect metrics and visualise them with standard tools.
+
+- [Grafana](/guides/grafana)
+- [OpenTelemetry Collector](/guides/opentelemetry-collector)
+
+## Developer Tools & Remote Access
+
+Access remote development environments and file transfer services.
+
+- [Visual Studio Code Server](/guides/visual-studio-code-server)
+- [noVNC](/guides/novnc-browser)
+- [Debian SSH Server](/guides/debian-ssh)
+- [vsftpd](/guides/vsftpd)
+
+## Full-Stack Applications & CMS
+
+Deploy complete web applications and content management systems.
+
+- [WordPress](/guides/wordpress-all-in-one)
+- [Ruby on Rails](/guides/ruby3.2-rails)
+- [Hugo](/guides/hugo0.122)
+
+## Browser Automation
+
+Run browser automation and end-to-end testing workloads on Unikraft Cloud.
+
+- [Playwright Chromium (Node)](/guides/node-playwright-chromium)
+- [Playwright Firefox (Node)](/guides/node-playwright-firefox)
+- [Playwright WebKit (Node)](/guides/node-playwright-webkit)
+- [Playwright Chromium (Python)](/guides/python-playwright-chromium)
+
+## Real-time & Gaming
+
+Multiplayer and WebSocket-based applications.
+
+- [Node WebSocket Server](/guides/node21-websocket)
+- [Agar.io Clone](/guides/node18-agario)
+- [Wings.io Clone](/guides/node18-wingsio)
+- [Node AllKaraoke](/guides/node24-karaoke)
+
+## Integration & Automation
+
+Examples for webhooks, background jobs, and automation.
+
+- [GitHub Webhook Receiver](/guides/github-webhook-node)
+
+{/* vale on */}

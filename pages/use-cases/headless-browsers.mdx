@@ -3,20 +3,18 @@ title: Headless Browsers
 navigation_icon: app-window
 ---
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "zudoku/ui/Tabs"
-
 Headless browsers power web scraping, automated testing, Search Engine Optimization (SEO) rendering, and synthetic monitoring.
-They're resource-intensive, security-sensitive, and often run in short bursts—making them ideal candidates for unikernel-based, scale-to-zero infrastructure.
+They're resource-intensive, security-sensitive, and often run in short bursts—making them ideal candidates for microVM-based, scale-to-zero infrastructure.
 
 
 ## Why headless browsers on Unikraft Cloud
 
 ### ⚡ Instant startups
 
-Instances on Unikraft Cloud boot in microseconds, so browsers spin up only when needed:
+Instances on Unikraft Cloud boot in milliseconds, so browsers spin up only when needed:
 
 * Perfect for on-demand scraping and CI/CD testing.
-* No idle costs when browsers aren’t running.
+* No idle costs when browsers aren't running.
 
 ### 🔒 Strong security
 
@@ -25,13 +23,12 @@ With Unikraft Cloud:
 
 * Each browser runs in its own VM, isolated by design.
 * Minimal OS footprint drastically reduces attack surface.
-* Immutable unikernel images prevent tampering.
 
 ### 💸 Cost-efficient scale-to-zero
 
 Scraping jobs or test suites often run in short, irregular bursts:
 
-* Browsers use scale-to-zero when idle, cutting infrastructure waste.
+* Browsers scale-to-zero when idle, cutting infrastructure waste.
 * Pay only for the seconds of actual execution.
 
 ### 🌍 Serverless-ready
@@ -40,6 +37,7 @@ Integrate with pipelines and workloads that demand ephemeral execution:
 
 * Trigger browsers via APIs or serverless functions.
 * Distribute workloads globally to run close to data sources.
+
 
 ## Getting started
 
@@ -52,24 +50,35 @@ option to run them headless (no UI).
 
 To run it, follow these steps:
 
-1. Install the [`kraft` CLI tool](/install) and a container runtime engine (for example, Docker).
+1. Install the CLI and a container runtime engine (for example, [Docker](https://docs.docker.com/engine/install/)).
+   Use the [unikraft CLI](/docs/cli/unikraft) or the legacy [kraft CLI](https://unikraft.org/docs/cli/install).
 
-1. Clone the [`examples` repository](https://github.com/kraftcloud/examples) and `cd` into the `examples/node-express-puppeteer/` directory:
+1. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/node-express-puppeteer/` directory:
 
 ```bash
-git clone https://github.com/kraftcloud/examples
+git clone https://github.com/unikraft-cloud/examples
 cd examples/node-express-puppeteer/
 ```
 
-Make sure to log into Unikraft Cloud by setting your token and a [metro](/metros#available) close to you.
+Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪):
 
-```bash
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft login
+```
+
+```bash title="kraft"
 # Set Unikraft Cloud access token
 export UKC_TOKEN=token
 # Set metro to Frankfurt, DE
 export UKC_METRO=fra
 ```
+
+</CodeTabs>
+
+The `UKC_TOKEN` and `UKC_METRO` environment variables are only supported by the legacy CLI.
 
 :::note
 
@@ -80,9 +89,18 @@ Request an increase in the instance memory quota when you need more memory.
 
 When done, invoke the following command to deploy this app on Unikraft Cloud:
 
-```bash
-kraft cloud deploy -p 443:3000 -M 4096 .
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft build . --output <my-org>/node-express-puppeteer:latest
+unikraft run --metro=fra -p 443:3000/http+tls -m 4Gi --image=<my-org>/node-express-puppeteer:latest
 ```
+
+```bash title="kraft"
+kraft cloud deploy -p 443:3000 -M 4Gi .
+```
+
+</CodeTabs>
 
 The output shows the instance address and other details:
 
@@ -107,14 +125,22 @@ They're different for each run.
 Use a browser to access the landing page of the Puppeteer (that uses [ExpressJS](https://expressjs.com/)).
 The app and the landing page are part of [this repository](https://github.com/christopher-talke/node-express-puppeteer-pdf-example).
 
-In the example run above, the landing page is at the address https://nameless-fog-0tvh1uov.fra.unikraft.app
+In the example run above, the landing page is at the address `https://nameless-fog-0tvh1uov.fra.unikraft.app`.
 You can use the landing page to generate the PDF version of a remote page.
 
 At any time, you can list information about the instance:
 
-```bash
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft instances list node-express-puppeteer-7afg3
+```
+
+```bash title="kraft"
 kraft cloud instance list node-express-puppeteer-7afg3
 ```
+
+</CodeTabs>
 
 ```text
 NAME                          FQDN                                           STATE    STATUS        IMAGE                              MEMORY   ARGS                               BOOT TIME
@@ -123,9 +149,17 @@ node-express-puppeteer-7afg3  node-express-puppeteer-7afg3.fra.unikraft.app  run
 
 When done, you can remove the instance:
 
-```bash
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft instances delete node-express-puppeteer-7afg3
+```
+
+```bash title="kraft"
 kraft cloud instance remove node-express-puppeteer-7afg3
 ```
+
+</CodeTabs>
 
 ### Customize your deployment
 
@@ -137,8 +171,16 @@ You can update the service itself to provide a Representational State Transfer (
 
 Use the `--help` option for detailed information on using Unikraft Cloud:
 
-```bash
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft --help
+```
+
+```bash title="kraft"
 kraft cloud --help
 ```
 
-Or visit the [CLI Reference](/docs/cli).
+</CodeTabs>
+
+Or visit the [CLI Reference](/docs/cli/unikraft) or the [legacy CLI reference](/docs/cli/kraft/overview).

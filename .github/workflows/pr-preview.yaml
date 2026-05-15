@@ -1,0 +1,120 @@
+name: pr/preview
+
+on:
+  pull_request:
+    types:
+    - opened
+    - synchronize
+    - reopened
+    - closed
+    branches:
+    - prod-staging
+
+# Automatically cancel in-progress actions on the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request_target' && github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+env:
+  UKC_TOKEN: ${{ secrets.UKC_TOKEN }}
+  UKC_METRO: ${{ vars.UKC_METRO }}
+  KRAFTKIT_LOG_LEVEL: error
+  KRAFTKIT_NO_CHECK_UPDATES: "true"
+
+permissions:
+  deployments: write
+  contents: read
+  pull-requests: write
+
+jobs:
+  deploy:
+    environment: pull-requests
+    runs-on: arc-ubuntu24.04-big
+    if: ${{ github.event.action != 'closed' }}
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Validate required secrets
+      shell: bash
+      run: |
+        if [[ -z "${{ vars.UKC_METRO }}" ]]; then
+          echo "Missing UKC_METRO variable" >&2
+          exit 1
+        fi
+
+
+    - name: Setup KraftKit
+      uses: ./.github/actions/setup-kraftkit
+
+    - name: Setup docs website
+      id: www
+      uses: ./.github/actions/setup-www
+      continue-on-error: true
+      with:
+        environment: pull-requests
+        name: com-docs-pr-${{ github.event.number }}
+        metro: ${{ vars.UKC_METRO }}
+        log-level: trace
+        docs-channel: prod-staging
+
+    - uses: chrnorm/deployment-action@v2
+      name: Create GitHub deployment
+      if: always()
+      id: pr-deploy-github
+      with:
+        token: '${{ github.token }}'
+        environment-url: 'https://${{ steps.www.outputs.domain }}'
+        environment: pull-requests
+
+    - name: Update PR deployment status (success)
+      if: ${{ steps.www.outcome == 'success' }}
+      uses: chrnorm/deployment-status@v2
+      with:
+        token: '${{ github.token }}'
+        environment-url: 'https://${{ steps.www.outputs.domain }}'
+        deployment-id: '${{ steps.pr-deploy-github.outputs.deployment_id }}'
+        state: 'success'
+
+    - name: Update PR deployment status (failure)
+      if: ${{ steps.www.outcome == 'failure' }}
+      uses: chrnorm/deployment-status@v2
+      with:
+        token: '${{ github.token }}'
+        environment-url: 'https://${{ steps.www.outputs.domain }}'
+        deployment-id: '${{ steps.pr-deploy-github.outputs.deployment_id }}'
+        state: 'failure'
+
+    - name: Fail job if deploy failed
+      if: ${{ steps.www.outcome == 'failure' }}
+      shell: bash
+      run: |
+        exit 1
+
+  cleanup:
+    environment: pull-requests
+    runs-on: arc-ubuntu24.04-big
+    if: ${{ github.event.action == 'closed' }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Validate required secrets
+      shell: bash
+      run: |
+        if [[ -z "${{ vars.UKC_METRO }}" ]]; then
+          echo "Missing UKC_METRO variable" >&2
+          exit 1
+        fi
+
+    - name: Setup KraftKit
+      uses: ./.github/actions/setup-kraftkit
+
+    - name: Cleanup deployment
+      id: cleanup-www
+      uses: ./.github/actions/cleanup-www
+      with:
+        name: com-docs-pr-${{ github.event.number }}
+        metro: ${{ vars.UKC_METRO }}
+        delete-image: true

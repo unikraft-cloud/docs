@@ -1,0 +1,55 @@
+---
+title: Network Communication
+navigation_icon: network
+---
+
+:::caution
+As of writing this, [scale-to-zero triggers](/tutorials/scale-to-zero-triggers) are unavailable on internal networking and, as such you must use external networking.
+Moreover, there is no load balancing on internal networks, this being up to the user.
+:::
+
+## Communication types
+
+The platform separates Unikraft Cloud instances on a per-user level.
+This means that all instances part of the scope of a user can "see" each other in the private internal network and they can communicate with each other.
+This communication is private and unencrypted, and doesn't reach the outside world.
+You can communicate internally by using the Private IP or Private FQDN.
+
+At the same time, when using the Public FQDN the connection goes through the external load balancer applied to every public instance.
+This means that an entirely different code path resolves the connection, and also the connection is always TLS encrypted.
+
+### External communication
+
+External communication refers to every request going over the public FQDN of an instance.
+This means that the request goes through the external load balancer, and as such TLS encryption is mandatory.
+This also means that the instance will be load balanced with all other public instances behind the same [service](/features/load-balancing).
+The request will do a round trip from the client through the load balancer and to the instance.
+This communication is best suited for frontend-to-service communication, public APIs, web services, and more.
+
+### Internal communication
+
+Internal communication refers to every request going over the private network of a user.
+Every instance, by default, receives a private IP and a private FQDN (of the format `<instance-name>.internal`).
+This means that the request stays within the user internal network, and doesn't go through the external load balancer.
+This also means that the system won't encrypt the connection by default.
+This communication is best suited for service-to-service communication, microservices, databases, caches, and more.
+For example, you wouldn't want to expose your database publicly, but you would want your app to be able to connect to it internally.
+
+:::note
+When using the legacy CLI tunnel command to connect to your instances you are using the internal network to reach your instance.
+The command creates a public-facing instance that tunnels your requests to the private instance over the internal network.
+This is a good way to keep your instances private while still being able to access them from your local machine.
+:::
+
+## Conclusion
+
+When building your app architecture on Unikraft Cloud, it's important to understand the differences between internal and external communication.
+External communication is best suited for public-facing services, while internal communication is ideal for private interactions between services within your app.
+By leveraging both types of communication, you can deploy a robust and efficient app architecture on Unikraft Cloud.
+
+## Learn more
+
+* [Load balancing](/features/load-balancing) of services.
+* [Platform services](/platform/services) and how they work.
+* [Scale to zero triggers](/tutorials/scale-to-zero-triggers) for automatic instance scaling.
+* The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).

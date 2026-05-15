@@ -15,7 +15,19 @@ By default, at present, Unikraft Cloud supports the following metros:
 
 :::tip
 
-You can list the metros available to your account via the `kraft cloud metro ls` command.
+You can list the metros available to your account via the CLI.
+
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft metros list
+```
+
+```bash title="kraft"
+kraft cloud metro ls
+```
+
+</CodeTabs>
 
 :::
 
@@ -67,18 +79,26 @@ If you require running solutions in-house or on-premise, either for SOC/ISO/HIPP
 
 ## Usage
 
-When using `kraft`, you can set the metro you wish to use by either setting the CLI flag `--metro` in any `kraft cloud` subcommand or by setting the environmental variable `UKC_METRO`.
+You can set the metro you wish to use by setting the `--metro` flag.
+The legacy CLI also supports the `UKC_METRO` environment variable.
 Use the IATA code descriptor to target the specific metro.
 For example with `fra`:
 
-```bash title=""
-# Via CLI flag
-kraft cloud --metro fra run -p 443:8080 nginx:latest
+<CodeTabs syncKey="cli-tool">
+    ```bash title="unikraft"
+    unikraft run --metro=fra -p 443:8080/http+tls --image=nginx:latest
+    ```
 
-# or via environmental variable
-export UKC_METRO=fra
-kraft cloud run -p 443:8080 nginx:latest
-```
+    ```bash title="kraft"
+    # Via CLI flag
+    kraft cloud --metro fra run -p 443:8080 nginx:latest
+
+    # or via environmental variable
+    export UKC_METRO=fra
+    kraft cloud run -p 443:8080 nginx:latest
+    ```
+    The `UKC_METRO` environment variable is only supported by the legacy CLI.
+</CodeTabs>
 
 For on-premise or enterprise users, set the FQDN of the API endpoint as the
 metro argument, e.g.:

@@ -3,8 +3,8 @@ title: Autoscale
 navigation_icon: square-stack
 ---
 
-Autoscaling is [load balancing](/docs/features/load-balancing) where the *number of instances* used to handle your traffic is automatically adapted to match the current traffic load.
-On Unikraft Cloud, scale out (the process of adding instances to cope with increased load) happens in milliseconds.
+Autoscaling is [load balancing](/features/load-balancing) where the *number of instances* used to handle your traffic automatically adapts to match the current traffic load.
+On Unikraft Cloud, scale-out (the process of adding instances to cope with increased load) happens in milliseconds.
 You can transparently and effortlessly handle load increase including traffic peaks.
 No more headaches due to slow autoscale like keeping hot instances around to deal with peaks, coming up with complex predictive algorithms, or other painful workarounds.
 You can set autoscale on and let Unikraft Cloud handle your traffic increases and peaks.
@@ -12,7 +12,7 @@ You can set autoscale on and let Unikraft Cloud handle your traffic increases an
 
 ## The basics
 
-As with [load balancing](/docs/features/load-balancing), autoscaling in Unikraft Cloud takes care of a *service*.
+As with [load balancing](/features/load-balancing), autoscaling in Unikraft Cloud takes care of a *service*.
 Services allow you to load balance traffic for an Internet-facing service like a web server by creating many instances within the same service.
 
 While you can add or remove instances to a service to scale your service, doing this manually makes it hard to react to changes in traffic load.
@@ -21,26 +21,36 @@ This is where autoscale comes into play.
 
 With autoscale enabled, Unikraft Cloud takes care of the heavy lifting for you by continuously monitoring the load of your service and automatically creating or deleting instances as needed.
 
+{/* vale off */}
 :::caution[Limited Access]
-
-At the moment, autoscale **isn't** enabled by default on Unikraft Cloud accounts (you might get a "Autoscale not enabled for your account" error).
-If you would like to enable it for you please reach out to the Unikraft Cloud Discord or send an email to `support@unikraft.com`.
-
+At the moment, autoscale **is not** enabled by default (you might get an "Autoscale not enabled for your account" error).
+If you would like to enable it, please reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to `support@unikraft.com`.
 :::
+{/* vale on */}
 
 :::note
-Autoscale as well as load balancing in general is currently only available for Internet-facing services.
+Autoscale, as well as load balancing in general, currently supports only Internet-facing services.
 :::
 
 ## Setting up autoscale
 
-First, use the `kraft cloud deploy` command to create an instance, in this example using NGINX:
+First, create an instance, in this example using NGINX:
 
-```bash title=""
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
 git clone https://github.com/unikraft-cloud/examples
 cd examples/nginx/
-kraft cloud deploy -p 443:8080 .
+unikraft run --metro=fra -p 443:8080/http+tls -m 256MiB --image=nginx:latest
 ```
+
+```bash title="kraft"
+git clone https://github.com/unikraft-cloud/examples
+cd examples/nginx/
+kraft cloud deploy -p 443:8080 -M 256 .
+```
+
+</CodeTabs>
 
 ```ansi title=""
 [90m[[0m[92m●[0m[90m][0m Deployed successfully!
@@ -51,24 +61,26 @@ kraft cloud deploy -p 443:8080 .
  [90m├[0m[90m───────────[0m [90murl[0m: https://small-leaf-rafirkw7.fra.unikraft.app
  [90m├[0m[90m─────────[0m [90mimage[0m: nginx@sha256:389bfa6be6455c92b61cfe429b50491373731dbdd8bd8dc79c08f985d6114758
  [90m├[0m[90m─────[0m [90mboot time[0m: 20.36 ms
- [90m├[0m[90m────────[0m [90mmemory[0m: 128 MiB
+ [90m├[0m[90m────────[0m [90mmemory[0m: 256 MiB
  [90m├[0m[90m───────[0m [90mservice[0m: small-leaf-rafirkw7
  [90m├[0m[90m──[0m [90mprivate fqdn[0m: nginx-4d7u3.internal
  [90m├[0m[90m────[0m [90mprivate ip[0m: 172.16.6.5
  [90m└[0m[90m──────────[0m [90margs[0m: /usr/bin/nginx -c /etc/nginx/nginx.conf
 ```
 
-With this single `kraft cloud deploy` command, 3 things happen:
+This single deploy or run flow does 3 things:
 
 1. Creates an instance of NGINX which will serve as the **autoscale master** instance.
 1. Creates a service via the `-p` flag (named `small-leaf-rafirkw7`).
-1. Attaches the instance to the service (automatically done by the `-p` flag too).
+1. Attaches the instance to the service (the `-p` flag also does this automatically).
 
 All that's left to do now to set up autoscale is to set an autoscale configuration *policy* and to set the instance as master.
 Unikraft Cloud then takes care of cloning this master instance whenever load increases.
-To achieve this, use the `kraft cloud scale` command:
+To achieve this, use the legacy CLI scale command:
 
-```bash  title=""
+<CodeTabs>
+
+```bash title="kraft"
 kraft cloud scale init small-leaf-rafirkw7 \
   --master nginx-4d7u3 \
   --min-size 1 \
@@ -90,36 +102,41 @@ kraft cloud scale add small-leaf-rafirkw7 \
   --step :50/-50
 ```
 
+</CodeTabs>
+
 Note the following:
 
-* The first command sets the master to the instance created, and sets it to scale up to a maximum of 8 instances and a minimum of 1; the warm up and cool down time are also set to 1 second each, so it's not constantly fluctuating up and down.
-* The second command sets the *scale out* policy based on CPU utilization (in millicores): between 60% and 80% utilization, an increase by 50% of instances occurs.
+* The first command sets the master to the created instance, and configures it to scale up to a maximum of 8 instances and a minimum of 1; the command also sets the warm up and cool down time to 1 second each, so it doesn't constantly fluctuate up and down.
+* The second command sets the *scale-out* policy based on CPU utilization (in millicores): between 60% and 80% utilization, the system increases instances by 50%.
   From 80% onward, the number of instances doubles.
-* The third command sets the *scale in* policy: below 50% utilization, reduce the number of instances by half (note the `-` sign for scale in).
+* The third command sets the *scale-in* policy: below 50% utilization, the system reduces the number of instances by half (note the `-` sign for scale-in).
 
 :::note
 
-The intervals that autoscale uses for making scale-out and scale-in decisions use the `--warmup-time` and `--cooldown-time` parameters of `kraft cloud scale init`, in units of milliseconds.
-Refer to the API autoscale [reference](/docs/api/v1/autoscale/#step) for more details.
+The intervals that autoscale uses for making scale-out and scale-in decisions use the `--warmup-time` and `--cooldown-time` parameters of the scale init command, in units of milliseconds.
+Refer to the API autoscale [reference](/api/platform/v1/autoscale) for more details.
 
 :::
 
 :::note
 
-Keep in mind that there are a few restrictions on how to define scale-in/scale-out steps.
-The documentation is available [here](/docs/api/v1/autoscale/#step) at the bottom of the section.
-General information about autoscale is available [here](/docs/api/v1/autoscale)
+Keep in mind that a few restrictions apply to how you define scale-in/scale-out steps.
+You can find the documentation [here](/api/platform/v1/autoscale) at the bottom of the section.
 
 :::
 
 
 ## Testing it
 
-To check it's working, you can use the `kraft cloud scale get` command to list the autoscale properties of the service:
+To check it's working, you can use the legacy CLI scale get command to list the autoscale properties of the service:
 
-```bash title=""
+<CodeTabs>
+
+```bash title="kraft"
 kraft cloud scale get small-leaf-rafirkw7
 ```
+
+</CodeTabs>
 
 You should see output like:
 
@@ -135,11 +152,15 @@ You should see output like:
       policies: scale-out-policy;scale-in-policy
 ```
 
-To list an individual policy, you can further use the `kraft cloud scale get` command as follows:
+To list an individual policy, use the legacy CLI scale get command as follows:
 
-```bash title=""
+<CodeTabs>
+
+```bash title="kraft"
 kraft cloud scale get --policy scale-out-policy small-leaf-rafirkw7
 ```
+
+</CodeTabs>
 
 You should see output like:
 
@@ -158,12 +179,20 @@ steps:
 type: step
 ```
 
-You can further check that the master instance is on `standby` (scaled to zero) assuming your service isn't receiving any traffic yet.
-You can get the UUID of your master instance from the `kraft cloud scale get` command above.
+You can further check that the master instance is on `standby` (scaled to zero), assuming your service hasn't received any traffic yet.
+You can get the UUID of your master instance from the legacy CLI scale get command above.
 
-```bash title=""
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft instances get f840ac12-f485-4f02-9f33-6a0a7de46f1f -o list
+```
+
+```bash title="kraft"
 kraft cloud instance get f840ac12-f485-4f02-9f33-6a0a7de46f1f -o list
 ```
+
+</CodeTabs>
 
 You should see output like:
 
@@ -175,7 +204,7 @@ You should see output like:
          state: standby
     created at: 30 minutes ago
          image: nginx@sha256:d4325c1f1a472c511723148adc380d491029f4c98a2367fbeff628c6456d4180
-        memory: 128 MiB
+        memory: 256 MiB
           args: /usr/bin/nginx -c /etc/nginx/nginx.conf
            env:
        volumes:
@@ -186,18 +215,126 @@ You should see output like:
 Note the value of the `state` field.
 Now to make sure the service is up, `curl` the service address:
 
-```bash
+```bash title=""
 curl https://small-leaf-rafirkw7.fra.unikraft.app
 ```
 
 You should get an immediate response, even though the instance was on `standby`.
-You can use the `watch` tool to see if you manage to see the instance change state from `standby` to `running`:
+You can use a watch command to see if you catch the instance changing state from `standby` to `running`:
 
-```ansi title=""
-watch --color -n 0.5 Unikraft Cloud instance list
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft instances list --watch
+```
+
+```bash title="kraft"
+watch --color -n 0.5 kraft cloud instance list
+```
+
+</CodeTabs>
+
+## Policy types
+
+Four autoscale policy types are available.
+A service can have more than one policy active at the same time.
+
+### Step policy
+
+The `step` policy scales instances based on metric thresholds.
+You define up to **4 steps**, each specifying a lower bound, upper bound, and the scaling change to apply when the metric falls in that range.
+
+You should order steps by lower bound with no gaps between them and no overlaps.
+
+```bash title=""
+kraft cloud scale add <service-name> \
+  --name my-step-policy \
+  --type step \
+  --metric cpu \
+  --adjustment-type change \
+  --step 600:800/2 \
+  --step 800:/4
+```
+
+#### Metrics
+
+The following metrics can drive a step policy:
+
+| Metric | Description |
+|--------|-------------|
+| `cpu` | CPU utilization in millicores |
+| `inflight_reqs` | Number of requests the platform is processing across all instances |
+| `reqs_per_sec` | Request throughput in requests per second |
+
+#### Scale change types
+
+Step policies support three scaling change types:
+
+| Type | Description |
+|------|-------------|
+| `change` | Change the instance count by the specified value (positive to scale out, negative to scale in) |
+| `exact` | Set the instance count to exactly the specified value |
+| `percent` | Change the instance count by the specified percentage of the current count |
+
+
+### On-demand policy
+
+The `on-demand` policy creates a new instance immediately when an incoming request finds no available instances.
+This prevents request queuing but introduces cold start delays.
+
+```json title="POST /services"
+{
+  ...
+  "policies": [
+    {
+      "name": "scale-out",
+      "type": "on_demand"
+    }
+  ]
+  ...
+}
+```
+
+### Create policy
+
+The `create` policy provisions a new VM when an instance exceeds the `num_requests` threshold.
+Setting `replace` to true deletes the original VM after the new one starts.
+
+```json title="POST /services"
+{
+  ...
+  "policies": [
+    {
+      "name": "create",
+      "type": "create",
+      "replace": true,
+      "num_requests": 100
+    }
+  ]
+  ...
+}
+```
+
+
+### Idle policy
+
+The `idle` policy scales in (removes instances) when the service has been idle—receiving no requests—for a configurable period.
+
+```json title="POST /services"
+{
+  ...
+  "policies": [
+    {
+      "name": "scale-in",
+      "type": "idle",
+      "idle_time_ms": 1000
+    }
+  ]
+  ...
+}
 ```
 
 ## Learn more
 
-* The `kraft cloud` [command-line tool reference](/docs/cli/), and in particular the [scale](/docs/cli/scale) subcommand.
-* Unikraft Cloud's [REST API reference](/docs/api/v1), and in particular the section on [autoscale](/docs/api/v1/autoscale).
+* The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
+* Unikraft Cloud's [REST API reference](/api/platform/v1), and in particular the section on [autoscale](/api/platform/v1/autoscale).

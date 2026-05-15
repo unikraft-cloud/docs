@@ -3,10 +3,21 @@ title: FAQ
 navigation_icon: circle-question-mark
 ---
 
-#### What's Unikraft?
+{/* vale off */}
+#### What is Unikraft?
+{/* vale on */}
 
-Unikraft is the company behind Unikraft Cloud, a next-generation compute platform that leverages unikernel technology.
+Unikraft is the company behind Unikraft Cloud, a next-generation compute platform that leverages microVM technology.
 It delivers millisecond cold boots and scale-to-zero autoscaling so you never pay for idle resources.
+
+
+{/* vale off */}
+#### What is a microVM?
+
+Definitionally, a microVM is any virtual machine launched with Firecracker, an open source Virtual Machine Monitor (VMM) from Amazon, originally done for AWS Lambda.
+{/* vale on */}
+The VM itself can still be chunky: as long as Firecracker launched it, it's considered a microVM.
+And any microVM *is* a VM, so it has the same strong, hardware-level isolation as any VM does.
 
 
 #### Can you do cloud-prem, or on-prem deployments?
@@ -15,20 +26,10 @@ Yes.
 Please [get in touch](https://unikraft.com/contact) to discuss dedicated hosting.
 
 
-#### What's a unikernel?
-
-A unikernel is a specialized virtual machine.
-Each target app gets a distro and kernel containing only the code it needs.
-Everything builds at compile time, before deployment.
-If an app doesn't need a line of code to run, it doesn't get deployed.
-This packages as any other virtual machine, with strong, hardware-level isolation.
-Unikraft packages unikernels as OCI images.
-
-
 #### Aren't virtual machines heavyweight?
 
 They need not be!
-Unikraft unikernels are proof you can have strong, hardware-level isolation.
+Unikraft microVMs are proof you can have strong, hardware-level isolation.
 This isolation is the workhorse of public cloud deployments.
 It combines with the lightweight characteristics of containers or processes, such as millisecond cold boot times.
 
@@ -44,10 +45,10 @@ For example, an NGINX Unikraft image is under 2MBs in size.
 When you deploy a container on the public cloud, it gets deployed on top of a virtual machine to have strong, hardware-level isolation.
 The container thus adds yet another layer of overhead between your app and the hardware.
 At Unikraft, `Dockerfile`s create the filesystem at build time.
-Then, a lean unikernel provides the best efficiency at deploy time.
+Then, a lean microVM provides the best efficiency at deploy time.
 
 
-#### Do Unikraft unikernels come with security benefits?
+#### Do Unikraft microVMs come with security benefits?
 
 Yes, especially stemming from the fact that they have a minimal Trusted Computing Base (TCB), and everything is off by default (services, ports, etc).
 
@@ -57,33 +58,28 @@ Yes, especially stemming from the fact that they have a minimal Trusted Computin
 Definitely.
 Every instance on Unikraft Cloud has a private IP and DNS name.
 You can plug instances together.
-Follow this [guide](/docs/guides/features/idns/) for instructions.
+Follow this [guide](/platform/services) for instructions.
 
 
 #### With an access token and an app, what should you do?
 
 You'll need a Dockerfile and Kraftfile.
-See any of the apps/langs guides (here)[/docs/guides/] to see examples.
+See any of the apps/langs guides [here](/guides/bun) to see examples.
 
 
-#### What's `kraft`?
+{/* vale off */}
+#### What is `kraft`?
+{/* vale on */}
 
-`kraft` is Unikraft Cloud's [open source CLI tool written in Go](https://github.com/unikraft/kraftkit).
+`kraft` is Unikraft Cloud's legacy [open source CLI tool written in Go](https://github.com/unikraft/kraftkit).
 You can control Unikraft Cloud with it as well as build unikernels and try things out locally.
-
-
-#### How does Unikraft differ from Linux, and what about debugging?
-
-Unikraft implements the Linux API so apps and languages run unmodified.
-A common concern is that unikernels are hard to debug.
-Unikraft includes a full GDB server, tracing, and other facilities, so debugging feels like Linux (see [here](https://unikraft.org/docs/internals/debugging)).
-For observability, Unikraft ships a Prometheus library so a unikernel can export metrics to Grafana dashboards.
+If you want to interact with the latest features of Unikraft Cloud, you should use the new [open source `unikraft` CLI tool](https://github.com/unikraft/cli), written in Go as well.
 
 
 #### How's millisecond scale-to-zero achieved?
 
 Magic 🪄
-Kidding, it's the combination of using Unikraft unikernels to run workloads and a custom node ingress controller.
+Kidding, it's the combination of using Unikraft microVMs to run workloads and a custom node ingress controller.
 This controller can be reactive in milliseconds and scale to thousands of instances.
 Other optimizations to the underlying host also help.
 When traffic dies, your app will stop, consume no resources, and get charged $0.
@@ -115,7 +111,7 @@ Stateful scale-to-zero in milliseconds anyone?
 #### What do you need to get started?
 
 [Sign up](https://console.unikraft.cloud/signup) to get an access token.
-If you're interested in an enterprise solution please [write to us](/contact).
+If you're interested in an enterprise solution please [write to us](https://unikraft.com/contact).
 
 
 #### What about usability?
@@ -145,7 +141,7 @@ Unikraft can provide cost savings in many ways:
 #### What's the relationship between the Unikraft open source project and Unikraft Cloud?
 
 Unikraft OSS allows you to build and run unikernels locally via `kraft run` (and even hack the Unikraft OS itself if you like tinkering!).
-When you're ready to deploy, switch to `kraft cloud deploy`.
+When you're ready to deploy to cloud, use the `unikraft` CLI (or the legacy `kraft cloud` CLI).
 
 
 #### Are you a replacement for Docker?
@@ -153,14 +149,14 @@ When you're ready to deploy, switch to `kraft cloud deploy`.
 Definitely not!
 Docker is great for dev environments and for building images.
 In fact, Unikraft relies on `Dockerfile` to specify the filesystem of images on Unikraft Cloud.
-Having said that, when it's time to deploy, Unikraft places the resulting filesystem on a lean unikernel.
+Having said that, when it's time to deploy, Unikraft places the resulting filesystem on a lean microVM.
 It's ready to run with hardware-level isolation and extreme efficiency.
 
 
 #### Are you a competing technology to WASM?
 
 No.
-You can read more about [how Unikraft and WASM complement each other in our dedicated blog post on the matter](/blog/unikernels-and-wasm/).
+You can read more about [how Unikraft and WASM complement each other in our dedicated blog post on the matter](https://unikraft.com/blog/unikernels-and-wasm/).
 In short, WASM provides language-level isolation, whereas Unikraft provides hardware-level.
 When you deploy WASM to the public cloud, there will be a VM underneath for isolation.
 Maybe even a container runtime.
@@ -171,7 +167,7 @@ The VM (the unikernel) itself has only the minimal code needed to run the WASM r
 #### Can you deploy within hyperscaler infra and connect to their services with Unikraft Cloud?
 
 Yes.
-Unikraft supports [metros](/docs/metros) / regions within existing hyperscaler infra, and also connectivity to their services.
+Unikraft supports [metros](/platform/metros) (regions) within existing hyperscaler infra, and also connectivity to their services.
 For example, you could run an API server on Unikraft Cloud and connect to S3 as a storage back end.
 Contact information is available for more details.
 
@@ -179,13 +175,13 @@ Contact information is available for more details.
 #### Can you try Unikraft open source first?
 
 Yes.
-Head on over to [unikraft.org](http://www.unikraft.org/), install the `kraft` tool with the one-liner there, and use `kraft run` to build, package and run your app locally.
-When you're ready to deploy to cloud, set your Unikraft Cloud token and deploy via `kraft cloud deploy`.
+Head on over to [unikraft.org](https://unikraft.org/docs/cli/install) to install the legacy `kraft` tool, and use `kraft run` to build, package and run your app locally.
+When you're ready to deploy to cloud, use the [`unikraft`](https://github.com/unikraft/cli) CLI or the legacy `kraft cloud` CLI.
 
 
 #### Does Unikraft Cloud work on Mac/Windows/Linux?
 
-Yes, the kraft tool can run on Mac, Windows or Linux.
+Yes, the CLI can run on Mac, Windows or Linux.
 
 
 #### How can you track instances on Unikraft Cloud?
@@ -194,16 +190,119 @@ Unikraft provides full log support for all users.
 Paying customers get access to Prometheus metrics.
 
 
-#### Are there other unikernel cloud platforms?
+{/* vale off */}
+#### What is a unikernel?
+{/* vale on */}
+
+A unikernel is a specialized virtual machine.
+Each target app gets a distro and kernel containing only the code it needs.
+Everything builds at compile time, before deployment.
+If an app doesn't need a line of code to run, it doesn't get deployed.
+This packages as any other virtual machine, with strong, hardware-level isolation.
+Unikraft packages unikernels as OCI images.
+
+
+#### Does Unikraft Cloud only support unikernels?
+
+No, Unikraft Cloud also supports minimalistic, Linux-based microVMs.
+
+
+#### Are there other platforms supporting unikernels?
 
 Other unikernel projects exist, but most are research efforts, unmaintained, or limited to a single app or language and aren't POSIX (Portable Operating System Interface) compliant.
 
 
 #### Do you have a Kubernetes integration?
 
-[Yes!](/docs/integrations/kubernetes/)
+[Yes!](/integrations/kubernetes/)
 
 
 #### Do you have a Terraform integration?
 
-[Yes!](/docs/integrations/terraform/)
+[Yes!](https://github.com/unikraft-cloud/terraform-provider-ukc)
+
+
+#### When should you use the CLI stable and/or staging?
+
+You should use stable versions when initially trying out the Unikraft Cloud Platform and its features.
+Any time you encounter a problem, it's good to first try out the latest staging version before forwarding the problem as it might have been already fixed.
+There's also a chance that staging contains changes available only on non-stable nodes.
+
+
+#### What keywords does the CLI ignore from a Dockerfile?
+
+This is the current list of ignored keywords: `EXPOSE`, `HEALTHCHECK`, `ONBUILD`, `SHELL`, `STOPSIGNAL`, `VOLUME`.
+The `USER` keyword is relevant for running subsequent `RUN` instructions in the Dockerfile, but not for the `ENTRYPOINT` and `CMD` commands.
+At runtime, Unikraft Cloud instances run as `root` user, unless explicitly switching to another user.
+
+
+#### How does the image size and memory relate to boot times?
+
+When using `CPIO`, there is a [strong correlation](/tutorials/rootfs-formats) between the image size and the boot time.
+This is because it needs to load the whole image into memory first.
+
+When using `EROFS`, there is no such correlation, as the operating system loads pages directly from disk, on demand.
+
+At the same time, there is a slight correlation between big memory allocations and higher boot times, though not significant.
+This is irrespective of the file system used.
+
+
+#### What's the key difference between cold boots and warm boots?
+
+End-result wise, cold and warm boots are no different, the instance still works.
+The server handles the request in both cases if the app is stateless.
+The main difference appears in [stateful](/features/snapshots) apps and when considering latency, hence the `--scale-to-zero-stateful` flag.
+
+A cold boot equates to starting the instance every time and then stopping it if no traffic hit it for a while.
+
+A warm boot resembles the suspend and resume operations in virtual machines.
+The platform saves the system memory to disk and loads it when a request comes.
+
+Warm boots offer clear advantages over cold boots, having lower boot times, no setup time, and are better in general, with the trade off of using space on the disk.
+Thus, for most use cases, using [stateful scale-to-zero](/features/scale-to-zero#stateful-scale-to-zero) is the better alternative.
+
+Cases exist where short lived VMs are small enough to have a small boot time, but they use a lot of memory.
+In this case it might be better to use cold boots, to use disk efficiently.
+This should be first experimented or discussed with a Unikraft Engineer to verify it.
+
+
+#### What can you push as an image?
+
+An image is specifically a pair of a kernel and a rootfs bundled together as different layers of an OCI package.
+To keep things light, certain optimizations are in place to not repush existing kernels and to reuse them from your account.
+If these aren't automatically detected, the CLI pushes the kernel again.
+
+At the same time, things like ROMs use the same packaging systems, but push images with a missing kernel and only a rootfs.
+These have specific metadata that identifies them as ROMs.
+
+Finally, kernels can also run without a rootfs.
+They don't do anything, but support exists to run them.
+
+
+#### How to tell if an app can run in the Unikraft kernel or TinyX?
+
+No exact suite can determine if your app can run on one or another.
+
+TinyX is a slimmed down Linux Kernel, which means that most cloud-compatible apps work out of the box as long as it has all files available.
+Some virtual devices and virtual file system entries are missing, but you can contact a Unikraft staff member to look into adding them.
+
+If your app successfully runs on TinyX and Unikraft Cloud, you have the option to also try running it on the Unikraft kernel.
+This kernel removes even more unused features so the chance that the app isn't compatible increases, but the performance and boot times are better.
+For example, if your app uses extensive process cloning, it has a low chance to work on the Unikraft kernel, as it supports running a single process at a time.
+Other examples of unsupported formats are 32bit executables and non-PIE (Position Independent Executable) executables, as the Unikraft kernel can't load them in memory at the moment.
+
+Other small differences exist, which you should report to the Unikraft Team for fixing, as the Unikraft kernel tries to follow Linux and the POSIX format.
+
+
+#### How does the [rootfs format](/tutorials/rootfs-formats) and size equate to the memory used?
+
+When using the `CPIO` file system, the memory allocated to the instance needs to be at least twice as big as the image size.
+This is because the system must load and unpack the `CPIO` rootfs format in memory before using it.
+This is a bare minimum and to this you need to add also the memory your app needs to run.
+
+When using `EROFS`, there is no direct correlation between the image size and the memory needed.
+Ideally, the memory should be at least the image size to make sure the system can load all files in memory before using.
+The system loads files on demand and maps them directly from disk, ensuring lower memory usage and overhead.
+If you have files that you know are never used, it's better to remove them from the image to slim it down.
+Thus, in theory, `EROFS` uses only the allocated pages, but it's also highly dependent on the workload.
+An instance with a 3GB image might use 128MB of RAM at one point, whilst an instance with a 300MB image might use 1GB of RAM at some point.

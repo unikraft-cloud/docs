@@ -1,0 +1,147 @@
+---
+title: Cron Jobs / Scheduled Wake-ups
+navigation_icon: clock
+---
+
+Scheduled operations let you automatically start, stop, delete, or exec a command in instances on a calendar-based schedule.
+Each scheduled operation specifies a name, a calendar expression, and an action (`start`, `stop`, `delete`, or `exec`).
+
+Each instance stores its own schedules, and cloning preserves them.
+
+## Calendar expression format
+
+Unikraft Cloud uses systemd calendar events (see [systemd.time(7)](https://www.man7.org/linux/man-pages/man7/systemd.time.7.html)).
+Calendar expressions have the following fields:
+
+```
+[weekday] [[year-]month-day] [hour:minute[:second]]
+```
+
+The expression syntax supports ranges, steps, and comma-separated lists:
+
+| Syntax | Description |
+|--------|-------------|
+| `*` | Any value |
+| `5` | Exact value |
+| `1..5` | Range |
+| `1..5/2` | Range with step |
+| `1,2,5` | Comma-separated list |
+
+## Setting a schedule at instance creation
+
+Pass `schedules` in the create request.
+For example, to start an instance every day at 09:00 UTC and stop it at 18:00 UTC:
+
+```json title="POST /instances"
+{
+  "image": "...",
+  "schedules": [
+    {
+      "name": "morning-start",
+      "when": "*-*-* 09:00:00",
+      "action": "start"
+    },
+    {
+      "name": "evening-stop",
+      "when": "*-*-* 18:00:00",
+      "action": "stop"
+    }
+  ]
+}
+```
+
+To run a command inside the instance every night at midnight, use the `exec` action with an `args` array:
+
+```json title="POST /instances"
+{
+  "image": "...",
+  "schedules": [
+    {
+      "name": "nightly-cleanup",
+      "when": "*-*-* 00:00:00",
+      "action": "exec",
+      "args": ["/bin/sh", "-c", "rm -rf /tmp/*"]
+    }
+  ]
+}
+```
+
+## Updating schedules of an existing instance
+
+Add, set, or remove scheduled operations via `PATCH`:
+
+```json title="PATCH /instances/{uuid}"
+{
+  "prop": "schedules",
+  "op": "add",
+  "value": [
+    {
+      "name": "weekend-stop",
+      "when": "Sat,Sun *-*-* 20:00:00",
+      "action": "stop"
+    }
+  ]
+}
+```
+
+Add an `exec` schedule the same way, but include `args` with the command to run:
+
+```json title="PATCH /instances/{uuid}"
+{
+  "prop": "schedules",
+  "op": "add",
+  "value": [
+    {
+      "name": "hourly-healthcheck",
+      "when": "*-*-* *:00:00",
+      "action": "exec",
+      "args": ["/usr/bin/healthcheck"]
+    }
+  ]
+}
+```
+
+```json title="PATCH /instances/{uuid}"
+{
+  "prop": "schedules",
+  "op": "del",
+  "value": [
+    "morning-start"
+  ]
+}
+```
+
+## Actions
+
+| Action | Description |
+|--------|-------------|
+| `start` | Start the instance at the scheduled time |
+| `stop` | Stop the instance at the scheduled time |
+| `delete` | Delete the instance at the scheduled time |
+| `exec` | Execute a command inside the instance at the scheduled time. Requires the `args` field. |
+
+### The `args` field
+
+The `args` field is an array of strings specifying the command to run when using the `exec` action.
+The first element is the executable and the remaining elements are its arguments.
+
+```json
+{
+  "name": "daily-report",
+  "when": "*-*-* 06:00:00",
+  "action": "exec",
+  "args": ["/usr/bin/python3", "/app/report.py", "--daily"]
+}
+```
+
+No need to specify it for all other actions.
+
+## Notes
+
+- Each schedule has a name that must be unique within an instance.
+- An instance can have more than one scheduled operation.
+- When you clone an instance from a template, the clone inherits its scheduled operations.
+
+## Learn more
+
+* Unikraft Cloud's [REST API reference](/api/platform/v1), in particular the section on [instances](/api/platform/v1/instances).

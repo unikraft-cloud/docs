@@ -1,0 +1,224 @@
+---
+title: Remote Desktops
+navigation_icon: screen-share
+---
+
+Full remote desktop environments power browser-based access to Linux GUIs, agentic computer-use workloads, secure browsing sessions, and disposable workstations.
+They're memory-hungry, security-sensitive, and often run in short, interactive bursts—making them a strong fit for microVM-based, scale-to-zero infrastructure.
+
+
+## Why run remote desktops on Unikraft Cloud
+
+### ⚡ Instant session startups
+
+MicroVMs on Unikraft Cloud boot in milliseconds, so a full desktop is ready the moment a user opens the link:
+
+* No waiting for heavy VMs or container images to warm up.
+* Sessions resume from standby in milliseconds when traffic returns.
+
+### 🔒 Strong session isolation
+
+Remote desktops run untrusted browsers, untrusted documents, and arbitrary user input.
+With Unikraft Cloud:
+
+* Each desktop runs in its own VM, isolated by design.
+* A minimal, single-purpose image reduces attack surface.
+
+### 💸 Cost-efficient scale-to-zero
+
+Interactive sessions are bursty—active for minutes, idle for hours:
+
+* Desktops scale-to-zero between sessions, removing idle costs.
+* Pay only for the seconds users actively spend in the session.
+
+### 🤖 Built for automation
+
+Computer-use workloads drive a real desktop the same way a human does:
+
+* Expose a noVNC endpoint over HTTPS for browser or programmatic access.
+* Spin up a fresh, disposable environment per task or per session.
+
+
+## Getting started
+
+Remote desktops on **Unikraft Cloud** run faster, safer, and cheaper.
+From disposable browsers to a Linux GUI in a tab, you get instant scale-out and zero idle costs—without sacrificing isolation.
+
+This guide shows you how to use [noVNC](https://novnc.com/info.html), an open source Virtual Network Computing (VNC) client that runs in the browser, paired with a minimal Linux desktop and Firefox.
+
+To run it, follow these steps:
+
+1. Install the CLI and a container runtime engine (for example, [Docker](https://docs.docker.com/engine/install/)).
+   Use the [unikraft CLI](/docs/cli/unikraft) or the legacy [kraft CLI](https://unikraft.org/docs/cli/install).
+
+1. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/novnc-browser/` directory:
+
+```bash
+git clone https://github.com/unikraft-cloud/examples
+cd examples/novnc-browser/
+```
+
+Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
+This guide uses `fra` (Frankfurt, 🇩🇪):
+
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft login
+```
+
+```bash title="kraft"
+# Set Unikraft Cloud access token
+export UKC_TOKEN=token
+# Set metro to Frankfurt, DE
+export UKC_METRO=fra
+```
+
+</CodeTabs>
+
+The `UKC_TOKEN` and `UKC_METRO` environment variables are only supported by the legacy CLI.
+
+:::note
+
+A noVNC desktop instance on Unikraft Cloud requires 4GB to run.
+Request an increase in the instance memory quota when you need more memory.
+
+:::
+
+When done, invoke the following command to deploy this app on Unikraft Cloud:
+
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft build . --output <my-org>/novnc-browser:latest
+unikraft run --scale-to-zero policy=on,cooldown-time=4000,stateful=true --metro fra -p 443:6080/tls+http -m 4G --name vnc-browser --image <my-org>/novnc-browser:latest
+```
+
+```bash title="kraft"
+kraft cloud deploy \
+    --scale-to-zero on \
+    --scale-to-zero-stateful \
+    --scale-to-zero-cooldown 4s \
+    -p 443:6080/tls+http \
+    -M 4Gi \
+    -n vnc-browser \
+    .
+```
+
+</CodeTabs>
+
+The output shows the instance address and other details:
+
+<CodeTabs syncKey="cli-tool">
+
+```ansi title="unikraft"
+metro:        fra
+name:         vnc-browser
+uuid:         90a59b05-0ae1-4ca6-8383-79c5115355ee
+state:        [92mstarting[0m
+image:        <my-org>/novnc-browser
+resources:
+  memory:     4096MiB
+  vcpus:      1
+service:
+  uuid:       aaf03f7c-65e6-5624-d5f4-84e87450beee
+  name:       weathered-fog-y5jjmwfd
+  domains:
+  - fqdn:     weathered-fog-y5jjmwfd.fra.unikraft.app
+networks:
+- uuid:       61708609-d291-572d-4a4c-399413238199
+  private-ip: 10.0.0.49
+  mac:        12:b0:1e:47:6c:59
+timestamps:
+  created:    just now
+```
+
+```ansi title="kraft"
+[90m[[0m[92m●[0m[90m][0m Deployed successfully!
+ [90m│[0m
+ [90m├[0m[90m──────────[0m [90mname[0m: vnc-browser
+ [90m├[0m[90m──────────[0m [90muuid[0m: 90a59b05-0ae1-4ca6-8383-79c5115355ee
+ [90m├[0m[90m─────────[0m [90mstate[0m: [92mstarting[0m
+ [90m├[0m[90m────────[0m [90mdomain[0m: https://weathered-fog-y5jjmwfd.fra.unikraft.app
+ [90m├[0m[90m─────────[0m [90mimage[0m: oci://unikraft.io/<my-org>/novnc-browser@sha256:fdb4887e84362ebbaf54c713e0d85f547e8ee173fe63a6ab39e94b7e612a9892
+ [90m├[0m[90m────────[0m [90mmemory[0m: 4096 MiB
+ [90m├[0m[90m───────[0m [90mservice[0m: weathered-fog-y5jjmwfd
+ [90m├[0m[90m──[0m [90mprivate fqdn[0m: vnc-browser.internal
+ [90m└[0m[90m────[0m [90mprivate ip[0m: 10.0.0.49
+```
+
+</CodeTabs>
+
+In this case, the instance name is `vnc-browser`.
+The address is different for each run.
+
+Open the provided address in a browser to reach the noVNC landing page.
+From there, click **Connect** to open the remote desktop, which ships with Firefox and a minimal Linux GUI.
+
+At any time, you can list information about the instance:
+
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft instances list
+```
+
+```bash title="kraft"
+kraft cloud instance list
+```
+
+</CodeTabs>
+
+<CodeTabs syncKey="cli-tool">
+
+```ansi title="unikraft"
+[1mMETRO[0m  [1mNAME[0m         [1mSTATE[0m    [1mIMAGE[0m                   [1mARGS[0m  [1mMEMORY[0m  [1mVCPUS[0m  [1mFQDN[0m                                     [1mCREATED[0m
+fra    vnc-browser  [94mstandby[0m  <my-org>/novnc-browser        4.0GiB  1      weathered-fog-y5jjmwfd.fra.unikraft.app  2 minutes ago
+```
+
+```ansi title="kraft"
+[1mNAME[0m         [1mFQDN[0m                                     [1mSTATE[0m    [1mSTATUS[0m   [1mIMAGE[0m                                                [1mMEMORY[0m   [1mVCPUS[0m  [1mARGS[0m  [1mBOOT TIME[0m
+vnc-browser  weathered-fog-y5jjmwfd.fra.unikraft.app  [94mstandby[0m  [94mstandby[0m  oci://unikraft.io/<my-org>/novnc-browser@sha256:...  4.0 GiB  1            7.17 ms
+```
+
+</CodeTabs>
+
+When done, you can remove the instance:
+
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft instances delete vnc-browser
+```
+
+```bash title="kraft"
+kraft cloud instance remove vnc-browser
+```
+
+</CodeTabs>
+
+### Customize your deployment
+
+The current deployment ships with Firefox, a tiling panel, and a small set of X11 utilities on top of Ubuntu.
+Customizing the deployment means editing the `Dockerfile` to add the apps your users need, such as a different browser, an editor, or developer tools.
+You can also adjust the screen geometry through the `WIDTH`, `HEIGHT`, and `DISPLAY_NUM` environment variables in `wrapper.sh`.
+
+[Anthropic's Computer Use Demo](https://github.com/anthropics/claude-quickstarts/tree/main/computer-use-demo) inspired this example, which works well as a sandbox for computer-use automation that needs to drive a real desktop.
+
+## Learn more
+
+Use the `--help` option for detailed information on using Unikraft Cloud:
+
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft --help
+```
+
+```bash title="kraft"
+kraft cloud --help
+```
+
+</CodeTabs>
+
+Or visit the [CLI Reference](/docs/cli/unikraft) or the [legacy CLI reference](/docs/cli/kraft/overview).

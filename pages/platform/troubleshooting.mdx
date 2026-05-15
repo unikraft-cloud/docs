@@ -13,11 +13,21 @@ If you need help, reach out to Unikraft Cloud Support.
 An app may crash, freeze, or misbehave.
 To inspect it, try either:
 
-```bash title=""
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft instances logs <instance_name>
+# or
+unikraft instances get <instance_name>
+```
+
+```bash title="kraft"
 kraft cloud inst logs <instance_name>
 # or
 kraft cloud inst get <instance_name>
 ```
+
+</CodeTabs>
 
 This may, in certain times, provide insufficient information.
 
@@ -72,7 +82,7 @@ There is no service on this URL.
 ```
 
 This happens when you connect with an HTTPS client (port `443`) and the app doesn't expose that port.
-Database services such as [MongoDB](/docs/guides/mongodb) or [MariaDB](/docs/guides/mariadb) use different ports (for example, `27017`, `3306`).
+Database services such as [MongoDB](/guides/mongodb) or [MariaDB](/guides/mariadb) use different ports (for example, `27017`, `3306`).
 
 Use the correct exposed port.
 You may need a TLS tunnel (see below).
@@ -81,9 +91,9 @@ You may need a TLS tunnel (see below).
 ## Connect to a non-TLS app
 
 Unikraft Cloud uses TLS to expose services to the outside world.
-Some apps (such as [MongoDB](/docs/guides/mongodb) or [MariaDB](/docs/guides/mariadb)) don't use TLS.
-Create a TLS tunnel via `kraft cloud tunnel`, which opens a local endpoint (`localhost` / `127.0.0.1`) and forwards traffic over TLS.
-See the [MariaDB guide](/docs/guides/mariadb) for an example.
+Some apps (such as [MongoDB](/guides/mongodb) or [MariaDB](/guides/mariadb)) don't use TLS.
+Create a TLS tunnel via the legacy CLI, which opens a local endpoint (`localhost` / `127.0.0.1`) and forwards traffic over TLS.
+See the [MariaDB guide](/guides/mariadb) for an example.
 
 
 ## "No such file or directory" when building or deploying an image
@@ -96,33 +106,42 @@ When building / deploying an image, you may get the error below:
 
 This often means the local `kraft` cache is in an inconsistent state.
 
-To solve this, remove the local `kraft` cache and local packages:
+To solve this, remove the local legacy CLI cache and local packages:
 
-```bash title=""
+<CodeTabs>
+
+```bash title="kraft"
 kraft pkg rm --all
 rm -fr ~/.local/share/kraftkit
 ```
 
+</CodeTabs>
+
 ## Launched app not visible in list
 
 The most common reason is that you deployed an app to one metro but listed a different one.
-Set the metro for a session with an env variable:
+Use the `--metro` flag per command, or use the legacy CLI environment variable for a session:
 
-```bash title=""
-export UKC_METRO=<metro_name>
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft instances list --metro <metro_name>
 ```
 
-or for each indvidual command via the `--metro` flag, for example:
-
-```bash title=""
+```bash title="kraft"
+export UKC_METRO=<metro_name>
 kraft cloud instance list --metro <metro_name>
 ```
+
+</CodeTabs>
+
+> **Note:** The `UKC_METRO` environment variable is only supported by the legacy CLI.
 
 ## How can you cache the app's filesystem for faster builds
 
 When using a `Dockerfile` for the app filesystem, Unikraft Cloud passes the commands to [BuildKit](https://docs.docker.com/build/buildkit/).
 
-By default, each `kraft cloud deploy` command starts an ephemeral BuildKit container.
+By default, each legacy deploy command starts an ephemeral BuildKit container.
 The platform then removes the filesystem app data, so each deploy starts from zero.
 
 To prevent this, follow the instructions [here](https://unikraft.org/guides/building-dockerfile-images-with-buildkit):
@@ -144,7 +163,7 @@ Here `$HOME/.buildkit-cache` is a local path on your machine where BuildKit stor
 
 ## What's a `Kraftfile`
 
-A `Kraftfile` is used by the `kraft` CLI tool to understand how to build and deploy your instance.
+A `Kraftfile` is used by the CLI toolchain to understand how to build and deploy your instance.
 Typically you can use the default `Kraftfile` found in each Unikraft Cloud example.
 Below is a sample `Kraftfile` with a brief explanation:
 
@@ -163,28 +182,30 @@ labels:
   cloud.unikraft.v1.instances/scale_to_zero.cooldown_time_ms: 1000
 ```
 
-The `runtime` specifies one of the Unikraft Cloud runtimes (unikernels) built to run different languages and apps.
+The `runtime` specifies one of the Unikraft Cloud runtimes (microVMs) built to run different languages and apps.
 Here it specifies a Python runtime.
 
-The `rootfs` parameter tells `kraft` to use a `Dockerfile` in the same directory to build the root filesystem, and the `cmd` parameter which command to run when deployed (although you can also specify this in the `Dockerfile`).
+The `rootfs` parameter tells the CLI to use a `Dockerfile` in the same directory to build the root filesystem, and the `cmd` parameter which command to run when deployed (although you can also specify this in the `Dockerfile`).
 
 Finally the `labels` specify runtime options.
 In the example above, the configuration enables stateful scale-to-zero and the platform waits 1 second with no requests before putting the instance to sleep.
 
 ## Debugging the build, packaging and pushing steps
 
-The `kraft cloud deploy` command performs steps on your local device before actually deploying your app to Unikraft Cloud:
+The legacy deploy command performs steps on your local device before actually deploying your app to Unikraft Cloud:
 
 1. Downloads the runtime image (defined in the `Kraftfile`) from the Unikraft Cloud registry.
 1. Builds the app filesystem using the `Dockerfile` via [BuildKit](https://unikraft.org/guides/building-dockerfile-images-with-buildkit).
 1. Packages the app filesystem and the runtime in an Open Container Initiative (OCI) image.
 1. Pushes the OCI image to the to the Unikraft Cloud registry under your username's namespace.
 
-If any of these steps fail, enable `kraft` debugging with the `--log-level` and `--log-type` flags:
+If any of these steps fail, enable legacy CLI debugging with the `--log-level` and `--log-type` flags:
 
-```bash title=""
-kraft cloud deploy --log-level debug --log-type basic [...]
-```
+<CodeTabs syncKey="cli-tool">
+  ```bash title="kraft"
+  kraft cloud deploy --log-level debug --log-type basic [...]
+  ```
+</CodeTabs>
 
 You should then see debug output for the 4 steps above.
 
@@ -213,14 +234,23 @@ If not, report it with the output on the [Discord server](/discord).
 ## Debugging running apps
 
 The most direct way to debug an app is to use the app console output, which may include kernel output.
-To see it, after starting the Unikraft Cloud instance (via `kraft cloud deploy` or `kraft cloud inst create`), use:
+To see it, after starting the Unikraft Cloud instance, use:
 
-```bash title=""
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft instances logs <instance_name>
+```
+
+```bash title="kraft"
 kraft cloud inst logs <instance_name>
 ```
 
+</CodeTabs>
+
 In case of a crash, you'll see a full crash output:
 
+{/* vale off */}
 ```text title=""
 Powered by Unikraft Telesto (0.16.2~9c264902)
 [    0.066949] CRIT: [libukvmem] Cannot handle write page fault at 0x1000bb8024 (ec: 0x2): -12
@@ -248,10 +278,12 @@ Powered by Unikraft Telesto (0.16.2~9c264902)
 [    0.080871] CRIT: [appelfloader]  [0x000000100041fdcb]
 [    0.081311] CRIT: [appelfloader]  Bad frame pointer
 
-It looks like the instance exited fatally.  To see more details about why, run:
+It looks like the instance exited fatally.
+Run this for more details:
 
-        kraft cloud instance get http-python312-hb7ij
+        unikraft instances get http-python312-hb7ij
 ```
+{/* vale on */}
 
 Use the recommended command for detailed output.
 This yields output like:
@@ -289,7 +321,8 @@ Here the cause is insufficient memory.
 
 If the stop reason lacks detail, enable debug tracing for the instance.
 
-To do that, in your app of choice in the [examples repository](https://github.com/unikraft-cloud/examples/), or in an app directory you created, update the `runtime` entry in the `Kraftfile` to reference the debug build of the image you use by adding `-dbg` to the name of the runtime.
+To do that, pick an app from the [examples repository](https://github.com/unikraft-cloud/examples/) or an app directory you created.
+Update the `runtime` entry in the `Kraftfile` to reference the debug build by adding `-dbg` to the runtime name.
 For example, if you want to run the [http-go1.21 example](https://github.com/unikraft-cloud/examples/tree/main/http-go1.21) with debug output, update its `Kraftfile` as follows:
 
 ```yaml title="Kraftfile"
@@ -305,15 +338,32 @@ cmd: ["/server"]
 That is, change `base:latest` to `base:latest-dbg`.
 Now Unikraft Cloud is ready to re-deploy:
 
-```bash title=""
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft build . --output <my-org>/http-go-strace:latest
+unikraft run --metro=fra --name http-go-strace -p 443:8080/http+tls --image=<my-org>/http-go-strace:latest
+```
+
+```bash title="kraft"
 kraft cloud deploy --name http-go-strace -p 443:8080 .
 ```
 
+</CodeTabs>
+
 You can now inspect the logs as before and view system call tracing:
 
-```bash title=""
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft instances logs http-go-strace
+```
+
+```bash title="kraft"
 kraft cloud inst logs http-go-strace
 ```
+
+</CodeTabs>
 
 ```ansi title=""
 [    0.000000] Info: [libkvmplat] Unikraft Telesto (0.16.2~5b96d531)
@@ -349,14 +399,27 @@ Contact Unikraft Cloud on the [Discord server](/discord) and include this output
 :::tip
 
 While you debug an issue you can mitigate crashes by setting a restart policy.
-For example, use `kraft cloud deploy --restart on-failure` to have the platform restart the app if it crashes.
-Find more info on [restart policies here](/docs/api/v1/instances/#restart-policy).
+For example, use the CLI to set `--restart on-failure` so the platform restarts the app if it crashes.
+
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft run --metro=fra --restart=on-failure --image=my-app:latest
+```
+
+```bash title="kraft"
+kraft cloud deploy --restart on-failure .
+```
+
+</CodeTabs>
+
+Find more info in the [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
 
 :::
 
 
 ## Learn more
 
-* The `kraft cloud` [CLI reference](/docs/cli/)
-* Unikraft Cloud's [REST API reference](/docs/api/v1)
-* Many more guides [here](/docs/guides)
+* The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
+* Unikraft Cloud's [REST API reference](/api/platform/v1).
+* Many more guides [here](/guides/bun).

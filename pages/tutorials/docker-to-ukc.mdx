@@ -1,0 +1,389 @@
+---
+title: Docker To Unikraft Cloud
+navigation_icon: package
+---
+
+This tutorial shows how to take an existing container image and turn it into a Unikraft Cloud deployment.
+It starts with a safe first pass that keeps the upstream filesystem intact.
+It then shows how to slim the image down to a bare minimum deployment.
+
+The examples use `FROM image:latest` as a placeholder for the upstream OCI image.
+They follow the same general pattern used in the [Unikraft Cloud example repository](https://github.com/unikraft-cloud/examples).
+
+## Prerequisites
+
+Make sure you have the CLI installed.
+Use the [unikraft CLI](/docs/cli/unikraft) or the legacy [kraft CLI](https://unikraft.org/docs/cli/install).
+You also need a container runtime such as Docker because the `Dockerfile` builds the root filesystem.
+
+Set your Unikraft Cloud credentials and preferred metro before deploying:
+
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft login
+```
+
+```bash title="kraft"
+# Set Unikraft Cloud access token
+export UKC_TOKEN=token
+# Set metro to Frankfurt, DE
+export UKC_METRO=fra
+```
+
+</CodeTabs>
+
+The `UKC_TOKEN` and `UKC_METRO` environment variables are only supported by the legacy CLI.
+
+## Use the upstream image
+
+The fastest way to get an existing container running on Unikraft Cloud is to keep its root filesystem as-is.
+For that, BuildKit fetches the upstream image through a `FROM image:latest` line and the `Kraftfile` reproduces the original start command.
+
+### Inspect the upstream image
+
+Before writing the `Kraftfile`, inspect the original image and record its effective startup command.
+In Docker terms, the final process arguments are usually `ENTRYPOINT` followed by `CMD`.
+
+```bash
+docker pull image:latest
+docker image inspect image:latest --format '{{json .Config.Entrypoint}}'
+docker image inspect image:latest --format '{{json .Config.Cmd}}'
+docker image inspect image:latest --format '{{json .Config.WorkingDir}}'
+docker image inspect image:latest --format '{{json .Config.ExposedPorts}}'
+```
+
+Use the values you get as follows:
+
+* If `Entrypoint` is empty, use `Cmd` as the full `cmd` value in the `Kraftfile`.
+* If both are present, concatenate them in the same order and use the result as the `cmd` value.
+* If the image starts through a wrapper such as `docker-entrypoint.sh`, keep that wrapper in the command line.
+* Prefer absolute paths in `cmd` so the deployment doesn't depend on a specific working directory.
+
+### Create the initial files
+
+Start with the smallest possible `Dockerfile`:
+
+```dockerfile title="Dockerfile"
+FROM image:latest
+```
+
+Then create a matching `Kraftfile`:
+
+```yaml title="Kraftfile"
+spec: v0.6
+
+runtime: base-compat:latest
+
+rootfs: ./Dockerfile
+
+cmd: ["/path/from-entrypoint", "arg1", "arg2"]
+```
+
+In this first-pass `Kraftfile`:
+
+* `runtime: base-compat:latest` selects the generic compatibility runtime.
+* `rootfs: ./Dockerfile` tells the CLI to build the root filesystem from the `Dockerfile`.
+* `cmd: [...]` explicitly sets the process arguments that should run inside the instance.
+
+Replace the placeholder command with the exact values extracted from `docker image inspect`.
+For example, if the image reports `Entrypoint=["/usr/local/bin/docker-entrypoint.sh"]` and `Cmd=["postgres"]`, then use `cmd: ["/usr/local/bin/docker-entrypoint.sh", "postgres"]`.
+
+:::caution
+These Dockerfile keywords aren't deployment controls on Unikraft Cloud.
+In particular, `EXPOSE`, `HEALTHCHECK`, `ONBUILD`, `SHELL`, `STOPSIGNAL`, and `VOLUME` are ignored as Docker deployment semantics.
+Also note that instances run as `root` unless you explicitly switch users at runtime.
+:::
+
+### Deploy the first pass
+
+Run an initial deployment before optimizing anything.
+This confirms that the runtime, filesystem, and command line are valid.
+
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft build . --output <my-org>/docker-port:latest
+unikraft run --metro=fra -p 443:<container-port> -m 512MiB --image=<my-org>/docker-port:latest
+```
+
+```bash title="kraft"
+kraft cloud deploy \
+		-p 443:<container-port> \
+		-M 512Mi \
+		.
+```
+
+</CodeTabs>
+
+Replace [`<container-port>`](/platform/services) with the app's listen port.
+Take this value from the image documentation or from the `ExposedPorts` field you inspected earlier.
+
+If the instance fails to boot, inspect the logs and fix the command line first.
+In most broken first attempts, the issue is either a wrong executable path, a missing wrapper script, or insufficient memory.
+
+:::note
+If the upstream image depends on a specific `WORKDIR`, verify whether absolute paths are enough.
+If not, add a small wrapper script that changes directory and then `exec`s the original command.
+:::
+
+## Slim the root filesystem
+
+Once the first pass works, the next step is to stop shipping the entire upstream image.
+The goal is to copy only the files needed at runtime into a minimal final stage.
+
+In practice, that often means removing:
+
+* package manager caches;
+* compilers and build tools;
+* test data and documentation;
+* shells you no longer need;
+* temporary build artifacts.
+
+### Find the files you actually need
+
+For native or mixed-language workloads, the difficult part is identifying the runtime dependencies that must stay in the image.
+The exact list depends on the upstream image.
+
+Use the upstream container to inspect the binary and its dependencies:
+
+```bash
+docker run --rm --entrypoint sh image:latest -lc '
+	command -v your-app || true
+	ldd /path/to/executable || true
+'
+```
+
+If the image doesn't contain a shell, use a temporary debug image or inspect the filesystem with `docker create` and `docker cp`.
+The goal is the same in both cases: copy only what the final process needs at runtime.
+
+:::tip
+Verify whether the upstream image is glibc-based or musl-based before copying the loader and shared libraries.
+The sample paths above use musl-flavoured locations because that's a common pattern in the examples, but your image may differ.
+:::
+
+### Strip binaries and libraries
+
+Once you know which files the app needs, the next step is to reduce the size of the native executables and shared libraries themselves.
+This helps most with native apps and compiled dependencies.
+
+The common tool for this is `strip` from `binutils`.
+It removes symbol and debug information that the app doesn't need at runtime.
+
+:::note
+Use stripping only after the app already boots correctly.
+:::
+
+Start with the main executable and the libraries you identified with `ldd`:
+
+```dockerfile title="Dockerfile"
+FROM image:latest AS upstream
+
+RUN strip --strip-unneeded /path/to/executable && \
+	strip --strip-unneeded /usr/lib/libexample.so.1
+```
+
+If the upstream image doesn't include `strip`, install the required tooling only in the build stage.
+Don't copy that tooling into the final `scratch` stage.
+
+For example, on Debian-based images:
+
+```dockerfile title="Dockerfile"
+FROM image:latest AS upstream
+
+RUN apt-get update && \
+	apt-get install -y --no-install-recommends binutils
+
+RUN strip --strip-unneeded /path/to/executable && \
+	strip --strip-unneeded /usr/lib/libexample.so.1
+```
+
+As a rule of thumb, strip these files only when they're part of your runtime path:
+
+* the main executable;
+* helper executables started by wrapper scripts;
+* shared libraries reported by `ldd`.
+
+:::warning
+Don't strip files if you will need them for debugging later.
+:::
+
+### Convert the Dockerfile to a multi-stage build
+
+Start from the upstream image in a build stage.
+Then copy only the final executable, its direct shared libraries, and the app files into a `scratch` stage.
+
+```dockerfile title="Dockerfile"
+FROM image:latest AS upstream
+
+# Add framework-specific build steps here if the image needs a compile step.
+# Remove caches here if the upstream image leaves package manager data behind.
+
+FROM scratch
+
+# Copy the main executable or wrapper script used by the app.
+COPY --from=upstream /path/to/executable /path/to/executable
+
+# Copy the dynamic loader and shared libraries required by the executable.
+COPY --from=upstream /lib/ld-musl-x86_64.so.1 /lib/ld-musl-x86_64.so.1
+COPY --from=upstream /usr/lib/libgcc_s.so.1 /usr/lib/libgcc_s.so.1
+COPY --from=upstream /usr/lib/libstdc++.so.6 /usr/lib/libstdc++.so.6
+
+# Distribution metadata is often useful for runtime compatibility checks.
+COPY --from=upstream /etc/os-release /etc/os-release
+
+# Copy only the app files that are needed at runtime.
+COPY --from=upstream /app /app
+```
+
+This is the same shape used by examples such as [`node21-nextjs`](https://github.com/unikraft-cloud/examples/blob/main/node21-nextjs/Dockerfile), where the final image keeps only the Node binary, its required libraries, `/etc/os-release`, and the built app output.
+
+## Recommended deployment settings for the slim image
+
+After reducing the filesystem, deploy it with [`EROFS`](/tutorials/rootfs-formats) when possible.
+This often gives better cold-boot behaviour and lower memory pressure than `CPIO` for larger images.
+
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft build . --output <my-org>/docker-port:latest
+unikraft run --metro=fra -p 443:<container-port> -m 256MiB --image=<my-org>/docker-port:latest
+```
+
+```bash title="kraft"
+kraft cloud deploy \
+		-p 443:<container-port> \
+		-M 256Mi \
+		--rootfs-type erofs \
+		.
+```
+
+</CodeTabs>
+
+Treat the memory value as a starting point.
+Tune it after the first successful deployment by looking at the actual boot behaviour and logs.
+
+## Bare minimum checklist
+
+Before calling the image minimized, check the following:
+
+* the `cmd` line uses the final executable path;
+* copy only runtime files into the final stage;
+* no package manager cache or compiler output remains;
+* expose the instance port through the CLI `-p` flag;
+* use [`EROFS`](/tutorials/rootfs-formats) unless you have a reason to stay on `CPIO`.
+
+## More configurations
+
+### Environment variables
+
+If the upstream image depends on environment variables, you can optionally carry them over explicitly.
+The most reliable method at deployment time is to pass them through the CLI with `--env` or `-e`.
+
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft build . --output <my-org>/docker-port:latest
+unikraft run --metro=fra -p 443:<container-port> -m 256MiB \
+  -e APP_ENV=production \
+  -e LOG_LEVEL=info \
+  --image=<my-org>/docker-port:latest
+```
+
+```bash title="kraft"
+kraft cloud deploy \
+		-p 443:<container-port> \
+		-M 256Mi \
+		--rootfs-type erofs \
+		-e APP_ENV=production \
+		-e LOG_LEVEL=info \
+		.
+```
+
+</CodeTabs>
+
+If the image expects a wrapper entrypoint that prepares environment variables before starting the main process, keep that wrapper in your `cmd` line or replace it with your own script.
+The [Environment Variables](/tutorials/environment-variables) tutorial describes the wrapper pattern in more detail.
+
+:::note
+Dockerfile `ENV` instructions carry over into the image, but you might want to set them explicitly at deployment time for better visibility and control.
+:::
+
+### Users and permissions
+
+Container images often include a `USER` directive to avoid running as `root`.
+On Unikraft Cloud, that directive only affects subsequent `RUN` steps while building the root filesystem.
+It doesn't automatically change the user that runs `ENTRYPOINT` or `CMD` at instance boot.
+
+In practice, this means the deployed process runs as `root` unless you switch users explicitly inside your startup command or wrapper script.
+
+When slimming the image, check permission-sensitive paths such as:
+
+* runtime directories under `/var` or `/run`;
+* app state directories under `/app`, `/srv`, or `/data`;
+* Unix sockets or process ID files created by the upstream entrypoint.
+
+If the original image relied on a specific unprivileged user, you may need to preserve passwd and group metadata files as well:
+
+```dockerfile
+COPY --from=upstream /etc/passwd /etc/passwd
+COPY --from=upstream /etc/group /etc/group
+```
+
+If the app still assumes a particular user context, add a small wrapper that prepares the filesystem and then starts the original process.
+
+### Scale to zero
+
+After the image boots correctly and the slimmed filesystem works, scale-to-zero is a good final validation step.
+It tests whether the app can suspend cleanly and resume on the next request.
+
+The simplest way to test scale-to-zero is to deploy with an explicit scale-to-zero policy and a short cooldown:
+
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft build . --output <my-org>/docker-port:latest
+unikraft run --metro=fra -p 443:<container-port> -m 256MiB \
+  --scale-to-zero \
+  --scale-to-zero-cooldown-time-ms=5000 \
+  --image=<my-org>/docker-port:latest
+```
+
+```bash title="kraft"
+kraft cloud deploy \
+		-p 443:<container-port> \
+		-M 256Mi \
+		--rootfs-type erofs \
+		--scale-to-zero on \
+        --scale-to-zero-stateful \
+		--scale-to-zero-cooldown 5s \
+		.
+```
+
+</CodeTabs>
+
+After deployment, wait a few seconds and then list the instances:
+
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft instances list
+```
+
+```bash title="kraft"
+kraft cloud instance list
+```
+
+</CodeTabs>
+
+If everything is working, the instance should transition to `standby` when idle and wake up again on the next request.
+
+Apps with long initialization phases, background work, or long-lived connections may need extra adjustments before scale-to-zero behaves well.
+In those cases, review the [Scale-to-Zero](/features/scale-to-zero) feature page and consider a longer cooldown, stateful mode, or temporarily disabling scale-to-zero from inside the app during startup.
+
+## Learn more
+
+* [Images](/platform/images) and how `Dockerfile`s, `Kraftfile`s, and runtimes fit together.
+* [Rootfs Formats](/tutorials/rootfs-formats) for understanding the `CPIO` and `EROFS` tradeoffs.
+* The [Kraftfile reference](https://unikraft.org/docs/cli/reference/kraftfile) for all supported top-level fields.
+* The [Next.js guide](/guides/nextjs) as a concrete example of a multi-stage Docker build trimmed down for deployment.

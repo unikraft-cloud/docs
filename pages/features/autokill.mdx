@@ -1,0 +1,93 @@
+---
+title: Autokill
+navigation_icon: timer-off
+---
+
+Autokill automatically terminates instances or service groups when a configured condition triggers.
+It helps avoid unnecessary resource usage when instances or groups are no longer needed.
+
+You can configure autokill on:
+- **Instances**: killed after a time, or after reaching a request limit
+- **Instance templates**: killed if nobody clones them within a specified time
+- **Service groups**: killed after the group has been empty for a specified time
+
+## Instance autokill
+
+### Kill after stopped duration
+
+Automatically kill an instance after it stops and remains stopped for a given number of milliseconds:
+
+```json title="POST /instances"
+{
+  "autokill": {
+    "time_ms": 3600000
+  }
+}
+```
+
+This example kills the instance 1 hour after it stops.
+
+### Kill after a request count
+
+Kill an instance after it serves a specified request count:
+
+```json title="POST /instances"
+{
+  "autokill": {
+    "num_requests": 1000
+  }
+}
+```
+
+### Updating autokill on a stopped instance
+
+```json title="PATCH /instances/{uuid}"
+{
+	"prop": "autokill",
+	"op": "set",
+	"value": {
+	    "time_ms": 10000
+	}
+}
+```
+
+## Service group autokill
+
+Automatically kill a service group after it stays empty (no instances) for a given number of milliseconds:
+
+```json title="POST /services"
+{
+  "autokill": {
+    "time_ms": 300000
+  }
+}
+```
+
+This example kills the service group 5 minutes after its last instance leaves.
+
+## Instance template autokill
+
+Automatically kill an instance template if nobody clones it within a given number of milliseconds:
+
+```json title="POST /instances/templates"
+{
+  "autokill": {
+    "time_ms": 86400000
+  }
+}
+```
+
+This example removes the template after 24 hours without a clone.
+
+## Interaction with delete locks
+
+Autokill skips any instance that has a [delete lock](/platform/delete-locks) set.
+The autokill timer doesn't fire while a delete lock is active.
+
+## Autokill on instance clone
+
+When you clone an instance from a template, the new instance inherits the autokill configuration.
+
+## Learn more
+
+* Unikraft Cloud's [REST API reference](/api/platform/v1), in particular the sections on [instances](/api/platform/v1/instances) and [services](/api/platform/v1/service-groups)

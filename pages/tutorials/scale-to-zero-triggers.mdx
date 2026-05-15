@@ -1,0 +1,143 @@
+---
+title: Scale To Zero Triggers
+navigation_icon: arrow-down-1-0
+---
+
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "zudoku/ui/Tabs"
+
+Unikraft Cloud supports scaling instances to zero based on different triggers.
+This allows you to optimize resource usage and costs by automatically setting instances to standby when they're not needed.
+They will automatically resume when required with minimal delay.
+The platform can scale down instances automatically, or you can scale them down manually.
+You can read more about Scale To Zero [here](/features/scale-to-zero).
+
+## Automatic triggers
+
+Automatic triggers are the most common and easiest way to use scale-to-zero with your instances on Unikraft Cloud.
+By default, instances scale down automatically when there is no traffic coming to them for a specified period.
+You can also configure scale-to-zero to consider idle active connections when determining whether to scale down an instance.
+
+### No traffic
+
+When you enable this trigger, Unikraft Cloud will track incoming connections to your instance.
+If there is no traffic for the configured duration, the instance scales down to zero.
+You can use the legacy CLI tool or the [API](/api/platform/v1/instances#create-instance) to enable this trigger:
+
+<Tabs defaultValue="kraft">
+    <TabsList>
+    <TabsTrigger value="kraft">Kraftkit</TabsTrigger>
+    <TabsTrigger value="api">API</TabsTrigger>
+    </TabsList>
+    <TabsContent value="kraft">
+```bash
+kraft cloud instance create \
+    --scale-to-zero on \
+    --scale-to-zero-cooldown 5s \
+    ...
+```
+</TabsContent>
+<TabsContent value="api">
+```json
+{
+    ...
+    "scale_to_zero": {
+        "policy": "on",
+        "cooldown_time_ms": "5000
+    }
+}
+```
+</TabsContent>
+</Tabs>
+
+### Idle connections
+
+When enabling this trigger, the platform will consider all active connections to your instance, so all traffic going to them.
+The instance will scale down if you make no new network connections and all existing connections have been idle for the configured duration.
+
+You can enable this trigger using the legacy CLI tool or the [API](/api/platform/v1/instances#create-instance) as follows:
+
+<Tabs defaultValue="kraft">
+    <TabsList>
+    <TabsTrigger value="kraft">Kraftkit</TabsTrigger>
+    <TabsTrigger value="api">API</TabsTrigger>
+    </TabsList>
+    <TabsContent value="kraft">
+```bash
+kraft cloud instance create \
+    --scale-to-zero idle \
+    --scale-to-zero-cooldown 5s \
+    --scale-to-zero-stateful \
+    ...
+```
+</TabsContent>
+<TabsContent value="api">
+```json
+{
+    ...
+    "scale_to_zero": {
+        "policy": "idle",
+        "cooldown_time_ms": "5000",
+        "stateful": true
+    }
+}
+```
+</TabsContent>
+</Tabs>
+
+:::tip
+If your app uses [keep-alive](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Keep-Alive) messages over this active connection, your instance won't scale down.
+You will have to either disable keep-alive or configure them with an interval high enough to allow scaling down.
+For example, with a 5 seconds cooldown, you can set keep-alive to once per minute.
+:::
+
+## Manual triggers
+
+For specific use cases, you might want to manually scale your instances to zero, or to manually disable scale-to-zero.
+Unikraft Cloud supports two ways to manually trigger scale-to-zero.
+
+### API
+
+You can use the Unikraft Cloud API to manually scale down an instance.
+You will have to use the `/instances/suspend` endpoint to scale down an instance.
+This happens instantly, regardless of the configured automatic triggers.
+
+First, set the required environment variables:
+
+```bash
+# Set Unikraft Cloud access token
+export UKC_TOKEN=token
+# Set metro to Frankfurt, DE
+export UKC_METRO=fra
+```
+
+Then invoke the following `curl` command to scale down an instance named `my-instance`:
+
+```bash
+curl -X POST https://api.$UKC_METRO.unikraft.cloud/v1/instances/suspend \
+  -H "Authorization: Bearer $UKC_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "my-instance"
+  }'
+```
+
+### Device file
+
+You can also manually scale down an instance by writing '+'/'-' to a special device file available inside the instance.
+Every instance has this file at `/uk/libukp/scale_to_zero_disable`.
+By writing '+' to this file, you disable automatic scale-to-zero for the instance until the number of '-' written matches the number of '+' written.
+For example, to disable automatic scale-to-zero, run the following command inside the instance:
+
+```bash
+echo '+' > /uk/libukp/scale_to_zero_disable
+```
+
+:::tip
+If your app starts listening for incoming connections before being ready to serve them, you can use this mechanism to disable scale-to-zero during startup.
+Once your app is ready to serve requests, you can write '-' to the file to re-enable automatic scale-to-zero.
+:::
+
+## Learn more
+
+* The [Scale To Zero](/features/scale-to-zero) feature page.
+* The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).

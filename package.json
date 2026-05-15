@@ -1,0 +1,26 @@
+{
+  "name": "docs",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "zudoku dev --port 3131",
+    "build": "zudoku build",
+    "preview": "zudoku preview",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@shikijs/vscode-textmate": "^10.0.2",
+    "hast-util-to-html": "^9.0.5",
+    "oniguruma-parser": "^0.12.1",
+    "react": ">=19.0.0",
+    "react-dom": ">=19.0.0",
+    "regex-utilities": "^2.3.0",
+    "zudoku": "^0.77.0"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.14.0"
+  }
+}

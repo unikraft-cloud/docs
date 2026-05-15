@@ -1,0 +1,26 @@
+name: setup-kraftkit
+
+description: Setup KraftKit.
+
+inputs:
+  version:
+    description: KraftKit version to install (use latest to auto-detect).
+    required: false
+    default: latest
+
+runs:
+  using: composite
+  steps:
+  - name: Install
+    shell: bash
+    run: |
+      if [[ -z $(command -v kraft) ]]; then
+        _VERSION="${{ inputs.version }}"
+        if [[ -z "${_VERSION}" || "${_VERSION}" == "latest" ]]; then
+          _VERSION=$(curl -fsSL https://get.kraftkit.sh/latest.txt)
+        fi
+        wget -nv -LO kraft.tar.gz https://github.com/unikraft/kraftkit/releases/download/v${_VERSION}/kraft_${_VERSION}_linux_amd64.tar.gz;
+        tar xzf kraft.tar.gz kraft;
+        sudo mv kraft /usr/bin/;
+        rm kraft.tar.gz;
+      fi

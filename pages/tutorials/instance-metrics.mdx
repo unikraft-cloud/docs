@@ -1,0 +1,412 @@
+---
+title: Instance Metrics
+navigation_icon: bar-chart
+---
+
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "zudoku/ui/Tabs"
+
+Unikraft Cloud provides an endpoint to retrieve real-time hardware and network metrics for your running instances.
+These metrics are useful for monitoring the performance, memory usage, and network traffic handled by your app.
+
+## Prerequisites
+
+To access the instance metrics, you must have the **`developer`** permission role for your user.
+
+## Retrieving metrics
+
+You can retrieve the metrics of one or more instances by making a `GET` request to the `/instances/metrics` endpoint.
+The request body must contain an array of instance UUIDs or names.
+Use a tool like `curl` for ad-hoc queries, or configure your monitoring system to consume the endpoint's Prometheus-formatted output.
+
+### Example
+
+The following example creates an instance and retrieves its metrics using `curl`.
+
+First, provision a new instance:
+
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+git clone https://github.com/unikraft-cloud/examples
+cd examples/nginx/
+unikraft run --metro=fra -p 443:8080/http+tls -m 256MiB --image=nginx:latest
+```
+
+```bash title="kraft"
+git clone https://github.com/unikraft-cloud/examples
+cd examples/nginx/
+kraft cloud deploy -p 443:8080 -M 256 .
+```
+
+</CodeTabs>
+
+This command will create the NGINX instance with scale-to-zero enabled:
+
+```ansi title=""
+[90m[[0m[92m●[0m[90m][0m Deployed successfully!
+ [90m│[0m
+ [90m├[0m[90m──────────[0m [90mname[0m: nginx-26g86
+ [90m├[0m[90m──────────[0m [90muuid[0m: 3605978e-5feb-4209-8f9e-de45f00a7d66
+ [90m├[0m[90m─────────[0m [90mstate[0m: [92mrunning[0m
+ [90m├[0m[90m───────────[0m [90murl[0m: https://black-snowflake-iy7509ap.fra.unikraft.app
+ [90m├[0m[90m─────────[0m [90mimage[0m: nginx@sha256:19854a12fe97f138313cb9b4806828cae9cecf2d050077a0268d98129863f954
+ [90m├[0m[90m─────[0m [90mboot time[0m: 7.77 ms
+ [90m├[0m[90m────────[0m [90mmemory[0m: 256 MiB
+ [90m├[0m[90m───────[0m [90mservice[0m: black-snowflake-iy7509ap
+ [90m├[0m[90m──[0m [90mprivate fqdn[0m: nginx-26g86.internal
+ [90m├[0m[90m────[0m [90mprivate ip[0m: 172.16.6.1
+ [90m└[0m[90m──────────[0m [90margs[0m: /usr/bin/nginx -c /etc/nginx/nginx.conf
+```
+
+Now, request the metrics for that instance.
+Set `UKC_TOKEN` and `UKC_METRO` for the API calls:
+
+<Tabs defaultValue="json">
+    <TabsList>
+    <TabsTrigger value="json">JSON</TabsTrigger>
+    <TabsTrigger value="prometheus">Prometheus</TabsTrigger>
+    </TabsList>
+    <TabsContent value="json">
+```bash title=""
+curl -X GET "https://api.$UKC_METRO.unikraft.cloud/v1/instances/metrics" \
+  -H "Authorization: Bearer $UKC_TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -d '[{"name":"nginx-26g86"}]'
+```
+</TabsContent>
+<TabsContent value="prometheus">
+```bash title=""
+curl -X GET "https://api.$UKC_METRO.unikraft.cloud/v1/instances/metrics" \
+  -H "Authorization: Bearer $UKC_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '[{"name":"nginx-26g86"}]'
+```
+</TabsContent>
+</Tabs>
+
+<Tabs defaultValue="json">
+    <TabsList>
+    <TabsTrigger value="json">JSON</TabsTrigger>
+    <TabsTrigger value="prometheus">Prometheus</TabsTrigger>
+    </TabsList>
+    <TabsContent value="json">
+```json
+{
+  "status": "success",
+  "data": {
+    "instances": [
+      {
+        "status": "success",
+        "uuid": "3605978e-5feb-4209-8f9e-de45f00a7d66",
+        "name": "nginx-26g86",
+        "state": "standby",
+        "start_count": 2,
+        "started_at": "2026-03-18T12:31:49Z",
+        "stopped_at": "2026-03-18T12:31:50Z",
+        "uptime_s": 7.817000,
+        "boot_time_s": 0.005900,
+        "net_time_s": 0.025256,
+        "rss_bytes": 0,
+        "cpu_time_s": 0,
+        "rx_bytes": 1614,
+        "rx_packets": 10,
+        "tx_bytes": 537,
+        "tx_packets": 5,
+        "nconns": 0,
+        "nreqs": 0,
+        "nqueued": 0,
+        "ntotal": 1,
+        "wakeup_latency_seconds": [
+          {
+            "bucket_s": 0.001000,
+            "count": 0
+          },
+          {
+            "bucket_s": 0.002000,
+            "count": 0
+          },
+          {
+            "bucket_s": 0.004000,
+            "count": 0
+          },
+          {
+            "bucket_s": 0.008000,
+            "count": 0
+          },
+          {
+            "bucket_s": 0.016000,
+            "count": 0
+          },
+          {
+            "bucket_s": 0.032000,
+            "count": 1
+          },
+          {
+            "bucket_s": 0.064000,
+            "count": 0
+          },
+          {
+            "bucket_s": 0.128000,
+            "count": 0
+          },
+          {
+            "bucket_s": 0.256000,
+            "count": 0
+          },
+          {
+            "bucket_s": 0.512000,
+            "count": 0
+          },
+          {
+            "bucket_s": 1.024000,
+            "count": 0
+          },
+          {
+            "bucket_s": 2.048000,
+            "count": 0
+          },
+          {
+            "bucket_s": 4.096000,
+            "count": 0
+          },
+          {
+            "bucket_s": null,
+            "count": 0
+          }
+        ],
+        "wakeup_latency_seconds_sum": 0.023
+      }
+    ]
+  },
+  "op_time_us": 125
+}
+```
+</TabsContent>
+<TabsContent value="prometheus">
+```prom
+# HELP instance_state 0=stopped,1=starting,2=running,3=draining,4=stopping,5=standby,6=template
+# TYPE instance_state gauge
+instance_state{instance_uuid="3605978e-5feb-4209-8f9e-de45f00a7d66"} 5
+
+# HELP instance_start_count Number of times the instance has been started
+# TYPE instance_start_count counter
+instance_start_count{instance_uuid="3605978e-5feb-4209-8f9e-de45f00a7d66"} 2
+
+# HELP instance_restart_count Number of times the instance has been restarted
+# TYPE instance_restart_count counter
+instance_restart_count{instance_uuid="3605978e-5feb-4209-8f9e-de45f00a7d66"} 0
+
+# HELP instance_started_at Time when the instance started
+# TYPE instance_started_at gauge
+instance_started_at{instance_uuid="3605978e-5feb-4209-8f9e-de45f00a7d66"} 1773840567
+
+# HELP instance_stopped_at Time when the instance stopped
+# TYPE instance_stopped_at gauge
+instance_stopped_at{instance_uuid="3605978e-5feb-4209-8f9e-de45f00a7d66"} 1773840567
+
+# HELP instance_uptime_s Uptime in seconds
+# TYPE instance_uptime_s gauge
+instance_uptime_s{instance_uuid="3605978e-5feb-4209-8f9e-de45f00a7d66"} 7.817000
+
+# HELP instance_boot_time_s Boot time in seconds
+# TYPE instance_boot_time_s gauge
+instance_boot_time_s{instance_uuid="3605978e-5feb-4209-8f9e-de45f00a7d66"} 0.005900
+
+# HELP instance_net_time_s Net time in seconds
+# TYPE instance_net_time_s gauge
+instance_net_time_s{instance_uuid="3605978e-5feb-4209-8f9e-de45f00a7d66"} 0.025256
+
+# HELP instance_rss_bytes Resident set size in bytes
+# TYPE instance_rss_bytes gauge
+instance_rss_bytes{instance_uuid="3605978e-5feb-4209-8f9e-de45f00a7d66"} 0
+
+# HELP instance_cpu_time_s Consumed CPU time in seconds
+# TYPE instance_cpu_time_s counter
+instance_cpu_time_s{instance_uuid="3605978e-5feb-4209-8f9e-de45f00a7d66"} 0.000000
+
+# HELP instance_rx_bytes Amount of bytes received over network
+# TYPE instance_rx_bytes counter
+instance_rx_bytes{instance_uuid="3605978e-5feb-4209-8f9e-de45f00a7d66"} 1614
+
+# HELP instance_tx_bytes Amount of bytes transmitted over network
+# TYPE instance_tx_bytes counter
+instance_tx_bytes{instance_uuid="3605978e-5feb-4209-8f9e-de45f00a7d66"} 543
+
+# HELP instance_rx_packets Count of packets received from network
+# TYPE instance_rx_packets counter
+instance_rx_packets{instance_uuid="3605978e-5feb-4209-8f9e-de45f00a7d66"} 10
+
+# HELP instance_tx_packets Count of packets transmitted over network
+# TYPE instance_tx_packets counter
+instance_tx_packets{instance_uuid="3605978e-5feb-4209-8f9e-de45f00a7d66"} 5
+
+# HELP instance_nconns Number of active connections
+# TYPE instance_nconns gauge
+instance_nconns{instance_uuid="3605978e-5feb-4209-8f9e-de45f00a7d66"} 0
+
+# HELP instance_nreqs Number of active requests
+# TYPE instance_nreqs gauge
+instance_nreqs{instance_uuid="3605978e-5feb-4209-8f9e-de45f00a7d66"} 0
+
+# HELP instance_nqueued Number of queued connections/requests
+# TYPE instance_nqueued gauge
+instance_nqueued{instance_uuid="3605978e-5feb-4209-8f9e-de45f00a7d66"} 0
+
+# HELP instance_ntotal Number of processed connections/requests
+# TYPE instance_ntotal counter
+instance_ntotal{instance_uuid="3605978e-5feb-4209-8f9e-de45f00a7d66"} 1
+
+# HELP instance_wakeup_latency_seconds Wakeup latencies in seconds
+# TYPE instance_wakeup_latency_seconds histogram
+instance_wakeup_latency_seconds{le="0.001000"} 0
+instance_wakeup_latency_seconds{le="0.002000"} 0
+instance_wakeup_latency_seconds{le="0.004000"} 0
+instance_wakeup_latency_seconds{le="0.008000"} 0
+instance_wakeup_latency_seconds{le="0.016000"} 0
+instance_wakeup_latency_seconds{le="0.032000"} 1
+instance_wakeup_latency_seconds{le="0.064000"} 1
+instance_wakeup_latency_seconds{le="0.128000"} 1
+instance_wakeup_latency_seconds{le="0.256000"} 1
+instance_wakeup_latency_seconds{le="0.512000"} 1
+instance_wakeup_latency_seconds{le="1.024000"} 1
+instance_wakeup_latency_seconds{le="2.048000"} 1
+instance_wakeup_latency_seconds{le="4.096000"} 1
+instance_wakeup_latency_seconds{le="+Inf"} 1
+instance_wakeup_latency_seconds_sum 23
+instance_wakeup_latency_seconds_count 1
+```
+</TabsContent>
+</Tabs>
+
+If the request is successful, you will receive a response reporting the instance's performance and network data.
+
+## Understanding the Response
+
+The metrics response contains fields for CPU, memory, boot time, and networking.
+The Prometheus output comments contain details about each metric.
+Below is a detailed breakdown of each field returned in the metrics object.
+
+### Instance Info
+
+#### **`uuid`**
+
+The UUID of the instance.
+
+#### **`name`**
+
+The name of the instance.
+
+#### **`state`**
+
+The current state of the instance.
+Possible values: `stopped`, `starting`, `running`, `draining`, `stopping`, `standby`, `template`.
+
+### Lifecycle and uptime
+
+#### **`start_count`**
+
+Number of times the instance started, including scale-to-zero wakeups.
+
+#### **`started_at`**
+
+Timestamp of the most recent instance start, in [RFC 3339](https://www.rfc-editor.org/rfc/rfc3339) format.
+
+#### **`stopped_at`**
+
+Timestamp of the most recent instance stop, in [RFC 3339](https://www.rfc-editor.org/rfc/rfc3339) format.
+
+#### **`uptime_s`**
+
+Total accumulated uptime of the instance in seconds across all starts.
+
+### Memory & CPU
+
+#### **`rss_bytes`**
+
+Resident set size in bytes.
+This is the amount of physical memory that the instance has touched and is currently reserved for it.
+It grows as the instance uses more memory up to the configured limit.
+This metric drops to `0` when the instance is in standby.
+
+#### **`cpu_time_s`**
+
+Consumed CPU time in seconds for the last second.
+This metric drops to `0` when the instance is in standby.
+
+### Boot and network initialization times
+
+#### **`boot_time_s`**
+
+Boot time in seconds.
+Calculated as the time between the virtualization toolstack responding to a boot request and the moment the guest OS starts executing user code.
+
+#### **`net_time_s`**
+
+Network initialization time in seconds.
+This is the time from when the instance started until the user-level app starts listening on a non-localhost port.
+
+### Network traffic
+
+#### **`rx_bytes`**
+
+Total amount of network bytes received.
+
+#### **`rx_packets`**
+
+Total count of network packets received.
+
+#### **`tx_bytes`**
+
+Total amount of network bytes transmitted.
+
+#### **`tx_packets`**
+
+Total count of network packets transmitted.
+
+### Connections & Requests
+
+#### **`nconns`**
+
+Number of currently established inbound connections (non-HTTP).
+This metric drops to `0` when the instance is in standby.
+
+#### **`nreqs`**
+
+Number of in-flight HTTP requests.
+This metric drops to `0` when the instance is in standby.
+
+#### **`nqueued`**
+
+Number of queued inbound connections and HTTP requests.
+This metric drops to `0` when the instance is in standby.
+
+#### **`ntotal`**
+
+Total number of inbound connections and HTTP requests handled.
+
+### Wakeup latency
+
+#### **`wakeup_latency_seconds`**
+
+A histogram of scale-to-zero wakeup latencies.
+Each entry contains a `bucket_s` threshold (in seconds) and the `count` of wakeups that fell within that bucket.
+The final bucket has `bucket_s: null`, representing the `+Inf` overflow bucket for wakeups exceeding all defined thresholds.
+
+#### **`wakeup_latency_seconds_sum`**
+
+The sum of all wakeup latencies in seconds.
+Together with the histogram buckets this allows computing a mean wakeup latency: `wakeup_latency_seconds_sum / ntotal`.
+
+## Conclusion
+
+Instance metrics give you a real-time view into the performance and health of your Unikraft Cloud instances.
+By monitoring memory usage, CPU time, boot and network initialization times, and connection statistics, you can understand how your app behaves under load.
+The Prometheus format lets you plug these metrics directly into monitoring tools such as Grafana or any other Prometheus-compatible system.
+
+## Learn more
+
+* [Scale to zero](/features/scale-to-zero) and how it affects instance lifecycle.
+* [Scale to zero triggers](/tutorials/scale-to-zero-triggers) for controlling when instances wake up.
+* [Platform instances](/platform/instances) for managing and inspecting your instances.
+* The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).

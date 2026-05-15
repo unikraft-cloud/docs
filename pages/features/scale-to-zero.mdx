@@ -11,17 +11,17 @@ Instances on Unikraft Cloud can cold boot within milliseconds, while providing t
 
 Millisecond cold boots allow performing low-latency scale-to-zero.
 As long as no traffic is flowing through your instance, it consumes **no** resources.
-When the next connection arrives, Unikraft Cloud takes care of transparently cold booting (it's called cold booting if it's milliseconds?) your instance and replying.
-All within a negligible amount of time for Internet round-trip times and so unbeknownst to your end users.
+When the next connection arrives, Unikraft Cloud takes care of transparently cold booting (is it cold booting if it's milliseconds?) your instance and replying.
+All within a negligible amount of time compared to Internet round-trip times, and so unbeknownst to your end users.
 
-By default, Unikraft Cloud reduces network and cloud stack cold start time to a min time.
+By default, Unikraft Cloud reduces network and cloud stack cold start time to a minimum.
 Some apps take a while to initialize (for example, Spring Boot, Puppeteer, etc).
-If you need to deploy such an app and still want millisecond cold starts, Unikraft Cloud provides a *stateful* feature.
-Please check out [this guide](/docs/guides/features/stateful/) for more information on how to set this up.
+If you need to deploy such an app and still want millisecond cold starts, Unikraft Cloud offers a *stateful* feature.
+Please check out [this guide](/features/scale-to-zero#stateful-scale-to-zero) for more information on how to set this up.
 
 :::tip
-If you add instances to a [service](/docs/guides/features/service), the service will load balance traffic across all them and Unikraft Cloud will ensure each instance gets woken up as needed.
-This differs from [autoscale](/docs/guides/features/autoscale), in which you *don't* specify the number of instances.
+If you add instances to a [service](/platform/services), the service will load balance traffic across them and Unikraft Cloud will wake up each instance as needed.
+This differs from [autoscale](/features/autoscale), in which you *don't* specify the number of instances.
 The platform does this for you based on traffic load.
 :::
 
@@ -34,9 +34,9 @@ Unikraft Cloud currently supports the following scale-to-zero policies:
 
 | Policy | Description |
 |--------|-------------|
-| `off`  | Scale-to-zero isn't enabled. The instance keeps on running until manually stopped. |
-| `on`   | Enables scale-to-zero. When there are no TCP connections or HTTP requests during the cool-down time, the instance goes into standby. |
-| `idle` | Same as `on`, but also puts the instance into standby when there are TCP connections established that have been inactive during the cool-down time. The connections remain established and incoming packets wake up the instance. Scale-to-zero doesn't happen while there are active HTTP requests (that is, traffic on ports, which use the `http` [handler](/docs/api/v1/services#handlers)). |
+| `off`  | Disables scale-to-zero. The instance keeps on running until manually stopped. |
+| `on`   | Enables scale-to-zero. When there are no TCP connections or HTTP requests during the cooldown time, the instance goes into standby. |
+| `idle` | Same as `on`, but also puts the instance into standby when there are TCP connections established that have been inactive during the cooldown time. The connections remain established and incoming packets wake up the instance. Scale-to-zero doesn't happen while there are active HTTP requests (that is, traffic on ports which use the `http` [handler](/platform/services#handlers)). |
 
 :::note
 Unikraft Cloud only considers network traffic that's going through its proxy to control scale-to-zero.
@@ -52,18 +52,17 @@ Cases exist where making your app aware of scale-to-zero makes sense.
 
 - **Background Jobs**: For example, you want to run background jobs after your app has responded to a request (for example, send trace information to a logging server).
   In this case, you may want to temporarily disable scale-to-zero to ensure your instance isn't put to sleep while still performing work.
-  Cases exist where making your app aware of scale-to-zero makes sense.
 
 - **Long Request Processing**: The same is true if your app can have long request processing times.
-  Consider a setup where you use the `idle` policy with plain TCP connections and configure a cool-down time of 10s.
+  Consider a setup where you use the `idle` policy with plain TCP connections and configure a cooldown time of 10s.
   Sometimes if it takes your app 15s to process a request until the first response data gets sent, Unikraft Cloud will prematurely scale your instance to zero[^1].
 
-Configuring a longer cool-down time can be a simple solution sometimes.
+Configuring a longer cooldown time can be a simple solution sometimes.
 But this isn't possible if the max duration of background jobs or request processing phases is unknown.
 It also means that you have to compromise between cost efficiency and reliability of your service.
 
 Unikraft Cloud allows your app to temporarily disable scale-to-zero.
-You can have both a short cool-down phase and reliable operation no matter how long things may take.
+You can have both a short cooldown phase and reliable operation no matter how long things may take.
 To control scale-to-zero from within your app, instances on Unikraft Cloud provide a special file-based interface:
 
 | Path | Description |
@@ -71,13 +70,13 @@ To control scale-to-zero from within your app, instances on Unikraft Cloud provi
 |`/uk/libukp/scale_to_zero_disable` | Allows to temporarily disable scale-to-zero. |
 
 The `scale_to_zero_disable` pseudo file keeps track of the count of concurrent disable requests.
-If the count is `0`, scale-to-zero remains active[^1].
+If the count reaches `0`, scale-to-zero remains active[^2].
 Any number larger than `0` means scale-to-zero is temporarily inactive.
-Using a count instead of a boolean value helps many independent workers.
+Using a count instead of a boolean value is helpful when you have many independent workers.
 Your app workers can disable scale-to-zero individually by incrementing and decrementing the count without having to synchronize.
 
 Reading the file returns the current count.
-The value gets a prefix with an equals sign (that is, `=X` with `X` being the current count).
+The system prefixes the value with an equals sign (that is, `=X` with `X` being the current count).
 Writing to the file modifies the count.
 You can use the following strings:
 
@@ -95,9 +94,40 @@ Any attempt to set a count less than `0` or larger than `2^64` returns an `ERANG
 :::caution
 Writing to the file to disable scale-to-zero doesn't atomically disable scale-to-zero.
 There can be a short delay (a few milliseconds) until the Unikraft Cloud controller receives the changed value and makes scale-to-zero decisions accordingly.
-Ensure you configure a cool-down time large enough to accommodate for potential signal delay.
+Ensure you configure a cooldown time large enough to accommodate for potential signal delay.
 :::
 
+## Notification signal
+
+Before the platform suspends an instance, it can send a notification signal to the guest, giving it time to finish in-flight work before suspension begins.
+
+The platform delivers the notification over [vsock](https://man7.org/linux/man-pages/man7/vsock.7.html) on port `138`.
+The platform sends the literal string `scaletozero` to the guest at the configured lead time before suspension.
+
+Your app can listen on vsock port `138` and use the signal to:
+- Drain in-flight requests
+- Flush write buffers
+- Update any external state
+
+### Configuring the notification lead time
+
+Use the `notify_time_ms` field in the `scale_to_zero` configuration when creating or updating an instance to specify the number of milliseconds before the scaletozero event, when the platform should send the notification signal:
+
+```json title="POST /instances"
+{
+  "scale_to_zero": {
+    "cooldown_time_ms": 5000,
+    "notify_time_ms": 2000
+  }
+}
+```
+
+This sends the notification 2 seconds before the cooldown expires and suspension begins.
+
+:::note
+`notify_time_ms` must be less than `cooldown_time_ms`.
+If `notify_time_ms` is `0` (the default), the platform skips the notification and suspends the instance immediately when the cooldown expires, without informing the guest.
+:::
 
 ## Stateful scale-to-zero
 
@@ -105,16 +135,17 @@ Some apps have a long cold boot phase or experience large first response latency
 For example, to run just-in-time compilation and fill caches.
 Using stateful scale-to-zero can dramatically reduce the response time of your service.
 With stateful scale-to-zero Unikraft Cloud takes a snapshot of the instance state before putting it into standby.
-When incoming network traffic triggers a wake-up, the snapshot gets loaded.
-The instance resumes execution where it left off - with caches already warm.
+When incoming network traffic triggers a wake-up, Unikraft Cloud loads the snapshot.
+The instance resumes execution where it left off—with caches already warm.
 
 Stateful scale-to-zero can also enable scale-to-zero for apps that need to keep state for functional correctness.
 This works even if cold boot times are no concern.
+If your app doesn't require maintaining state and has a satisfactorily short boot time, you might prefer to disable stateful scale-to-zero to save disk space.
 
 :::note
 The time to load an instance snapshot is constant and in the order of a few milliseconds.
-This is what gets reported in the boot time metrics.
-The actual memory contents gets loaded from the snapshot only at first access.
+This is what the boot time metrics report.
+The system loads the actual memory contents from the snapshot only at first access.
 This reduces response latency by loading only what's necessary to process the request.
 This means that the first few requests might take longer until all required memory comes back.
 
@@ -122,9 +153,44 @@ The time to take an instance snapshot during scale-to-zero depends on the amount
 :::
 
 
+## Best practices
+
+### Cooldown configuration
+
+Choosing the optimal cooldown period depends on your app's start-up time and traffic patterns.
+The default cooldown is 1 second, which works well for simple apps.
+For larger apps with longer boot times, start with a conservative cooldown (for example, 5-10 seconds) and gradually lower it while monitoring behavior.
+
+If your app takes a long time to initialize, you might encounter issues where it scales down before serving the first request if the cooldown is too short.
+Strategies to mitigate this include:
+1.  **Stateful Scale-to-Zero**: [Enabling stateful mode](#stateful-scale-to-zero) saves memory to disk, reducing wake-up time for complex apps.
+2.  **Startup Protection**: Use the [manual disable mechanism](#application-support-for-scale-to-zero) to temporarily turn off scale-to-zero during your app's boot sequence, then re-enable it once ready to serve.
+
+### Managing connectivity and state
+
+#### Continuous connections
+
+Apps using long-lived connections with frequent keep-alive messages (for example, WebSockets, HTTP/2, HMR) may prevent the instance from scaling to zero.
+To allow the instance to sleep:
+*   Increase the interval between keep-alive messages.
+*   Use a more aggressive cooldown period if appropriate.
+*   If requiring continuous connectivity, consider disabling scale-to-zero for these workloads.
+
+#### Internal communication
+
+:::info
+This feature is currently under active development and may change in future releases.
+:::
+
+Currently, internal traffic via Private FQDNs doesn't trigger the scale-to-zero wake-up mechanism.
+Services attempting to reach a standby instance via its Private FQDN will fail to wake it.
+To ensure wake-on-request behavior for creating service-to-service communication, use the instance's **Public FQDN**.
+Note that this also applies to the legacy [CLI tunnel](/docs/cli/kraft/tunnel) command, which relies on internal connectivity.
+
+
 ## Getting started
 
-Millisecond scale-to-zero applies via a **label** in each of
+You can enable millisecond scale-to-zero via a **label** in each of
 the subdirectories' `Kraftfile` or with the `--scale-to-zero` flag in relevant
 command-line tool subcommands.
 
@@ -135,8 +201,8 @@ labels:
 ```
 
 :::tip
-The `cool-down` flag tells Unikraft Cloud how long the instance must be idle before scaling to zero.
-In the examples, values that work for each of them appear so you don't have to worry about this label if you don't want to.
+The `--scale-to-zero-cooldown` flag tells Unikraft Cloud how long the instance must be idle before scaling to zero.
+The examples include appropriate values so you don't have to worry about this label if you don't want to.
 :::
 
 :::tip
@@ -145,11 +211,22 @@ You can disable scale-to-zero either by setting the label to `false`, or with th
 
 Since Unikraft Cloud has scale-to-zero on by default, all you need to do is to start an instance normally:
 
-```bash title=""
-git clone https://github.com/kraft-cloud/examples
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+git clone https://github.com/unikraft-cloud/examples
 cd examples/nginx/
-kraft cloud deploy -p 443:8080 .
+unikraft build . --output <my-org>/nginx:latest
+unikraft run --metro=fra -p 443:8080/http+tls -m 128MiB --image=<my-org>/nginx:latest
 ```
+
+```bash title="kraft"
+git clone https://github.com/unikraft-cloud/examples
+cd examples/nginx/
+kraft cloud deploy -p 443:8080 -M 256 .
+```
+
+</CodeTabs>
 
 This command will create the NGINX instance with scale-to-zero enabled:
 
@@ -162,19 +239,27 @@ This command will create the NGINX instance with scale-to-zero enabled:
  [90m├[0m[90m───────────[0m [90murl[0m: https://twilight-gorilla-ui5b6kwt.fra.unikraft.app
  [90m├[0m[90m─────────[0m [90mimage[0m: nginx@sha256:19854a12fe97f138313cb9b4806828cae9cecf2d050077a0268d98129863f954
  [90m├[0m[90m─────[0m [90mboot time[0m: 19.81 ms
- [90m├[0m[90m────────[0m [90mmemory[0m: 128 MiB
+ [90m├[0m[90m────────[0m [90mmemory[0m: 256 MiB
  [90m├[0m[90m───────[0m [90mservice[0m: twilight-gorilla-ui5b6kwt
  [90m├[0m[90m──[0m [90mprivate fqdn[0m: nginx-1a747.internal
  [90m├[0m[90m────[0m [90mprivate ip[0m: 172.16.6.1
  [90m└[0m[90m──────────[0m [90margs[0m: /usr/bin/nginx -c /etc/nginx/nginx.conf
 ```
 
-Note that at first the system lists the status as `running` in the output of the `kraft cloud deploy` command.
+Note that at first the system lists the status as `running` in the output of the deploy or run flow.
 Check the instance's status:
 
-```bash title=""
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft instances list
+```
+
+```bash title="kraft"
 kraft cloud instances list
 ```
+
+</CodeTabs>
 
 You should see output like:
 
@@ -184,13 +269,18 @@ nginx-1a747  twilight-gorilla-ui5b6kwt.fra.unikraft.app  [94mstandby[0m
 ```
 
 Notice the state is now set to `standby`?
-At first `kraft cloud deploy` sets the state to `running`, but then Unikraft Cloud puts the instance immediately to sleep (more accurately, it stopped it, but it keeps state to start it again when needed).
+At first the deploy or run flow sets the state to `running`.
+Unikraft Cloud then puts the instance to sleep (it stops it, but keeps state to start it again when needed).
 
-You can also check that scale-to-zero gets enabled through the `kraft cloud scale` command:
+You can also check that scale-to-zero gets enabled through the legacy CLI scale command:
 
-```bash title=""
+<CodeTabs>
+
+```bash title="kraft"
 kraft cloud scale get twilight-gorilla-ui5b6kw
 ```
+
+</CodeTabs>
 
 which outputs:
 
@@ -206,31 +296,31 @@ which outputs:
       policies:
 ```
 
-Note the `min size` (0) and `max size` (1) fields -- these mean that the service can scale from max 1 instance to min 0 instances, meaning that the system enables scale-to-zero.
+Note the `min size` (0) and `max size` (1) fields -- these mean that the service can scale between 0 and 1 instances, which enables scale-to-zero.
 
 
 ### Testing scale-to-zero
 
-Now take this out for a spin.
-```
-
-Note the `min size` (0) and `max size` (1) fields -- these mean that the service can scale from max 1 instance to min 0 instances, meaning that scale-to-zero is enabled.
-
-
-### Testing scale-to-zero
-
-Try using `curl` or your browser to see scale-to-zero (well, scale to 1 in this case!) in action:
+Try using `curl` or your browser to see scale-to-zero (well, scale-to-1 in this case!) in action:
 
 ```bash title=""
 curl https://twilight-gorilla-ui5b6kwt.fra.unikraft.app
 ```
 
 You should get an NGINX response with no noticeable delay.
-For fun, try to use the following command to see if you can catch the instance's `STATE` field changing from `standby` to `running`
+For fun, try to use the following command to see if you can catch the instance's `STATE` field changing from `standby` to `running`:
 
-```bash title=""
+<CodeTabs syncKey="cli-tool">
+
+```bash title="unikraft"
+unikraft instances list --watch
+```
+
+```bash title="kraft"
 watch --color -n 0.5 kraft cloud instance list
 ```
+
+</CodeTabs>
 
 If you `curl` enough, you should see the `STATE` turn to a green `running` from
 time to time:
@@ -243,17 +333,17 @@ nginx-1a747  twilight-gorilla-ui5b6kwt.fra.unikraft.app  [92mrunning[0m
 :::note
 You can use scale-to-zero *in conjunction with* autoscale.
 This ensures that as you scale back down, if traffic dies, your last instance gets removed.
-You're not charged for the service.
-For more on autoscale please see the autoscale [guide](/docs/guides/features/autoscale)
+You're not charged for the service in this state.
+For more on autoscale please see the autoscale [guide](/features/autoscale).
 :::
 
 
 ## Learn more
 
-* The `kraft cloud` [command-line tool reference](/docs/cli/), and in particular the services and scale subcommands
-* Unikraft Cloud's [REST API reference](/docs/api/v1), and in particular the section [on scale-to-zero](/docs/api/v1/instances/#scaletozero).
+* The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
+* Unikraft Cloud's [REST API reference](/api/platform/v1), and in particular the [scale-to-zero schema](/api/platform/v1/~schemas#instance-scale-to-zero).
 
 
 
-[^1]: This is never the case for ports of your service that have the `http` handler set.
-[^2]: If it's actually enabled depends on the instance configuration.
+[^1]: This is never the case for ports of your service that have the `http` [handler](/platform/services#handlers) set.
+[^2]: If it's actually enabled, depends on the instance configuration.
