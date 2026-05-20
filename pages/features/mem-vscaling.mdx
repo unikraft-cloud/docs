@@ -1,0 +1,661 @@
+---
+title: Memory Vertical Scaling
+navigation_icon: memory-stick
+---
+
+:::caution[**DISCLAIMER**]
+The **Memory Vertical Scaling** feature isn't currently enabled for the public Unikraft Cloud offering.
+As such, the CLI can't entirely leverage this feature.
+For boxes where it's enabled, use it via the [Unikraft Cloud API](/api/platform/v1).
+:::
+
+Unikraft Cloud supports the ability to create instances that automatically scale their memory based on the current guest memory utilisation.
+Without the feature, all memory alloted to the machine is boot memory and when the guest utilises memory pages at least once they remain
+resident even after the guest stops utilising them (i.e., even free guest memory will consume host system RAM).
+With vertical scaling, once the in-guest memory utilisation drops bellow some watermark the host will **reclaim** this
+memory and potentially allocate it to other instances.
+
+## Overview
+
+With **Memory Vertical Scaling** the user can specify a min memory and max memory field during instance creation.
+As a result the new instance's memory will automatically scale between min and max based on its current memory utilisation.
+The feature requires building your application against the latest TinyX kernel since the core of the feature is an in-guest kernel thread that handles memory accounting and notifying the platform to scale up/down its memory.
+The general workflow is as follows:
+- if vertical scaling is enabled the guest will start up the monitoring kernel thread
+- the in-guest kernel-thread periodically monitors memory utilisation and sends requests to firecracker which in turn relays them to the platform
+- the platform validates a request, decides how much memory must be added/removed and relays the request back to firecracker which handles the mapping/unmapping of memory
+
+## Postgres setup with memory vertical scaling
+
+This example shows how to deploy a postgres instance with memory vertical scaling.
+Set the following environment variables:
+
+```bash title=""
+export UKC_USER="<your-username>"
+export UKC_TOKEN="<your-api-token>"
+export UKC_METRO="fra" # or your preferred metro
+```
+
+### Creating and running postgress image.
+
+Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/postgres/` directory:
+
+```bash
+git clone https://github.com/unikraft-cloud/examples
+cd examples/postgres/
+```
+
+Specify a TinyX kernel that supports vertical scaling in the Kraftfile:
+
+```yaml title="Kraftfile"
+spec: v0.7
+
+runtime: base-compat:latest
+
+rootfs:
+  source: ./Dockerfile
+  format: erofs
+
+cmd: ["/usr/local/bin/wrapper.sh", "postgres", "-c", "shared_preload_libraries='pg_ukc_scaletozero'"]
+```
+
+Build and push the image to the registry:
+
+```bash title=""
+kraft pkg \
+  --plat kraftcloud \
+  --arch x86_64 \
+  --name index.unikraft.io/"$UKC_USER"/postgres-vertical:latest \
+  --rootfs-type erofs \
+  --push .
+```
+
+Wait a few seconds for propagation and check that the image is present:
+
+```bash title="unikraft"
+unikraft images list
+```
+
+```bash title="kraft"
+kraft cloud image ls
+```
+
+Now create an instance using the postgres image with a volume:
+
+```bash title=""
+curl -X POST \
+     -H "Authorization: Bearer $UKC_TOKEN" \
+     -H "Content-Type: application/json" \
+     "$UKC_METRO/instances" \
+     -d "{
+        'name' : 'test-postgres-vertical',
+        'image': '${UKC_USER}/postgres-vertical:latest',
+        'args': [
+          '/usr/local/bin/wrapper.sh', 'postgres', '-c', 'shared_preload_libraries="pg_ukc_scaletozero"'
+        ],
+	'autostart': true,
+        'memory_mb': 756,
+	'vscaling' : {'min_memory_mb' : 512, 'max_memory_mb' : 32000},
+	'env': {'POSTGRES_PASSWORD' : 'unikraft', 'POSTGRES_INITDB_WALDIR' : '/mnt/postgres/wal', 'PGDATA' : '/mnt/postgres/data', 'POSTGRES_DB' : 'stress_db'},
+        'scale_to_zero': {
+              'policy': 'off'
+        },
+	 'volumes' : [{'at': '/mnt/postgres', 'size_mb': 8096}],
+        'service_group': {
+          'services': [
+            {
+              'port': 5432,
+              'destination_port': 5432,
+	      'handlers' : [ 'tls']
+            }
+          ],
+            'domains': [
+              {
+                'name': 'test-postgres-vertical'
+              }
+            ]
+        }
+      }"
+```
+
+This will create an image with an 8GB volume mounted at /mnt/postgres where we add the **data** and **wal** files.
+The instance will start with 756MB memory but depending on the memory utilisation of the system it will scale its memory between 512MB and 32GB.
+The information is specified by the **memory_mb** (default memory), **min_memory_mb** (min memory) and **max_memory_mb** (max memory) parameters.
+
+Check whether the image is up:
+
+```bash title=""
+kraft cloud instance get test-postgres-vertical
+```
+
+
+### Testing the image.
+
+On a different terminal run some script to check the current memory of the system to understand the effects of vertical scaling:
+
+```bash title="pg_watch.sh"
+watch -n 0.1 "PGPASSWORD=unikraft psql -h test-postgres-vertical.${UKC_METRO}.unikraft.app -U postgres -d postgres -c \"
+SELECT
+    round(((regexp_match(pg_read_file('/proc/meminfo'), 'MemTotal:\s+(\d+)'))[1]::bigint     / 1024.0)::numeric, 2) AS total_mb,
+    round(((regexp_match(pg_read_file('/proc/meminfo'), 'MemAvailable:\s+(\d+)'))[1]::bigint / 1024.0)::numeric, 2) AS available_mb,
+    round(((regexp_match(pg_read_file('/proc/meminfo'), 'MemFree:\s+(\d+)'))[1]::bigint      / 1024.0)::numeric, 2) AS free_mb,
+    round((1 - (regexp_match(pg_read_file('/proc/meminfo'), 'MemFree:\s+(\d+)'))[1]::bigint::numeric
+              / (regexp_match(pg_read_file('/proc/meminfo'), 'MemTotal:\s+(\d+)'))[1]::bigint) * 100, 2) AS used_pct;
+\""
+```
+This will actively pull memory information from the instance using postgres.
+
+Now run a script using (e.g., pg_bench) to stress test the instance.
+The script bellow for example runs a couple of tests (database creation, select workload, etc.) with the instance we just created.
+One should see the instance actively adding memory once utilisation grows above some configurable utilisation percentage (80% by
+default) and scale down once utilisation drops bellow some configurable percentage (30% by default).
+
+```bash title="pg_stress.sh"
+#!/bin/bash
+# =============================================================================
+# PostgreSQL Memory Stress Test Script
+# Tests memory vertical scaling on an already configured in-memory database
+# Assumes: database already exists, WAL and data fully in RAM
+# =============================================================================
+
+set -euo pipefail
+
+# =============================================================================
+# CONFIGURATION — edit these
+# =============================================================================
+
+DB_HOST="${PGHOST:-test-postgres-vertical.${UKC_METRO}.unikraft.app}"
+DB_USER="${PGUSER:-postgres}"
+DB_PASS="${PGPASSWORD:-unikraft}"
+DB_NAME="${PGDATABASE:-stress_db}"
+DB_PORT="${PGPORT:-5432}"
+
+# DB size — controls how much data is generated
+# Scale factor: 1 = ~16MB, 10 = ~160MB, 32 = ~512MB, 64 = ~1GB
+DB_SCALE="${DB_SCALE:-32}"          # 32 = ~512MB
+
+# Benchmark parameters
+CLIENTS="${CLIENTS:-64}"            # concurrent clients
+THREADS="${THREADS:-16}"            # worker threads
+DURATION="${DURATION:-30}"          # seconds to run benchmark
+PROGRESS="${PROGRESS:-5}"           # report every N seconds
+
+# =============================================================================
+# HELPERS
+# =============================================================================
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+log()     { echo -e "${BLUE}[INFO]${NC}  $*"; }
+ok()      { echo -e "${GREEN}[OK]${NC}    $*"; }
+warn()    { echo -e "${YELLOW}[WARN]${NC}  $*"; }
+error()   { echo -e "${RED}[ERROR]${NC} $*"; exit 1; }
+section() { echo -e "\n${BLUE}══════════════════════════════════════════${NC}"; \
+            echo -e "${BLUE} $*${NC}"; \
+            echo -e "${BLUE}══════════════════════════════════════════${NC}"; }
+
+# psql wrapper — connects to stressdb
+psql_exec() {
+    PGPASSWORD="${DB_PASS}" psql \
+        -h "${DB_HOST}" \
+        -p "${DB_PORT}" \
+        -U "${DB_USER}" \
+        -d "${DB_NAME}" \
+        --pset=pager=off \
+        "$@"
+}
+
+# psql wrapper — connects to postgres system db (always exists)
+psql_sys() {
+    PGPASSWORD="${DB_PASS}" psql \
+        -h "${DB_HOST}" \
+        -p "${DB_PORT}" \
+        -U "${DB_USER}" \
+        -d postgres \
+        --pset=pager=off \
+        "$@"
+}
+
+# =============================================================================
+# STEP 1 — CHECK PREREQUISITES
+# =============================================================================
+section "Checking prerequisites"
+
+command -v psql     >/dev/null 2>&1 || error "psql not found. Install postgresql-client"
+command -v pgbench  >/dev/null 2>&1 || error "pgbench not found. Install postgresql-client"
+
+ok "psql:    $(psql --version)"
+ok "pgbench: $(pgbench --version)"
+
+# =============================================================================
+# STEP 2 — TEST CONNECTION
+# =============================================================================
+section "Testing connection"
+
+PGPASSWORD="${DB_PASS}" pg_isready \
+    -h "${DB_HOST}" \
+    -p "${DB_PORT}" \
+    -U "${DB_USER}" || error "Cannot reach PostgreSQL at ${DB_HOST}:${DB_PORT}"
+
+ok "Connection to ${DB_HOST}:${DB_PORT} OK"
+
+# Verify database exists
+DB_EXISTS=$(psql_sys -tAc "
+SELECT EXISTS (
+    SELECT 1 FROM pg_database WHERE datname = '${DB_NAME}'
+);" 2>/dev/null || echo "f")
+
+if [[ "${DB_EXISTS}" != "t" ]]; then
+    error "Database '${DB_NAME}' does not exist on ${DB_HOST}.
+       Ensure the database is created and configured before running this script."
+fi
+
+ok "Database '${DB_NAME}' exists"
+
+# =============================================================================
+# STEP 3 — CLEANUP TABLES FROM PREVIOUS RUN
+# =============================================================================
+section "Cleaning up tables from previous run"
+
+log "Terminating stale connections to ${DB_NAME}..."
+psql_sys -c "
+SELECT pg_terminate_backend(pid)
+FROM pg_stat_activity
+WHERE datname = '${DB_NAME}'
+  AND pid <> pg_backend_pid()
+  AND state IN ('idle in transaction', 'idle in transaction (aborted)', 'active');
+" 2>/dev/null && ok "Stale connections terminated" || warn "Could not terminate connections"
+
+log "Dropping stress tables..."
+psql_exec -c "DROP TABLE IF EXISTS stress_large CASCADE;" 2>/dev/null || true
+psql_exec -c "DROP TABLE IF EXISTS stress_wide   CASCADE;" 2>/dev/null || true
+ok "Stress tables dropped"
+
+log "Dropping pgbench tables..."
+psql_exec -c "DROP TABLE IF EXISTS pgbench_accounts CASCADE;" 2>/dev/null || true
+psql_exec -c "DROP TABLE IF EXISTS pgbench_branches CASCADE;" 2>/dev/null || true
+psql_exec -c "DROP TABLE IF EXISTS pgbench_tellers  CASCADE;" 2>/dev/null || true
+psql_exec -c "DROP TABLE IF EXISTS pgbench_history  CASCADE;" 2>/dev/null || true
+ok "pgbench tables dropped"
+
+log "Resetting system statistics..."
+psql_exec -c "SELECT pg_stat_reset();" \
+    2>/dev/null && ok "pg_stat reset" || warn "Could not reset stats"
+
+ok "Cleanup complete"
+
+# =============================================================================
+# STEP 4 — INITIALISE DATABASE
+# =============================================================================
+section "Initialising database (scale=${DB_SCALE}, ~$((DB_SCALE * 16))MB)"
+
+log "Running pgbench init (this generates ~$((DB_SCALE * 16))MB of data)..."
+PGPASSWORD="${DB_PASS}" pgbench \
+    -h "${DB_HOST}" \
+    -p "${DB_PORT}" \
+    -U "${DB_USER}" \
+    -i \
+    -s "${DB_SCALE}" \
+    --foreign-keys \
+    "${DB_NAME}" && ok "Database initialised"
+
+# =============================================================================
+# STEP 5 — CREATE ADDITIONAL MEMORY-STRESSING TABLES
+# =============================================================================
+section "Creating additional stress tables"
+
+psql_exec -c "
+CREATE TABLE IF NOT EXISTS stress_large (
+    id      SERIAL PRIMARY KEY,
+    payload TEXT,
+    value   FLOAT,
+    tag     INTEGER,
+    ts      TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS stress_wide (
+    id   SERIAL PRIMARY KEY,
+    c1 FLOAT, c2 FLOAT, c3 FLOAT, c4 FLOAT, c5 FLOAT,
+    c6 FLOAT, c7 FLOAT, c8 FLOAT, c9 FLOAT, c10 FLOAT,
+    c11 TEXT, c12 TEXT, c13 TEXT, c14 TEXT, c15 TEXT
+);
+
+INSERT INTO stress_large (payload, value, tag)
+SELECT
+    repeat(md5(random()::text), 128),
+    random(),
+    (random() * 1000)::int
+FROM generate_series(1, 10000);
+
+INSERT INTO stress_wide (c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13,c14,c15)
+SELECT
+    random(),random(),random(),random(),random(),
+    random(),random(),random(),random(),random(),
+    md5(random()::text),md5(random()::text),md5(random()::text),
+    md5(random()::text),md5(random()::text)
+FROM generate_series(1, 50000);
+
+CREATE INDEX IF NOT EXISTS idx_stress_large_value ON stress_large(value);
+CREATE INDEX IF NOT EXISTS idx_stress_large_tag   ON stress_large(tag);
+CREATE INDEX IF NOT EXISTS idx_stress_wide_c1     ON stress_wide(c1);
+
+ANALYZE stress_large;
+ANALYZE stress_wide;
+" && ok "Stress tables created and populated"
+
+# =============================================================================
+# STEP 6 — WRITE CUSTOM STRESS QUERIES
+# =============================================================================
+section "Writing stress query scripts"
+
+cat > /tmp/pg_stress_agg.sql << 'EOF'
+SELECT
+    tag,
+    COUNT(*) AS cnt,
+    AVG(value) AS avg_val,
+    MAX(value) AS max_val,
+    MIN(value) AS min_val
+FROM stress_large
+GROUP BY tag
+ORDER BY avg_val DESC
+LIMIT 100;
+EOF
+
+cat > /tmp/pg_stress_sort.sql << 'EOF'
+SELECT id, value, tag, ts
+FROM stress_large
+WHERE value > random() * 0.5
+ORDER BY value DESC, tag ASC
+LIMIT 1000;
+EOF
+
+cat > /tmp/pg_stress_join.sql << 'EOF'
+SELECT
+    a.aid,
+    b.bid,
+    SUM(a.abalance) AS total,
+    AVG(b.bbalance) AS avg_balance,
+    COUNT(*) AS cnt
+FROM pgbench_accounts a
+JOIN pgbench_branches b ON b.bid = (a.aid % 10) + 1
+JOIN pgbench_tellers  t ON t.tid = (a.aid % 100) + 1
+WHERE a.abalance > -500
+GROUP BY a.aid, b.bid
+ORDER BY total DESC
+LIMIT 500;
+EOF
+
+ok "Stress query scripts written to /tmp/"
+
+# =============================================================================
+# STEP 7 — RUN BENCHMARKS
+# =============================================================================
+section "Running benchmarks (duration=${DURATION}s, clients=${CLIENTS})"
+
+RESULTS_FILE="/tmp/pg_stress_results_$(date +%Y%m%d_%H%M%S).txt"
+
+{
+echo "============================================================"
+echo " PostgreSQL Memory Stress Test Results"
+echo " Date:      $(date)"
+echo " Host:      ${DB_HOST}"
+echo " DB:        ${DB_NAME}"
+echo " Scale:     ${DB_SCALE} (~$((DB_SCALE * 16))MB)"
+echo " Clients:   ${CLIENTS}"
+echo " Threads:   ${THREADS}"
+echo " Duration:  ${DURATION}s"
+echo "============================================================"
+echo ""
+} | tee "${RESULTS_FILE}"
+
+
+# --- Benchmark 1: Standard pgbench (read/write mix) ---
+log "Running benchmark 1: Standard read/write mix..."
+{
+echo "--- Benchmark 1: Standard Read/Write Mix ---"
+PGPASSWORD="${DB_PASS}" pgbench \
+    -h "${DB_HOST}" \
+    -p "${DB_PORT}" \
+    -U "${DB_USER}" \
+    -c "${CLIENTS}" \
+    -j "${THREADS}" \
+    -T "${DURATION}" \
+    -P "${PROGRESS}" \
+    "${DB_NAME}" 2>&1
+echo ""
+} | tee -a "${RESULTS_FILE}"
+
+# --- Benchmark 2: Read-only (max throughput) ---
+log "Running benchmark 2: Read-only (SELECT only)..."
+{
+echo "--- Benchmark 2: Read-Only (SELECT only) ---"
+PGPASSWORD="${DB_PASS}" pgbench \
+    -h "${DB_HOST}" \
+    -p "${DB_PORT}" \
+    -U "${DB_USER}" \
+    -c "${CLIENTS}" \
+    -j "${THREADS}" \
+    -T "${DURATION}" \
+    -P "${PROGRESS}" \
+    -S \
+    "${DB_NAME}" 2>&1
+echo ""
+} | tee -a "${RESULTS_FILE}"
+
+# --- Benchmark 3: Heavy aggregation ---
+log "Running benchmark 3: Heavy aggregation (work_mem stress)..."
+{
+echo "--- Benchmark 3: Heavy Aggregation ---"
+PGPASSWORD="${DB_PASS}" pgbench \
+    -h "${DB_HOST}" \
+    -p "${DB_PORT}" \
+    -U "${DB_USER}" \
+    -c "${CLIENTS}" \
+    -j "${THREADS}" \
+    -T "${DURATION}" \
+    -P "${PROGRESS}" \
+    -f /tmp/pg_stress_agg.sql \
+    "${DB_NAME}" 2>&1
+echo ""
+} | tee -a "${RESULTS_FILE}"
+
+# --- Benchmark 4: Heavy sort ---
+log "Running benchmark 4: Heavy sort (work_mem stress)..."
+{
+echo "--- Benchmark 4: Heavy Sort ---"
+PGPASSWORD="${DB_PASS}" pgbench \
+    -h "${DB_HOST}" \
+    -p "${DB_PORT}" \
+    -U "${DB_USER}" \
+    -c "${CLIENTS}" \
+    -j "${THREADS}" \
+    -T "${DURATION}" \
+    -P "${PROGRESS}" \
+    -f /tmp/pg_stress_sort.sql \
+    "${DB_NAME}" 2>&1
+echo ""
+} | tee -a "${RESULTS_FILE}"
+
+: << 'COMMENT'
+COMMENT
+
+# --- Benchmark 5: Heavy join ---
+log "Running benchmark 5: Heavy join (buffer pool stress)..."
+{
+echo "--- Benchmark 5: Heavy Join ---"
+export PGPASSWORD="${DB_PASS}"
+timeout --kill-after=5s "${DURATION}" pgbench \
+    -h "${DB_HOST}" \
+    -p "${DB_PORT}" \
+    -U "${DB_USER}" \
+    -c "${CLIENTS}" \
+    -j "${THREADS}" \
+    -T "${DURATION}" \
+    -P "${PROGRESS}" \
+    -f /tmp/pg_stress_join.sql \
+    "${DB_NAME}" 2>&1 || true
+echo ""
+} | tee -a "${RESULTS_FILE}"
+
+
+log "Cancelling any lingering server-side queries from benchmark 5..."
+psql_sys -c "
+SELECT pg_cancel_backend(pid)
+FROM pg_stat_activity
+WHERE datname = '${DB_NAME}'
+  AND state = 'active'
+  AND pid <> pg_backend_pid();
+" || true
+
+
+
+# =============================================================================
+# STEP 8 — MEMORY STATISTICS
+# =============================================================================
+section "Memory statistics"
+
+{
+echo "--- Memory Statistics ---"
+psql_exec -c "
+SELECT
+    pg_size_pretty(pg_database_size('${DB_NAME}'))          AS db_size,
+    pg_size_pretty(sum(heap_blks_hit)  * 8192)              AS buffer_hits,
+    pg_size_pretty(sum(heap_blks_read) * 8192)              AS disk_reads,
+    round(
+        sum(heap_blks_hit)::numeric /
+        NULLIF(sum(heap_blks_hit) + sum(heap_blks_read), 0) * 100
+    , 2)                                                     AS cache_hit_ratio_pct
+FROM pg_statio_user_tables;
+"
+
+echo ""
+echo "--- System Memory (server-side) ---"
+psql_exec -c "
+SELECT
+    round(((regexp_match(pg_read_file('/proc/meminfo'), 'MemTotal:\s+(\d+)'))[1]::bigint     / 1024.0 / 1024)::numeric, 2) AS total_gb,
+    round(((regexp_match(pg_read_file('/proc/meminfo'), 'MemAvailable:\s+(\d+)'))[1]::bigint / 1024.0 / 1024)::numeric, 2) AS available_gb,
+    round((1 - (regexp_match(pg_read_file('/proc/meminfo'), 'MemAvailable:\s+(\d+)'))[1]::bigint::numeric
+              / (regexp_match(pg_read_file('/proc/meminfo'), 'MemTotal:\s+(\d+)'))[1]::bigint) * 100, 2) AS used_pct;
+"
+
+echo ""
+echo "--- Active connections ---"
+psql_exec -c "
+SELECT count(*), state
+FROM pg_stat_activity
+GROUP BY state;
+"
+
+echo ""
+echo "--- Table sizes ---"
+psql_exec -c "
+SELECT
+    relname                                          AS table,
+    pg_size_pretty(pg_total_relation_size(relid))   AS total_size,
+    pg_size_pretty(pg_relation_size(relid))          AS table_size,
+    pg_size_pretty(pg_indexes_size(relid))           AS index_size
+FROM pg_catalog.pg_statio_user_tables
+ORDER BY pg_total_relation_size(relid) DESC;
+"
+} | tee -a "${RESULTS_FILE}"
+
+
+# =============================================================================
+# STEP 9 — TEARDOWN
+# =============================================================================
+section "Teardown — dropping tables and flushing WAL"
+
+log "Dropping all user tables in ${DB_NAME}..."
+psql_exec -c "
+DO \$\$
+DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN
+        SELECT tablename
+        FROM pg_tables
+        WHERE schemaname = 'public'
+    LOOP
+        EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(r.tablename) || ' CASCADE';
+    END LOOP;
+END
+\$\$;
+" && ok "All tables dropped" || warn "Could not drop all tables"
+
+log "Checkpointing to flush dirty pages and WAL..."
+psql_sys -c "CHECKPOINT;" \
+    && ok "Checkpoint complete — dirty pages flushed to storage" \
+    || warn "Could not run checkpoint"
+
+log "Switching WAL segment to allow old WAL files to be recycled..."
+psql_sys -c "SELECT pg_switch_wal();" \
+    && ok "WAL segment switched" \
+    || warn "Could not switch WAL segment"
+
+log "Running VACUUM FULL on system catalogs to reclaim space..."
+psql_sys -c "VACUUM FULL;" \
+    2>/dev/null && ok "VACUUM FULL complete" || warn "Could not run VACUUM FULL"
+
+log "Removing old WAL files via pg_archivecleanup (keeping only current)..."
+psql_sys -tAc "SELECT pg_walfile_name(pg_current_wal_lsn());" 2>/dev/null | while read -r current_wal; do
+    if [[ -n "${current_wal:-}" ]]; then
+        log "Current WAL file: ${current_wal}"
+        psql_sys -c "
+COPY (SELECT 1) TO PROGRAM
+    'find \$(dirname \$(readlink -f \$(pg_ctl -D \$PGDATA status 2>/dev/null | grep -o \"PID: [0-9]*\" | awk \"{print \$2}\" | xargs -I{} ls -la /proc/{}/fd 2>/dev/null | grep pg_wal | head -1 | awk \"{print \$NF}\"))) -name \"*.wal\" -o -name \"[0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F]\" | sort | head -n -1 | xargs rm -f';
+        " 2>/dev/null || true
+    fi
+done
+
+log "Cleaning WAL via pg_ls_waldir (removing all but current segment)..."
+psql_sys -c "
+COPY (SELECT 1) TO PROGRAM \$cmd\$
+    sh -c '
+        PGDATA=\$(psql -tAc \"SHOW data_directory\" 2>/dev/null || echo \"\")
+        if [ -n \"\${PGDATA}\" ]; then
+            WALDIR=\${PGDATA}/pg_wal
+            CURRENT=\$(psql -tAc \"SELECT pg_walfile_name(pg_current_wal_lsn())\" 2>/dev/null)
+            find \${WALDIR} -maxdepth 1 -type f ! -name \"\${CURRENT}\" ! -name \"*.history\" -delete
+            echo \"WAL files cleaned, kept: \${CURRENT}\"
+        fi
+    '
+\$cmd\$;" 2>/dev/null && ok "WAL files cleaned" || warn "Could not clean WAL files directly — checkpoint was sufficient"
+
+
+# =============================================================================
+# DONE
+# =============================================================================
+section "Done"
+ok "Results saved to: ${RESULTS_FILE}"
+echo ""
+echo "Key metric to watch: cache_hit_ratio_pct"
+echo "  > 99%  → working set fits in memory  ✅"
+echo "  95-99% → some disk spill             ⚠️"
+echo "  < 95%  → memory too small for load   ❌"
+echo ""
+echo "Re-run with different scale or load:"
+echo "  DB_SCALE=64 CLIENTS=128 DURATION=300 ./pg_memory_stress.sh"
+```
+
+### Cleanup
+
+When done, remove the instances:
+
+```bash title="unikraft"
+unikraft instances delete test-postgres-vertical
+```
+
+```bash title="kraft"
+kraft cloud instance rm test-postgres-vertical
+```
+
+## Learn more
+
+* The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
+* Unikraft Cloud's [REST API reference](/api/platform/v1), and in particular the [instances API](/api/platform/v1/instances).
+* The `kraft pkg` [command reference](https://unikraft.org/docs/cli/reference/kraft/pkg) for packaging images and ROMs.
+* The [systemd `mount` man page](https://www.man7.org/linux/man-pages/man8/mount.8.html) for filesystem mount options relevant to manual mounting scenarios.

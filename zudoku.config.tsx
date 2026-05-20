@@ -78,6 +78,7 @@ const config: ZudokuConfig = {
             "/features/autokill",
             "/features/cron-jobs",
             "/features/forking",
+            "/features/mem-vscaling",
           ],
         },
         {
