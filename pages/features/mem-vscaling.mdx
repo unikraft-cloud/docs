@@ -11,19 +11,20 @@ For boxes where it's enabled, use it via the [Unikraft Cloud API](/api/platform/
 
 Unikraft Cloud supports the ability to create instances that automatically scale their memory based on the current guest memory utilisation.
 Without the feature, all memory alloted to the machine is boot memory and when the guest utilises memory pages at least once they remain
-resident even after the guest stops utilising them (i.e., even free guest memory will consume host system RAM).
+resident even after the guest stops utilising them.
+In other words, even free guest memory will consume host system RAM, after it is used once.
 With vertical scaling, once the in-guest memory utilisation drops bellow some watermark the host will **reclaim** this
-memory and potentially allocate it to other instances.
+memory and use it for other instances.
 
 ## Overview
 
 With **Memory Vertical Scaling** the user can specify a min memory and max memory field during instance creation.
 As a result the new instance's memory will automatically scale between min and max based on its current memory utilisation.
-The feature requires building your application against the latest TinyX kernel since the core of the feature is an in-guest kernel thread that handles memory accounting and notifying the platform to scale up/down its memory.
+The feature requires building your app against the latest TinyX kernel since the core component is an in-guest kernel thread that handles memory accounting and notifying the platform to scale up/down its memory.
 The general workflow is as follows:
-- if vertical scaling is enabled the guest will start up the monitoring kernel thread
-- the in-guest kernel-thread periodically monitors memory utilisation and sends requests to firecracker which in turn relays them to the platform
-- the platform validates a request, decides how much memory must be added/removed and relays the request back to firecracker which handles the mapping/unmapping of memory
+- when you enable vertical scaling the guest will start up the monitoring kernel thread
+- the in-guest kernel thread periodically monitors memory utilisation and sends requests to firecracker which in turn relays them to the platform
+- the platform validates a request, decides how much memory to add or remove and relays the request back to firecracker which handles the mapping/unmapping of memory
 
 ## Postgres setup with memory vertical scaling
 
@@ -118,9 +119,9 @@ curl -X POST \
       }"
 ```
 
-This will create an image with an 8GB volume mounted at /mnt/postgres where we add the **data** and **wal** files.
+This will create an image with an 8GB volume mounted at /mnt/postgres that contains the **data** and **wal** files.
 The instance will start with 756MB memory but depending on the memory utilisation of the system it will scale its memory between 512MB and 32GB.
-The information is specified by the **memory_mb** (default memory), **min_memory_mb** (min memory) and **max_memory_mb** (max memory) parameters.
+The **memory_mb** (default memory), **min_memory_mb** (min memory) and **max_memory_mb** (max memory) parameters determine this information.
 
 Check whether the image is up:
 
@@ -145,10 +146,12 @@ SELECT
 ```
 This will actively pull memory information from the instance using postgres.
 
-Now run a script using (e.g., pg_bench) to stress test the instance.
-The script bellow for example runs a couple of tests (database creation, select workload, etc.) with the instance we just created.
+Now run a script using (for example, pg_bench) to stress test the instance.
+The script bellow for example runs a couple of tests (database creation, select workload, etc.) with the created instance.
 One should see the instance actively adding memory once utilisation grows above some configurable utilisation percentage (80% by
-default) and scale down once utilisation drops bellow some configurable percentage (30% by default).
+default).
+Conversely once utilisation drops bellow some configurable percentage (30% by default), the total memory of the instance will go
+down.
 
 ```bash title="pg_stress.sh"
 #!/bin/bash
