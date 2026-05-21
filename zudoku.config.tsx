@@ -172,7 +172,7 @@ const config: ZudokuConfig = {
         "/guides/httpserver-node21-nextjs", // Next.js HTTP Server
         "/guides/nginx", // Nginx
         "/guides/node24-karaoke", // Node AllKaraoke
-        "/guides/httpserver-node25", // Node HTTP Server
+        "/guides/httpserver-node26", // Node HTTP Server
         "/guides/node21-websocket", // Node WebSocket Server
         "/guides/novnc-browser", // noVNC
         "/guides/opentelemetry-collector", // OpenTelemetry Collector
