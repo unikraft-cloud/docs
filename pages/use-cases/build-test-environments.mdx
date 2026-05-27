@@ -62,7 +62,7 @@ cd examples/build-environments/
 Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪):
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft login
@@ -80,7 +80,7 @@ export UKC_METRO=fra
 
 Package and push the base Go runtime image (see `server.go` for the runtime implementation):
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft build . --output <my-org>/go-build-env:latest
@@ -105,7 +105,7 @@ The server in `server.go` loads `/rom/rom.go`, compiles it to `/run/rom.so` usin
 Create a short-lived instance from the base image (without ROM attached).
 The server writes to `/uk/libukp/template_instance` and turns the instance into a [template](/platform/instances#instance-templates) before serving requests:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft run --metro fra \
@@ -126,7 +126,7 @@ kraft cloud instance create \
 
 The output shows the instance address and other details:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```ansi title="unikraft"
 metro:        fra
@@ -163,7 +163,7 @@ timestamps:
 This instance is short-lived, since right before the server starts, it triggers a conversion into a template.
 To check that the template is ready, run:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft instances templates list
@@ -177,7 +177,7 @@ kraft cloud instance template list
 
 <br/>
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```ansi title="unikraft"
 [1mMETRO[0m  [1mNAME[0m          [1mSTATE[0m     [1mIMAGE[0m                  [1mARGS[0m  [1mMEMORY[0m  [1mVCPUS[0m  [1mCREATED[0m
@@ -195,7 +195,7 @@ go-build-env  oci://unikraft.io/<my-org>/go-build-env@sha256:1cbd6474386c9df5468
 
 Each ROM contains a Go function implementation.
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft build rom1/ --output <my-org>/go-rom1:latest
@@ -227,7 +227,7 @@ kraft pkg \
 
 Create an instance with the first ROM:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft run --metro fra \
@@ -279,7 +279,7 @@ curl -X POST "$UKC_METRO/instances" \
 The instance will compile the ROM into a plugin on first start, which may take a few seconds.
 To check the progress, you can view the instance logs:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft instances logs go-build-env-rom1 -f
@@ -293,7 +293,7 @@ kraft cloud instance logs go-build-env-rom1 -f
 
 Create another instance with the second ROM:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft run --metro fra \
@@ -345,7 +345,7 @@ curl -X POST "$UKC_METRO/instances" \
 The instance will compile the ROM into a plugin on first start, which may take a few seconds.
 To check the progress, you can view the instance logs:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft instances logs go-build-env-rom2 -f
@@ -361,7 +361,7 @@ Both instances run the same base Go runtime, but execute different ROM payloads,
 
 List the instances and note their FQDN values:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft instances list
@@ -375,7 +375,7 @@ kraft cloud instance list
 
 <br/>
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```ansi title="unikraft"
 [1mMETRO[0m  [1mNAME[0m               [1mSTATE[0m    [1mIMAGE[0m                  [1mARGS[0m  [1mMEMORY[0m  [1mVCPUS[0m  [1mFQDN[0m                                      [1mCREATED[0m
@@ -420,7 +420,7 @@ A pre-initialized runtime used to speed up new instance startup.
 
 ## Cleanup
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft instances delete go-build-env-rom1 go-build-env-rom2
@@ -436,7 +436,7 @@ kraft cloud instance template remove go-build-env
 
 ## Learn more
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft --help

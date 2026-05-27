@@ -129,7 +129,7 @@ Your app is now managed from the Kubernetes cluster, but is actually running on 
 
 To check the instances, run:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```shell title="unikraft"
 $ unikraft instances list
@@ -155,7 +155,7 @@ As you can see, all instances have the same FQDN.
 This is because Kraftlet created a corresponding Unikraft Cloud service for the Kubernetes service defined in YAML above.
 You can check the created service with the following command:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```shell title="unikraft"
 $ unikraft services list
@@ -203,7 +203,7 @@ my-claim   Bound    pv-7ab06383-ac03-4a81-968a-1b0cff03c23a   10Mi       RWO    
 
 Also, you can check the volumes on the Unikraft Cloud:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```shell title="unikraft"
 $ unikraft volumes list
@@ -249,7 +249,7 @@ spec:
 
 If you check the instances again, you will see a new instance created from the Pod:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```shell title="unikraft"
 $ unikraft instances list
@@ -265,7 +265,7 @@ nginx-pod-nginx  fragrant-breeze-llesxdta.fra.unikraft.app  running  since 1min 
 
 And if you check the volume now, you will see it's attached and mounted by the created instance:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```shell title="unikraft"
 $ unikraft volumes list

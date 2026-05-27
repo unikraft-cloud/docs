@@ -5,7 +5,7 @@ navigation_icon: shield-check
 
 To use a custom certificate instead of the automatically generated one from the default public certificate authority, create a certificate with the CLI:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```ansi title="unikraft"
 unikraft certificates create \
@@ -31,7 +31,7 @@ It can also be a wildcard domain.
 Use the CLI to view and manage certificates.
 For example, to list certificates:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft certificates list
@@ -53,7 +53,7 @@ mydomain-cert       valid  *.mydomain.com  2 days ago
 
 Retrieve full information about a certificate with:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft certificates get mydomain.com-sa4x9
@@ -84,7 +84,7 @@ serial number: 0455BBAEC140EACBA5FEEAE6D817E73EF266
 To remove a certificate, first remove any instances from the relevant service and then remove the service.
 Remove the certificate with:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft certificates delete mydomain.com-sa4x9

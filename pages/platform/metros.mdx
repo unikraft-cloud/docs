@@ -17,7 +17,7 @@ By default, at present, Unikraft Cloud supports the following metros:
 
 You can list the metros available to your account via the CLI.
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft metros list
@@ -84,7 +84,7 @@ The legacy CLI also supports the `UKC_METRO` environment variable.
 Use the IATA code descriptor to target the specific metro.
 For example with `fra`:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
     ```bash title="unikraft"
     unikraft run --metro=fra -p 443:8080/http+tls --image=nginx:latest
     ```

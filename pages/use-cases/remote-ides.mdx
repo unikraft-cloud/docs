@@ -60,7 +60,7 @@ cd examples/code-server/
 Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪).
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft login
@@ -79,7 +79,7 @@ The `UKC_TOKEN` and `UKC_METRO` environment variables are only supported by the 
 
 When done, invoke the following command to deploy this app on Unikraft Cloud:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft volumes create \
@@ -119,7 +119,7 @@ This deployment creates a volume for data persistence: `code-workspace`.
 Upon deleting the instance, this volume will persist, allowing you to create another instance without losing data.
 To remove the volume, you can use:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft volumes delete code-workspace
@@ -135,7 +135,7 @@ kraft cloud volume rm code-workspace
 
 Use the `--help` option for detailed information on using Unikraft Cloud:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft --help

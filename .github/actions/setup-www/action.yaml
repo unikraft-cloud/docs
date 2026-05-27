@@ -38,10 +38,12 @@ inputs:
   posthog-key:
     required: false
     description: The key to authenticate with PostHog.
-  docs-channel:
+  channel:
     required: false
-    default: prod-staging
-    description: The docs channel to use for the OpenAPI spec.
+    default: staging
+    description: |
+      The branch/channel of dependency repos (openapi, x) to pull when
+      building the site. One of `staging` or `stable`.
 
 outputs:
   domain:
@@ -101,7 +103,7 @@ runs:
         --build-arg PUBLIC_STATUS_PAGE_SUMMARY_URL="https://status.unikraft.cloud/api/v1/summary" \
         --build-arg PUBLIC_POSTHOG_HOST="${{ inputs.posthog-host }}" \
         --build-arg PUBLIC_POSTHOG_KEY="${{ inputs.posthog-key }}" \
-        --build-arg DOCS_CHANNEL="${{ inputs.docs-channel }}" \
+        --build-arg CHANNEL="${{ inputs.channel }}" \
         --memory "${{ inputs.memory }}" \
         --service "${{ inputs.name }}" \
         --image "${{ inputs.name }}" \

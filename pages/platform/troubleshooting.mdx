@@ -13,7 +13,7 @@ If you need help, reach out to Unikraft Cloud Support.
 An app may crash, freeze, or misbehave.
 To inspect it, try either:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft instances logs <instance_name>
@@ -122,7 +122,7 @@ rm -fr ~/.local/share/kraftkit
 The most common reason is that you deployed an app to one metro but listed a different one.
 Use the `--metro` flag per command, or use the legacy CLI environment variable for a session:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft instances list --metro <metro_name>
@@ -201,7 +201,7 @@ The legacy deploy command performs steps on your local device before actually de
 
 If any of these steps fail, enable legacy CLI debugging with the `--log-level` and `--log-type` flags:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
   ```bash title="kraft"
   kraft cloud deploy --log-level debug --log-type basic [...]
   ```
@@ -236,7 +236,7 @@ If not, report it with the output on the [Discord server](/discord).
 The most direct way to debug an app is to use the app console output, which may include kernel output.
 To see it, after starting the Unikraft Cloud instance, use:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft instances logs <instance_name>
@@ -338,7 +338,7 @@ cmd: ["/server"]
 That is, change `base:latest` to `base:latest-dbg`.
 Now Unikraft Cloud is ready to re-deploy:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft build . --output <my-org>/http-go-strace:latest
@@ -353,7 +353,7 @@ kraft cloud deploy --name http-go-strace -p 443:8080 .
 
 You can now inspect the logs as before and view system call tracing:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft instances logs http-go-strace
@@ -401,7 +401,7 @@ Contact Unikraft Cloud on the [Discord server](/discord) and include this output
 While you debug an issue you can mitigate crashes by setting a restart policy.
 For example, use the CLI to set `--restart on-failure` so the platform restarts the app if it crashes.
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft run --metro=fra --restart=on-failure --image=my-app:latest

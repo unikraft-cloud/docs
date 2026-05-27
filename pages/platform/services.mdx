@@ -28,7 +28,7 @@ The rest of this guide shows how to create a service first, then use the CLI to 
 
 First, create a new service with the CLI:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft services create \
@@ -50,7 +50,7 @@ This example assumes that the app opens port 8080.
 Now use the CLI with the service flag to attach the instance to the `my-service` service.
 For example, from the [Go web server guide](/guides/go):
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 git clone https://github.com/unikraft-cloud/examples
@@ -111,7 +111,7 @@ That's it.
 
 In the end, if you want to remove a service, use:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft services delete my-service
@@ -165,7 +165,7 @@ For example, the following creates the service `my-service` with three published
 - Port 80 with the `http` and `redirect` handlers (HTTP mode).
 - Port 10000 with only the `tls` handler (TCP mode).
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft services create \

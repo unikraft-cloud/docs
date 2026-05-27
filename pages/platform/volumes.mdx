@@ -21,7 +21,7 @@ In this case, the volume's lifetime is tied to the instance - when you delete th
 
 To start, create the volume with the CLI, with size in MBs and name `my-volume`:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft volumes create \
@@ -41,7 +41,7 @@ kraft cloud volume create \
 The command should return the volume's UUID, and you can check the operation
 worked via:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft volumes list
@@ -140,7 +140,7 @@ mounted persistent volume and print out the current contents of the file.
 Start the Flask web server, create a
 [service](/platform/services) for it via the publish flag, and mount the `my-volume` volume at `/mnt`:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft build . --output <my-org>/http-python312-flask30:latest
@@ -173,7 +173,7 @@ You should see output like:
 
 To confirm that the platform attached the volume, run:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft volumes get my-volume
@@ -217,7 +217,7 @@ Log file created.
 
 To test data persistence, first stop the instance, detach the volume, and remove the instance:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft instances stop http-python312-flask30-2h608
@@ -236,7 +236,7 @@ The explicit volume detach command is only available in the legacy CLI.
 
 Now start another instance and, like before, mount the same volume:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft build . --output <my-org>/http-python312-flask30:latest
@@ -283,7 +283,7 @@ Log file created.
 
 To clean up, first detach the volume from all instances and then remove it:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft volumes delete <volume-name>

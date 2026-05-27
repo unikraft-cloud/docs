@@ -73,7 +73,7 @@ cd examples/openclaw/
 Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪):
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft login
@@ -92,7 +92,7 @@ The `UKC_TOKEN` and `UKC_METRO` environment variables are only supported by the 
 
 When done, you may create the OpenClaw Unikraft Cloud image and deploy an instance from it like so:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft build . --output <my-org>/openclaw:latest
@@ -116,7 +116,7 @@ Make sure to replace `<my-org>` with your username / org-name and to set your SS
 
 The output shows the instance address and other details:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```ansi title="unikraft"
 metro:        fra
@@ -178,7 +178,7 @@ ssh -l root localhost -p 2222
 
 You can list information about the instance by running:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft instances list
@@ -190,7 +190,7 @@ kraft cloud instance list
 
 </CodeTabs>
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```ansi title="unikraft"
 [1mMETRO[0m  [1mNAME[0m            [1mSTATE[0m     [1mIMAGE[0m          [1mARGS[0m  [1mMEMORY[0m   [1mVCPUS[0m  [1mCREATED[0m
@@ -206,7 +206,7 @@ openclaw-8tosm  demo/openclaw        20 seconds ago
 
 When done, you can remove the instance using:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft instances delete openclaw-8tosm
@@ -301,7 +301,7 @@ You now have full access to your own OpenClaw deployment on Unikraft Cloud!
 
 Use the `--help` option for detailed information on using Unikraft Cloud:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft --help

@@ -211,7 +211,7 @@ You can disable scale-to-zero either by setting the label to `false`, or with th
 
 Since Unikraft Cloud has scale-to-zero on by default, all you need to do is to start an instance normally:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 git clone https://github.com/unikraft-cloud/examples
@@ -249,7 +249,7 @@ This command will create the NGINX instance with scale-to-zero enabled:
 Note that at first the system lists the status as `running` in the output of the deploy or run flow.
 Check the instance's status:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft instances list
@@ -310,7 +310,7 @@ curl https://twilight-gorilla-ui5b6kwt.fra.unikraft.app
 You should get an NGINX response with no noticeable delay.
 For fun, try to use the following command to see if you can catch the instance's `STATE` field changing from `standby` to `running`:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft instances list --watch

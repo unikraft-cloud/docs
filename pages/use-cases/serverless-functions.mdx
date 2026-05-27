@@ -60,7 +60,7 @@ cd examples/node-code-execution/
 Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪):
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft login
@@ -80,7 +80,7 @@ export UKC_METRO=fra
 The base image contains a Node.js server (`server.ts`) that loads a function from the attached ROM and executes it on each HTTP request.
 Right before starting the server, it writes `1` to `/uk/libukp/template_instance`, which triggers Unikraft Cloud to convert the running instance into a [template](/platform/instances#instance-templates).
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft build . --output <my-org>/node-code-exec:latest
@@ -103,7 +103,7 @@ kraft pkg \
 Boot a short-lived instance from the base image without any ROM attached.
 The instance self-converts into a template and exits:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft run --metro fra \
@@ -124,7 +124,7 @@ kraft cloud instance create \
 
 The output shows the instance details:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```ansi title="unikraft"
 metro:        fra
@@ -161,7 +161,7 @@ timestamps:
 This instance is short-lived, since right before the server starts, it triggers a conversion into a template.
 To confirm the template is ready:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft instances templates list
@@ -175,7 +175,7 @@ kraft cloud instance template list
 
 <br/>
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```ansi title="unikraft"
 [1mMETRO[0m  [1mNAME[0m       [1mSTATE[0m     [1mIMAGE[0m                    [1mARGS[0m  [1mMEMORY[0m  [1mVCPUS[0m  [1mCREATED[0m
@@ -195,7 +195,7 @@ node-exec  oci://unikraft.io/<my-org>/node-code-exec@sha256:71487fd6196987cf65fb
 ROMs package only the function source files—no runtime needed.
 Package both example functions:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft build rom1/ --output <my-org>/node-rom1:latest
@@ -230,7 +230,7 @@ New instances skip the cold-start initialization phase because they restore from
 
 Create the first instance with the JavaScript ROM attached:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft run --metro fra \
@@ -281,7 +281,7 @@ curl -X POST "$UKC_METRO/instances" \
 
 Create the second instance with the TypeScript ROM attached:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft run --metro fra \
@@ -392,7 +392,7 @@ The ROM deployment model has three layers:
 
 ## Cleanup
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft instances delete node-exec-rom1 node-exec-rom2
@@ -410,7 +410,7 @@ kraft cloud instance template remove node-exec
 
 Use the `--help` option for detailed information on using Unikraft Cloud:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft --help

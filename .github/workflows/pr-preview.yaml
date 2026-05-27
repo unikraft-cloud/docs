@@ -57,7 +57,7 @@ jobs:
         name: com-docs-pr-${{ github.event.number }}
         metro: ${{ vars.UKC_METRO }}
         log-level: trace
-        docs-channel: prod-staging
+        channel: staging
 
     - uses: chrnorm/deployment-action@v2
       name: Create GitHub deployment

@@ -1,0 +1,388 @@
+---
+title: KraftKit To Unikraft
+navigation_icon: book-open
+---
+
+This tutorial shows how to migrate from the legacy `kraft cloud` CLI to the new `unikraft` CLI for Unikraft Cloud.
+It focuses on the differences that matter during day-to-day work: authentication, profiles, deployment flow, common commands, and flag behaviour.
+
+## Prerequisites
+
+Make sure you have the new CLI installed.
+See the [unikraft CLI overview](/docs/cli/overview) for installation instructions.
+If you still need the legacy syntax during the migration, keep the [legacy CLI overview](/docs/cli/legacy-overview) nearby for reference.
+
+## Main mental shift
+
+The biggest change is that the legacy CLI combines packaging and deployment into a single command, while the new CLI treats them as separate operations.
+
+In the legacy flow:
+
+```bash title="kraft"
+kraft cloud deploy -p 443:8080/http+tls -M 512Mi --rootfs-type erofs .
+```
+
+the CLI reads the local project, builds the root filesystem and image if needed, pushes it, and starts an instance.
+
+In the new flow, the CLI splits the same work into two clearer stages:
+
+```bash title="unikraft"
+unikraft build . --output <my-org>/my-app:latest
+unikraft run --metro=fra -p 443:8080/http+tls -m 512M --image=<my-org>/my-app:latest
+```
+
+This split has two practical consequences:
+
+* `unikraft build` is where you package the image and store it in a registry.
+* `unikraft run` is where you create an instance from an existing image and set runtime options such as ports, memory, scale-to-zero, volumes, and environment variables.
+
+That separation makes the deployment flow more explicit.
+It also means you need to think about whether a flag belongs to image creation time or instance runtime.
+
+## Login and authentication
+
+### Public Unikraft Cloud
+
+For the public service, the new CLI uses an interactive login flow that opens a browser window to authenticate with the Unikraft Cloud dashboard.
+The legacy CLI relies on environment variables to store the access token and metro selection.
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft login
+```
+
+```bash title="kraft"
+# Set Unikraft Cloud access token
+export UKC_TOKEN=token
+# Set metro to Frankfurt, DE
+export UKC_METRO=fra
+```
+
+</CodeTabs>
+
+The environment variables `UKC_TOKEN` and `UKC_METRO` are only supported by the legacy CLI.
+They aren't the normal way to authenticate with the new CLI.
+
+### Profile management
+
+The new CLI uses profiles to manage authentication and configuration for different environments.
+The `default` profile contains all the publicly available metros:
+
+```bash
+unikraft profile list
+```
+```ansi
+[1mNAME[0m     [1mACTIVE[0m  [1mMETROS[0m
+default  true    ["fra0", "dal0", "sin0", "was1", "fra", "dal", "sin", "was", "sfo"]
+```
+
+Thus, listing instances with `unikraft` is more convenient than with `kraft cloud`:
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft instances list
+```
+
+```bash title="kraft"
+export UKC_METRO=fra
+kraft cloud instance list
+#------------------------
+export UKC_METRO=was
+kraft cloud instance list
+```
+
+</CodeTabs>
+
+<CodeTabs syncKey="cli">
+
+```ansi title="unikraft"
+[1mMETRO[0m  [1mNAME[0m                    [1mSTATE[0m    [1mIMAGE[0m                      [1mARGS[0m  [1mMEMORY[0m  [1mVCPUS[0m  [1mFQDN[0m                                        [1mCREATED[0m
+fra    httpserver-go121-qdrlz  [91mstopped[0m  <my-org>/httpserver-go121        256MiB  1      summer-star-huyfslqm.fra.unikraft.app       20 hours ago
+fra    httpserver-go121-bhjvm  [91mstopped[0m  <my-org>/httpserver-go121        256MiB  1      restless-gorilla-dalzi9bs.fra.unikraft.app  20 hours ago
+was    httpserver-go121-xjsli  [94mstandby[0m  <my-org>/httpserver-go121        256MiB  1      bitter-bonobo-20plsjfu.was.unikraft.app     2 minutes ago
+```
+
+```ansi title="kraft"
+[1mNAME[0m                    [1mFQDN[0m                                        [1mSTATE[0m    [1mSTATUS[0m  [1mIMAGE[0m                                                      [1mMEMORY[0m   [1mVCPUS[0m  [1mARGS[0m  [1mBOOT TIME[0m
+httpserver-go121-qdrlz  summer-star-huyfslqm.fra.unikraft.app       [91mstopped[0m          <my-org>/httpserver-go121@sha256:7785ebdf6c1ffaf05c3be...  256 MiB  1            90.20 ms
+httpserver-go121-bhjvm  restless-gorilla-dalzi9bs.fra.unikraft.app  [91mstopped[0m          <my-org>/httpserver-go121@sha256:7785ebdf6c1ffaf05c3be...  256 MiB  1            89.33 ms
+#-------------------------
+[1mNAME[0m                    [1mFQDN[0m                                     [1mSTATE[0m    [1mSTATUS[0m   [1mIMAGE[0m                                                      [1mMEMORY[0m   [1mVCPUS[0m  [1mARGS[0m  [1mBOOT TIME[0m
+httpserver-go121-xjsli  bitter-bonobo-20plsjfu.was.unikraft.app  [94mstandby[0m  standby  <my-org>/httpserver-go121@sha256:7785ebdf6c1ffaf05c3be...  256 MiB  1            165.63 ms
+```
+
+</CodeTabs>
+
+Write operations require an explicit metro selection with `--metro`:
+
+```bash title="unikraft"
+unikraft run --metro=fra -p 443:8080/http+tls -m 512MiB --image=<my-org>/my-app:latest
+``` 
+
+For custom or private metros, define a profile in `~/.config/unikraft/config.yaml`:
+
+```yaml title="config.yaml"
+profiles:
+  <metro_subdomain>:
+    type: cloud
+    token: <ukc_token>
+    organization: <ukc_user>
+    metros:
+      - name: <metro_subdomain>
+        endpoint: https://api.<metro_subdomain>.unikraft.cloud
+        country: <country_code>
+```
+
+Then select it explicitly:
+
+```bash title="unikraft"
+unikraft profile use <metro_subdomain>
+unikraft profile list
+```
+
+:::tip
+If you work against more than one metro or installation, create one profile per environment and switch with `unikraft profile use` instead of rewriting shell variables.
+This has the advantage of persistence through configuration files.
+:::
+
+## Translate the most common commands
+
+Use the following mappings as a quick migration reference.
+
+### Log in
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft login
+```
+
+```bash title="kraft"
+export UKC_TOKEN=<token>
+export UKC_METRO=<metro>
+```
+
+</CodeTabs>
+
+### Select a configured environment
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft profile use <profile>
+```
+
+```bash title="kraft"
+export UKC_TOKEN=<token>
+export UKC_METRO=<metro>
+```
+
+</CodeTabs>
+
+### Build and push an image
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft build . --output <my-org>/my-app:latest
+```
+
+```bash title="kraft"
+kraft pkg --push -p kraftcloud -m x86_64 --rootfs-type erofs --name <my-org>/my-app:latest .
+```
+
+</CodeTabs>
+
+### Run an instance from an image
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft run --metro=fra -p 443:8080/http+tls -m 512M --image=<my-org>/my-app:latest
+```
+
+```bash title="kraft"
+kraft cloud vm create --start -p 443:8080/http+tls -M 512Mi <my-org>/my-app:latest
+```
+
+</CodeTabs>
+
+### List instances
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft instances list
+```
+
+```bash title="kraft"
+kraft cloud instance list
+```
+
+</CodeTabs>
+
+### Remove an instance
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft instances delete <name>
+```
+
+```bash title="kraft"
+kraft cloud instance remove <name>
+```
+
+</CodeTabs>
+
+### Create a volume
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft volume create --metro=fra --name=data --size=200M
+```
+
+```bash title="kraft"
+kraft cloud volume create --name data --size 200Mi
+```
+
+</CodeTabs>
+
+## Flags differences
+
+### Memory units
+
+Memory units behave differently in the new CLI.
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft run --metro=fra -m 512M --image=<my-org>/my-app:latest
+```
+
+```bash title="kraft"
+kraft cloud deploy -M 512Mi .
+```
+
+</CodeTabs>
+
+`unikraft` only accepts units in the binary system, for example, `512M` or `512MiB` for Mebibytes.
+The legacy `kraft cloud` works with the decimal system as well—so `512M` would mean 512 Megabytes, which is about 488 Mebibytes, while `512Mi` would mean 512 Mebibytes, which is about 536 Megabytes.
+
+### Scale-to-zero
+
+The new CLI folds three legacy switches into one structured flag:
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft run --metro=fra \
+  --scale-to-zero policy=idle,cooldown-time=5000,stateful=true \
+  --image=<my-org>/my-app:latest
+```
+
+```bash title="kraft"
+kraft cloud deploy \
+  --scale-to-zero idle \
+  --scale-to-zero-stateful \
+  --scale-to-zero-cooldown 5s \
+  .
+```
+
+</CodeTabs>
+
+Not specifying any scale-to-zero configuration means **don't scale-to-zero**.
+Note that, besides `policy`, each of the options for scale-to-zero are optional.
+
+### Filtering and waiting
+
+The new CLI adds a rich filter language for many commands.
+For example:
+
+```bash
+unikraft instances list --filter 'state==running,metro==fra'
+```
+
+and:
+
+```bash
+unikraft instance wait my-instance --until state==running
+```
+
+These `--filter` and `--until` expressions are features of the new CLI.
+They aren't available in the legacy `kraft cloud` CLI.
+See [Filters](/docs/cli/filters) for the full syntax.
+
+## A side-by-side migration example
+
+Suppose your old workflow looked like this:
+
+```bash title="kraft"
+# do this once in every terminal session
+export UKC_TOKEN=token
+export UKC_METRO=fra
+
+kraft cloud deploy -n my-app -p 443:8080/http+tls -M 512Mi -e APP_ENV=production .
+kraft cloud instance get my-app
+kraft cloud instance logs my-app -f
+kraft cloud instance remove my-app
+```
+
+The migrated workflow is:
+
+```bash title="unikraft"
+unikraft build . --output <my-org>/my-app:latest
+unikraft run --metro=fra -n my-app -p 443:8080/http+tls -m 512M -e APP_ENV=production --image=<my-org>/my-app:latest
+unikraft instances get my-app
+unikraft instance logs my-app -f
+unikraft instances delete my-app
+```
+
+Note the absence of environment variable exports in the new CLI, which uses persistent profiles instead.
+
+## Migration checklist
+
+When moving an existing guide, script, or workshop from `kraft cloud` to `unikraft`, check the following:
+
+* Replace `kraft cloud deploy` with `unikraft build` plus `unikraft run`;
+* Move the local path such as `.` to `unikraft build`;
+* Add an explicit image reference with `--output` on `build` and `--image` on `run`;
+* Replace legacy authentication environment variables with `unikraft login` or a configured profile;
+* Move run-time flags such as memory, ports, env vars, volumes, and scale-to-zero settings to `unikraft run`;
+* Translate legacy scale-to-zero flags into the structured `--scale-to-zero` syntax;
+* Update instance management commands such as list and delete to the new command names;
+* Take advantage of new `--filter` and `--until` flags where they simplify scripts.
+
+## When to keep using the legacy CLI
+
+The `unikraft` CLI is the recommended default for new workflows leveraging the latest features and improvements.
+That said, the legacy CLI can still make sense if you depend on existing Compose-oriented flows (`kraft cloud compose`) or you need time to migrate automation gradually.
+
+Another reason to keep using `kraft` is for local development.
+Through `kraft pkg` and `kraft run`, you can run Unikraft unikernels locally, and it remains the preferred CLI for that use case.
+
+## Learn more
+
+Use the `--help` option for detailed information on using Unikraft Cloud:
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft --help
+```
+
+```bash title="kraft"
+kraft cloud --help
+```
+
+</CodeTabs>
+
+For more details, check the following references:
+
+* The [unikraft CLI overview](/docs/cli/overview).
+* The [legacy CLI overview](/docs/cli/legacy-overview).
+* The [Filters](/docs/cli/filters) reference for the new filtering language.
+* The [Environment Variables](/tutorials/environment-variables) tutorial for runtime configuration patterns.

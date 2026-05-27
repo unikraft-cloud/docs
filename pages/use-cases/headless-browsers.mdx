@@ -63,7 +63,7 @@ cd examples/node-express-puppeteer/
 Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪):
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft login
@@ -89,7 +89,7 @@ Request an increase in the instance memory quota when you need more memory.
 
 When done, invoke the following command to deploy this app on Unikraft Cloud:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft build . --output <my-org>/node-express-puppeteer:latest
@@ -130,7 +130,7 @@ You can use the landing page to generate the PDF version of a remote page.
 
 At any time, you can list information about the instance:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft instances list node-express-puppeteer-7afg3
@@ -149,7 +149,7 @@ node-express-puppeteer-7afg3  node-express-puppeteer-7afg3.fra.unikraft.app  run
 
 When done, you can remove the instance:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft instances delete node-express-puppeteer-7afg3
@@ -171,7 +171,7 @@ You can update the service itself to provide a Representational State Transfer (
 
 Use the `--help` option for detailed information on using Unikraft Cloud:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft --help

@@ -49,7 +49,7 @@ jobs:
         name: com-docs-staging
         metro: ${{ vars.UKC_METRO }}
         log-level: trace
-        docs-channel: prod-staging
+        channel: staging
 
     - uses: chrnorm/deployment-action@v2
       name: Create GitHub deployment
@@ -83,3 +83,13 @@ jobs:
       shell: bash
       run: |
         exit 1
+
+    - name: Trigger www prod-staging deploy
+      if: ${{ steps.www.outcome == 'success' }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ secrets.GH_PAT }}
+      run: |
+        gh workflow run prod-staging.yaml \
+          --repo unikraft-cloud/www \
+          --ref prod-staging

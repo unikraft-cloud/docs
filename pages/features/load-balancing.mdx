@@ -35,7 +35,7 @@ In case there are no other instances available, the load balancer blocks excess 
 To set load balancing up, first use the deploy or run flow with the publish flag to create the service as part of the instance creation.
 For example, use NGINX as the app:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 git clone https://github.com/unikraft-cloud/examples
@@ -72,7 +72,7 @@ This single command will (a) create a service via the `-p` flag and (b) start an
 
 With this in place, it's now time to start a second instance and attach it to the created service (in this case, named `wandering-shape-n6mhimgn`):
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 cd examples/nginx/
@@ -111,7 +111,7 @@ The command's output should look like this:
 Both the `url` and `service` fields in the 2 instances are the same.
 To check that it worked, run the following command:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft services list

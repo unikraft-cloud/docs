@@ -5,8 +5,10 @@
 ################################################################################
 FROM golang:1.26 AS build-kraft-docs
 
+ARG CHANNEL=staging
+
 WORKDIR /kraftkit
-ADD https://github.com/unikraft/kraftkit.git /kraftkit
+ADD https://github.com/unikraft/kraftkit.git#${CHANNEL} /kraftkit
 
 RUN make docs
 
@@ -15,8 +17,10 @@ RUN make docs
 ################################################################################
 FROM golang:1.26 AS build-cli-docs
 
+ARG CHANNEL=staging
+
 WORKDIR /cli
-ADD https://github.com/unikraft/cli.git /cli
+ADD https://github.com/unikraft/cli.git#${CHANNEL} /cli
 
 RUN make docs
 
@@ -49,11 +53,11 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 COPY . .
 
 # Grab the latest OpenAPI spec based on the desired channel.
-ARG DOCS_CHANNEL=prod-staging
-ADD https://raw.githubusercontent.com/unikraft-cloud/openapi/refs/heads/${DOCS_CHANNEL}/platform.yaml apis/platform.yaml
+ARG CHANNEL=staging
+ADD https://raw.githubusercontent.com/unikraft-cloud/openapi/refs/heads/prod-${CHANNEL}/platform.yaml apis/platform.yaml
 
 # Kraftfile v0.7 schema docs (from unikraft-cloud/x)
-ADD https://raw.githubusercontent.com/unikraft-cloud/x/refs/heads/${DOCS_CHANNEL}/kraftfile/schema.md pages/kraftfile/v0.7.md
+ADD https://raw.githubusercontent.com/unikraft-cloud/x/refs/heads/prod-${CHANNEL}/kraftfile/schema.md pages/kraftfile/v0.7.md
 
 # Kraft (old CLI) docs -> /cli/kraft/
 COPY --from=build-kraft-docs /kraftkit/docs/kraft/cloud /docs/pages/cli/kraft

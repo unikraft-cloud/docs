@@ -63,7 +63,7 @@ As such you can use them for persistent data, secrets, storage, logs, and more, 
 To create and use a volume, you can use the CLI volume commands.
 For example, you need to first create a volume:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft volumes create \
@@ -90,7 +90,7 @@ kraft cloud volume import --volume my-volume --source my-data/
 
 Finally, when you deploy an instance you can attach the volume to it:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft run --metro=fra -m 512MiB -p 443:8080/http+tls -v my-volume:/mnt --image=my-app:latest

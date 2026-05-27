@@ -122,7 +122,7 @@ This guide uses a Python [app](/guides/httpserver-python3.12) as an example to s
 
 Start with the simplest workflow: create an image from a Python app and start an instance from it:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft build . --output <my-org>/httpserver-python312:latest
@@ -185,7 +185,7 @@ The controller fetches the image from the registry to start the instance.
 
 You can see your images by running the following command:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft images list
@@ -232,7 +232,7 @@ There may be a delay of a few minutes between removing an image from the registr
 
 For the next workflow, start many instances:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft build . --output <my-org>/httpserver-python312:latest
@@ -245,7 +245,7 @@ kraft cloud deploy -p 443:8080 -M 512Mi --replicas 2 .
 
 </CodeTabs>
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 ```ansi title="unikraft"
 metro:        fra
 name:         httpserver-python312-lscmn
@@ -325,7 +325,7 @@ timestamps:
 
 Check that it worked by listing all instances with:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft instances list
@@ -360,7 +360,7 @@ Three instances run: the original plus two replicas.
 
 In this final workflow, take the existing image and start new instances from it:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft run --metro=fra -p 443:8080/http+tls -m 512M --image <my-org>/httpserver-python312@sha256:1b815914eb568a06ca4bbfdfb7d6cf484a9e9a0947ba8e0e0f1664d972a25bca

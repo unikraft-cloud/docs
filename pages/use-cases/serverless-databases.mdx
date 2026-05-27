@@ -65,7 +65,7 @@ cd examples/postgres/
 Make sure to log into Unikraft Cloud by setting your token and a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪):
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft login
@@ -146,7 +146,7 @@ You can do this by either changing the label in the `Kraftfile` or by using `--s
 
 At any time, you can list information about the instance:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft instances list
@@ -165,7 +165,7 @@ postgres-saan9    young-thunder-fbafrsxj.fra.unikraft.app  running  6 minutes ag
 
 When done, you can remove the instance:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft instances delete postgres-saan9
@@ -183,7 +183,7 @@ You can use [volumes](/platform/volumes) for data persistence for your PostgreSQ
 
 For that you would first create a volume:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```console title="unikraft"
 unikraft volumes create \
@@ -200,7 +200,7 @@ kraft cloud volume create --name postgres --size 200
 
 Then start the PostgreSQL instance and mount that volume:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```console title="unikraft"
 unikraft build . --output <my-org>/postgres:latest
@@ -232,7 +232,7 @@ The source instance keeps running unaffected.
 
 To create a branch, pass `--branch` with the source instance name to `unikraft run`:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 ```console title="unikraft"
 unikraft run --metro=fra -p 5432:5432/tls --branch <source-instance>
 ```
@@ -244,7 +244,7 @@ Whatever you do, the source instance remains unaffected.
 
 When you're done, remove the branch:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 ```console title="unikraft"
 unikraft instances delete <branch-name>
 ```
@@ -274,7 +274,7 @@ Support for scale-to-zero for internal instances is coming soon.
 
 Use the `--help` option for detailed information on using Unikraft Cloud:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft --help

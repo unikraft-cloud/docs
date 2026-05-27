@@ -61,7 +61,7 @@ cd examples/novnc-browser/
 Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪):
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft login
@@ -87,7 +87,7 @@ Request an increase in the instance memory quota when you need more memory.
 
 When done, invoke the following command to deploy this app on Unikraft Cloud:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft build . --output <my-org>/novnc-browser:latest
@@ -109,7 +109,7 @@ kraft cloud deploy \
 
 The output shows the instance address and other details:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```ansi title="unikraft"
 metro:        fra
@@ -157,7 +157,7 @@ From there, click **Connect** to open the remote desktop, which ships with Firef
 
 At any time, you can list information about the instance:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft instances list
@@ -169,7 +169,7 @@ kraft cloud instance list
 
 </CodeTabs>
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```ansi title="unikraft"
 [1mMETRO[0m  [1mNAME[0m         [1mSTATE[0m    [1mIMAGE[0m                   [1mARGS[0m  [1mMEMORY[0m  [1mVCPUS[0m  [1mFQDN[0m                                     [1mCREATED[0m
@@ -185,7 +185,7 @@ vnc-browser  weathered-fog-y5jjmwfd.fra.unikraft.app  [94mstandby[0m  [94msta
 
 When done, you can remove the instance:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft instances delete vnc-browser
@@ -209,7 +209,7 @@ You can also adjust the screen geometry through the `WIDTH`, `HEIGHT`, and `DISP
 
 Use the `--help` option for detailed information on using Unikraft Cloud:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft --help

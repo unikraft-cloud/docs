@@ -36,7 +36,7 @@ Autoscale, as well as load balancing in general, currently supports only Interne
 
 First, create an instance, in this example using NGINX:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 git clone https://github.com/unikraft-cloud/examples
@@ -182,7 +182,7 @@ type: step
 You can further check that the master instance is on `standby` (scaled to zero), assuming your service hasn't received any traffic yet.
 You can get the UUID of your master instance from the legacy CLI scale get command above.
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft instances get f840ac12-f485-4f02-9f33-6a0a7de46f1f -o list
@@ -222,7 +222,7 @@ curl https://small-leaf-rafirkw7.fra.unikraft.app
 You should get an immediate response, even though the instance was on `standby`.
 You can use a watch command to see if you catch the instance changing state from `standby` to `running`:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft instances list --watch

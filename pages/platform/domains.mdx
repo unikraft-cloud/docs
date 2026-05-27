@@ -33,7 +33,7 @@ ALIAS (apex alias) and ANAME (authoritative alias) are DNS record types some pro
 :::tip
 You can find information about the Unikraft Cloud metros available to you, as well as their IP addresses, via the CLI.
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft metros list
@@ -65,7 +65,7 @@ Log into Unikraft Cloud and select a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪).
 Set the following:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft login
@@ -85,7 +85,7 @@ The `UKC_TOKEN` and `UKC_METRO` environment variables are only supported by the 
 With this in place, use the CLI to create an instance of the web server and link it to a custom name.
 Unikraft Cloud does this through the domain flag:
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft build . --output <my-org>/nginx:latest

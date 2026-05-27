@@ -46,7 +46,7 @@ You can also refer to images by digest to pin to an exact version.
 Registry authentication uses the same API token as the rest of the platform.
 The new CLI uses profiles, while the legacy CLI reads `UKC_TOKEN` directly.
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
   ```bash title="unikraft"
   unikraft login
@@ -134,7 +134,7 @@ For more control, for example when packaging [ROMs](/features/roms) or base imag
 
 ## Listing images
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
   ```bash title="unikraft"
   unikraft images list
@@ -168,7 +168,7 @@ There may be a delay of a few minutes between pushing or removing an image and t
 
 ## Removing images
 
-<CodeTabs syncKey="cli-tool">
+<CodeTabs syncKey="cli">
 
   ```bash title="unikraft"
   # Not supported yet for direct pushing to node registries.
