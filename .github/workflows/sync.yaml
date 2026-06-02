@@ -45,12 +45,6 @@ jobs:
       run: |
         git diff pages/guides/
 
-    - name: Generate branch ID
-      id: id
-      run: |
-        BRANCH="sync/examples-$(date +'%Y%m%d%H%M%S')"
-        echo "name=${BRANCH}" >>"${GITHUB_OUTPUT}"
-
     - name: Generate timestamp
       id: timestamp
       run: |
@@ -73,7 +67,7 @@ jobs:
 
           **Branch:** `${{ inputs.examples_branch || 'main' }}`
           **Timestamp:** ${{ steps.timestamp.outputs.value }}
-        branch: ${{ steps.id.outputs.name }}
+        branch: sync/examples
         committer: Unikraft Bot <monkey@unikraft.io>
         author: Unikraft Bot <monkey@unikraft.io>
         add-paths: |

@@ -157,7 +157,9 @@ const config: ZudokuConfig = {
         "/guides/httpserver-flask-redis", // Flask + Redis HTTP Server
         "/guides/httpserver-python3.12-flask3.0-sqlite", // Flask and SQLite HTTP Server
         "/guides/httpserver-python3.12-flask3.0", // Flask HTTP Server
+        "/guides/nginx-flask-mongo", // Flask with MongoDB
         "/guides/github-webhook-node", // GitHub Webhook receiver
+        "/guides/httpserver-go1.22-redis", // Go and Redis HTTP Server
         "/guides/httpserver-go1.21", // Go HTTP Server
         "/guides/grafana", // Grafana
         "/guides/haproxy", // HAProxy
@@ -177,6 +179,7 @@ const config: ZudokuConfig = {
         "/guides/novnc-browser", // noVNC
         "/guides/opentelemetry-collector", // OpenTelemetry Collector
         "/guides/httpserver-perl5.42", // Perl HTTP Server
+        "/guides/phoenix-postgres", // Phoenix with PostgreSQL
         "/guides/httpserver-php8.2", // PHP HTTP Server
         "/guides/node-playwright-chromium", // Playwright (Chromium) with Node.js
         "/guides/python-playwright-chromium", // Playwright (Chromium) with Python FastAPI
@@ -204,6 +207,7 @@ const config: ZudokuConfig = {
         "/guides/httpserver-c-debug", // SSH and HTTP Server with C and Debugging Tools
         "/guides/httpserver-node22-sveltekit", // SvelteKit HTTP Server
         "/guides/traefik", // Traefik
+        "/guides/tyk", // Tyk
         "/guides/visual-studio-code-server", // Visual Studio Code Server
         "/guides/httpserver-node-vite-vanilla", // Vite (vanilla)
         "/guides/httpserver-node-vite-ssr-vanilla", // Vite (vanilla) SSR
@@ -212,6 +216,7 @@ const config: ZudokuConfig = {
         "/guides/wazero-import-go", // Wazero
         "/guides/node18-wingsio", // Wings.io (Node)
         "/guides/wordpress-all-in-one", // Wordpress
+        "/guides/wordpress", // Wordpress with Nginx and MariaDB
       ]
     },
     {
