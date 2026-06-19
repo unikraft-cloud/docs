@@ -79,6 +79,7 @@ const config: ZudokuConfig = {
             "/features/on-demand-templates",
             "/features/cron-jobs",
             "/features/forking",
+            "/features/mem-vscaling",
           ],
         },
         {
