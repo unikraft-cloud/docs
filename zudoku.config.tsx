@@ -102,6 +102,7 @@ const config: ZudokuConfig = {
             "/platform/instances",
             "/platform/services",
             "/platform/networking",
+            "/platform/plugins",
             "/platform/domains",
             "/platform/certificates",
             "/platform/volumes",

@@ -1,0 +1,125 @@
+---
+title: Plugins
+navigation_icon: puzzle
+---
+
+A plugin extends an instance with sidecar functionality.
+You attach a plugin to an instance at creation time and reach it directly via the instance's API endpoint.
+
+Plugin requests are authenticated like any other API call — unlike a [service](/platform/services), there's no external load balancer or TLS termination gateway.
+You are talking directly to the instance's private network.
+
+This design makes plugins a natural fit for the [sandbox](/use-cases/sandboxes) use case:
+a plugin runs a small HTTP server inside the VM that accepts commands for execution, offers file system services, and more.
+
+## Plugin image
+
+A plugin is a standard [ROM](/features/roms) image with an executable called `init` in its root directory.
+The platform automatically loads and mounts the image at `/uk/plugins/<plugin_name>` and starts the `init` binary.
+
+The `init` binary receives:
+* **`config`** — via STDIN. The value is whatever you specified under `config` in the plugin definition.
+  Note that `"config": "my-string"`, `"config": 232`, and `"config": { ... }` are all valid JSON.
+* **`--api_fd <fd>`** — a socket file descriptor that the plugin must accept connections from.
+
+## Plugin API
+
+The platform routes requests to a plugin through the instance's API endpoint:
+
+```text
+https://api.<metro>.unikraft.cloud/v1/instances/<UUID>/plugins/<PLUGIN_NAME>/*
+```
+
+Everything after the plugin name (`*`) is forwarded as a URL to the HTTP server running inside the plugin.
+
+For example, if you have an instance `e2a6183a-721b-4145-bfaf-37a5f859bbc1` with a plugin named `sandbox`:
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer ${UKC_TOKEN}" \
+  -d '{"cmd": "ls -la"}' \
+  https://api.fra.unikraft.cloud/v1/instances/e2a6183a-721b-4145-bfaf-37a5f859bbc1/plugins/sandbox/exec
+```
+
+## Creating an instance with a plugin
+
+Use the `plugins` array on `POST /v1/instances` to attach one or more plugins:
+
+```json title="POST /instances"
+{
+  "name": "my-instance",
+  "image": "nginx:latest",
+  "memory_mb": 256,
+  "plugins": [
+    {
+      "name": "my-plugin",
+      "image": "user/myplugin:latest",
+      "config": {
+        "key": "value"
+      }
+    }
+  ]
+}
+```
+
+| Field    | Type   | Required | Description |
+|----------|--------|----------|-------------|
+| `name`   | string | yes      | Plugin name used in the URL path. Max 63 characters. Allowed: `a-z`, `A-Z`, `0-9`, `-`, `_`. |
+| `image`  | string | yes      | OCI image reference (same format as the instance `image` field). |
+| `config` | any    | no       | Arbitrary JSON value passed to the plugin's `init` binary via STDIN at startup. Can be a string, number, object, array, etc. |
+
+The `plugins` field is fully supported by the `PATCH /instances` endpoint as well.
+
+You can attach at most **8 plugins** per instance.
+
+## Port allocation
+
+The socket file descriptor passed via `--api_fd` receives its port from the VMM.
+The controller picks a port within a configurable range, defaulting to `20000`–`29999`.
+Ports are assigned sequentially: the first plugin gets `20000`, the next `20001`, and so on.
+If a port is known to be in use by the guest, the controller skips it and tries the next port.
+
+:::caution[**Limited Access**]
+Custom port range configuration is only available as part of enterprise plans, and it requires a valid license.
+If you would like to try it out, please reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to `support@unikraft.com`.
+:::
+
+## Plugin lifecycle
+
+Plugins are loaded when the instance starts and stay loaded for the lifetime of the instance.
+They currently **cannot be unloaded** — this is coming in the next release.
+
+Just like regular ROMs, plugins are reloaded on every scale-to-zero resume, suspend, and restart cycle.
+
+### Inheritance
+
+Plugins are inherited when the instance is cloned — for example, through [branching](/features/branching) or by using [checkpoints](/features/checkpoints).
+
+## Licensing
+
+The plugin feature requires a dedicated flag in your Unikraft Cloud license.
+Contact your account team to enable it.
+
+## Scale-to-zero
+
+Plugins respect the instance's [scale-to-zero](/features/scale-to-zero) policy.
+If scale-to-zero is enabled, the instance (and its plugins) wakes up on the first request and stays running for the duration of the request — just like a regular request keeps the instance alive.
+
+## Comparison with service groups
+
+| Feature                | Plugin                          | Service group |
+|------------------------|---------------------------------|---------------|
+| Authentication         | API token (same as instance API) | TLS certificate |
+| Load balancing         | No                              | Yes           |
+| Autoscaling            | No                              | Yes           |
+| Route pattern          | `/instances/../plugins/../*`    | External FQDN |
+| Service group required | No                              | Yes           |
+| Direct to instance     | Yes                             | Via load balancer |
+
+## Learn more
+
+* [Sandboxes](/use-cases/sandboxes) — running isolated workloads with plugins.
+* [ROMs](/features/roms) — how ROM images work on Unikraft Cloud.
+* [Platform services](/platform/services) and how they work.
+* [Scale to zero triggers](/tutorials/scale-to-zero-triggers) for automatic instance scaling.
+* The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
