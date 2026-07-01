@@ -571,6 +571,15 @@ const config: ZudokuConfig = {
       icon: "book-a",
       to: "https://unikraft.com/glossary",
     },
+    {
+      type: "category",
+      label: "Releases",
+      icon: "tag",
+      items: [
+        "/releases/index",
+        "/releases/v1.0.0",
+      ],
+    },
   ],
   search: {
     type: "pagefind",
@@ -580,6 +589,7 @@ const config: ZudokuConfig = {
     { from: "/cli", to: "/cli/overview" },
     { from: "/kraftfile", to: "/kraftfile/v0.7" },
     { from: "/guides", to: "/guides/overview" },
+    { from: "/releases", to: "/releases/index" },
   ],
   apis: [
     {
