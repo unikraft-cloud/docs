@@ -9,7 +9,7 @@ specification at https://github.com/unikraft-cloud/openapi.
 
 ## Installation
 
-```bash title=""
+```bash
 go get unikraft.com/cloud/sdk
 ```
 
@@ -21,37 +21,37 @@ Requires Go 1.25 or later.
 package main
 
 import (
- "context"
- "fmt"
+  "context"
+  "fmt"
 
- "unikraft.com/cloud/sdk/platform"
+  "unikraft.com/cloud/sdk/platform"
 )
 
 func main() {
- ctx := context.Background()
+  ctx := context.Background()
 
- // Create a new client. The token and default metro are automatically
- // read from environment variables (UKC_TOKEN and UKC_METRO).
- client := platform.NewClient()
+  // Create a new client. The token and default metro are automatically
+  // read from environment variables (UKC_TOKEN and UKC_METRO).
+  client := platform.NewClient()
 
- // List all instances
- resp, err := client.GetInstances(ctx, nil, nil)
- if err != nil {
-  panic(err)
- }
+  // List all instances
+  resp, err := client.GetInstances(ctx, nil, nil)
+  if err != nil {
+    panic(err)
+  }
 
- // Check for API-level errors
- if resp.Status != "success" {
-  panic(resp.Message)
- }
+  // Check for API-level errors
+  if resp.Status != "success" {
+    panic(resp.Message)
+  }
 
- for _, inst := range resp.Data.Instances {
-  fmt.Printf("Name:  %s\n", *inst.Name)
-  fmt.Printf("UUID:  %s\n", *inst.Uuid)
-  fmt.Printf("State: %s\n", *inst.State)
-  fmt.Printf("Image: %s\n", *inst.Image)
-  fmt.Println("---")
- }
+  for _, inst := range resp.Data.Instances {
+    fmt.Printf("Name:  %s\n", *inst.Name)
+    fmt.Printf("UUID:  %s\n", *inst.Uuid)
+    fmt.Printf("State: %s\n", *inst.State)
+    fmt.Printf("Image: %s\n", *inst.Image)
+    fmt.Println("---")
+  }
 }
 ```
 
@@ -59,7 +59,7 @@ func main() {
 
 Pass your token via `platform.WithToken()`:
 
-```go title=""
+```go
 client := platform.NewClient(
     platform.WithToken("your-api-token"),
 )
@@ -75,7 +75,7 @@ Or set one of the following environment variables.
 You can also set the default metro via the `UKC_METRO` environment variable.
 If not specified, the SDK defaults to `fra`.
 
-```go title=""
+```go
 // No WithToken/WithDefaultMetro needed, NewClient reads the environment automatically
 client := platform.NewClient()
 ```
@@ -309,6 +309,4 @@ client.Healthz(ctx)
 
 ## Source
 
-The SDK source and full API reference are available at
-[github.com/unikraft-cloud/go-sdk](https://github.com/unikraft-cloud/go-sdk)
-and [pkg.go.dev/unikraft.com/cloud/sdk](https://pkg.go.dev/unikraft.com/cloud/sdk).
+The SDK source and full API reference are available at [github.com/unikraft-cloud/go-sdk](https://github.com/unikraft-cloud/go-sdk) and [pkg.go.dev/unikraft.com/cloud/sdk](https://pkg.go.dev/unikraft.com/cloud/sdk).

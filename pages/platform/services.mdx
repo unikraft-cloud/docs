@@ -5,25 +5,87 @@ navigation_icon: group
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "zudoku/ui/Tabs"
 
-On creation, Unikraft Cloud assigns each instance a private IP address and private FQDN for internal connectivity.
-It connects them to the Internet through a *service*: create a service and attach instances to it.
-
-:::note
+On creation, Unikraft Cloud assigns each instance a private IP address and private FQDN for internal connectivity, of the form `<instance-name>.internal`.
+To connect to an instance from the Internet, you need to create a service and attach the instance to it.
 
 A service defines how to reach a group of instances from the outside world.
-It maps an external FQDN port to an internal port common to all instances.
+It maps an external FQDN port to an internal port common to all instances within the service.
 The platform [load balances](/features/load-balancing) incoming connections across instances.
+
+:::caution
 Avoid placing apps that expose different ports in the same service.
 :::
 
+## Instance service groups
 
-If you use the deploy or run flow, part of the output lists a service, for example:
+If you specify a port mapping in the CLI deployment commands, the platform creates a service for you and attaches the instance to it:
 
-```ansi title=""
- [90m├[0m[90m─[0m [90mservice[0m: frosty-sky-vz8kwsm
- ```
+<CodeTabs syncKey="cli">
 
-Because the deploy or run flow is a single command to deploy a service, it automatically creates a service and attaches the new instance to it.
+```bash title="unikraft"
+unikraft run --metro fra \
+  -m 256M \
+  -p 443:8080/http+tls \
+  --image <my-org>/nginx:latest
+```
+
+```bash title="kraft"
+kraft cloud instance create \
+  --start \
+  -M 256Mi \
+  -p 443:8080/http+tls \
+  <my-org>/nginx:latest
+```
+
+</CodeTabs>
+
+<div style={{ marginTop: '0.8em' }} />
+
+<CodeTabs syncKey="cli">
+
+```ansi title="unikraft"
+[1mmetro[22m:        fra
+[1mname[22m:         nginx-67zbu
+[1muuid[22m:         8a8bc1b9-0af6-420e-a426-190dc2da9eaa
+[1mstate[22m:        [38;2;144;161;185mstarting[0m
+[1mimage[22m:        <my-org>/nginx
+[1mresources[22m:
+[3m  memory[23m:     256MiB
+[3m  vcpus[23m:      1
+[1mservice[22m:
+[3m  uuid[23m:       a942b9b5-ad17-3ffe-dcd2-ef4331f9087a
+[3m  name[23m:       nameless-fog-0tvh1uov                     # <---- service name
+[3m  domains[23m:
+[3m  - fqdn[23m:     nameless-fog-0tvh1uov.fra.unikraft.app    # <---- service domain
+[1mnetworks[22m:
+[3m- uuid[23m:       62d9bbf0-aec8-61f6-7bdb-86edf63dd068
+[3m  private-ip[23m: 10.0.3.3
+[3m  mac[23m:        12:b0:c6:23:ed:15
+[1mtimestamps[22m:
+[3m  created[23m:    just now
+```
+
+```ansi title="kraft"
+[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
+ [38;5;245m│[0m
+ [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245mname[0m: nginx-67zbu
+ [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245muuid[0m: 8a8bc1b9-0af6-420e-a426-190dc2da9eaa
+ [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
+ [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mstate[0m: [92mstarting[0m
+ [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mdomain[0m: https://nameless-fog-0tvh1uov.fra.unikraft.app    # <---- service domain
+ [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/nginx@sha256:f51ecc121c9ca34abb88a2bc6a69765501304f7893f7e85af15fbec3dc86e2bd
+ [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mmemory[0m: 256 MiB
+ [38;5;245m├[0m[38;5;245m──────[0m [38;5;245mservice[0m: nameless-fog-0tvh1uov                             # <---- service name
+ [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: nginx-67zbu.internal
+ [38;5;245m└[0m[38;5;245m───[0m [38;5;245mprivate ip[0m: 10.0.3.3
+```
+
+</CodeTabs>
+
+This ties the service to the lifetime of the instance, so the platform deletes it when you delete the instance.
+
+## Persistent service groups
+
 The rest of this guide shows how to create a service first, then use the CLI to create and attach instances to it.
 
 First, create a new service with the CLI:
@@ -31,38 +93,74 @@ First, create a new service with the CLI:
 <CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
-unikraft services create \
-  --set name=my-service \
-  --set metro=fra \
-  --set services=443:8080/tls+http
+unikraft services create --metro fra \
+  --name my-service \
+  --services 443:8080/http+tls
 ```
 
 ```bash title="kraft"
-kraft cloud service create --name my-service 443:8080/http+tls
+kraft cloud service create \
+  --name my-service \
+  443:8080/http+tls
+```
+
+</CodeTabs>
+
+<div style={{ marginTop: '0.8em' }} />
+
+<CodeTabs syncKey="cli">
+
+```ansi title="unikraft"
+[1mmetro[22m:         fra
+[1mname[22m:          my-service
+[1muuid[22m:          9bfe76ea-2679-482a-954e-577de7d122b3
+[1mpersistent[22m:    true
+[1mlimits[22m:
+[3m  soft[23m:        1
+[3m  hard[23m:        65535
+[1mtimestamps[22m:
+[3m  created[23m:     just now
+[1mdomains[22m:
+[3m- fqdn[23m:        my-service-pc4xjplc.fra.unikraft.app
+[1mservices[22m:
+[3m- source[23m:      443
+[3m  destination[23m: 8080
+[3m  handlers[23m:    ["tls", "http"]
+```
+
+```ansi title="kraft"
+[0;1;39mNAME[0m        [0;1;39mFQDN[0m                                  [0;1;39mSERVICES[0m           [0;1;39mINSTANCES[0m  [0;1;39mCREATED AT[0m    [0;1;39mPERSISTENT[0m
+my-service  my-service-f4744h0c.fra.unikraft.app  443:8080/tls+http             1 second ago  true
 ```
 
 </CodeTabs>
 
 This creates a new service named `my-service` listening on port 443.
-Unikraft Cloud terminates TLS and sends HTTP to port 8080.
+Unikraft Cloud terminates TLS and sends HTTP traffic to the app's port 8080.
 This example assumes that the app opens port 8080.
 
 Now use the CLI with the service flag to attach the instance to the `my-service` service.
-For example, from the [Go web server guide](/guides/go):
+For example, from the [Go HTTP server guide](/guides/httpserver-go1.21):
 
 <CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 git clone https://github.com/unikraft-cloud/examples
-cd examples/http-go1.21/
-unikraft build . --output <my-org>/http-go121:latest
-unikraft run --metro=fra --service my-service -m 256MiB --image=<my-org>/http-go121:latest
+cd examples/httpserver-go1.21/
+unikraft build . --output <my-org>/httpserver-go121:latest
+unikraft run --metro fra \
+  -m 256M \
+  --service my-service \
+  --image <my-org>/httpserver-go121:latest
 ```
 
 ```bash title="kraft"
 git clone https://github.com/unikraft-cloud/examples
-cd examples/http-go1.21/
-kraft cloud deploy --service my-service -M 256 .
+cd examples/httpserver-go1.21/
+kraft cloud deploy \
+  -M 256Mi \
+  --service my-service \
+  .
 ```
 
 </CodeTabs>
@@ -70,42 +168,60 @@ kraft cloud deploy --service my-service -M 256 .
 This creates a new Go web server instance and immediately attaches it to the `my-service` service.
 The output shows the instance address and other details:
 
-```ansi title=""
-[90m[[0m[92m●[0m[90m][0m Deployed successfully!
- [90m│[0m
- [90m├[0m[90m──────────[0m [90mname[0m: http-go121-fkt1x
- [90m├[0m[90m──────────[0m [90muuid[0m: 858da707-1851-46cb-9667-05b951471222
- [90m├[0m[90m─────────[0m [90mstate[0m: [92mrunning[0m
- [90m├[0m[90m───────────[0m [90murl[0m: https://my-service-rrtckyyi.fra.unikraft.app
- [90m├[0m[90m─────────[0m [90mimage[0m: http-go121@sha256:4d536236d226781874c3ad930dbc936c4f407aa3483a1f8e961ba63a7a72c78d
- [90m├[0m[90m─────[0m [90mboot time[0m: 17.14 ms
- [90m├[0m[90m────────[0m [90mmemory[0m: 256 MiB
- [90m├[0m[90m───────[0m [90mservice[0m: my-service
- [90m├[0m[90m──[0m [90mprivate fqdn[0m: http-go121-fkt1x.internal
- [90m├[0m[90m────[0m [90mprivate ip[0m: 172.16.6.6
- [90m└[0m[90m──────────[0m [90margs[0m: /server
+<CodeTabs syncKey="cli">
+
+```ansi title="unikraft"
+[1mmetro[22m:        fra
+[1mname[22m:         httpserver-go121-9a2wv
+[1muuid[22m:         8bb34040-9434-4a28-bd1e-c24ee532e2da
+[1mstate[22m:        [38;2;144;161;185mstarting[0m
+[1mimage[22m:        <my-org>/httpserver-go121
+[1mresources[22m:
+[3m  memory[23m:     256MiB
+[3m  vcpus[23m:      1
+[1mservice[22m:
+[3m  uuid[23m:       9bfe76ea-2679-482a-954e-577de7d122b3
+[3m  name[23m:       my-service
+[3m  domains[23m:
+[3m  - fqdn[23m:     my-service-f4744h0c.fra.unikraft.app
+[1mnetworks[22m:
+[3m- uuid[23m:       51f79dc1-e989-908d-894b-bdf0a87e7901
+[3m  private-ip[23m: 10.0.3.3
+[3m  mac[23m:        12:b0:57:91:bb:a5
+[1mtimestamps[22m:
+[3m  created[23m:    just now
 ```
 
-In this case, the instance name is `http-go121-fkt1x`.
-The address is `https://my-service-rrtckyyi.fra.unikraft.app`.
-These values differ for each run.
+```ansi title="kraft"
+[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
+ [38;5;245m│[0m
+ [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245mname[0m: httpserver-go121-9a2wv
+ [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245muuid[0m: 8bb34040-9434-4a28-bd1e-c24ee532e2da
+ [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
+ [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mstate[0m: [92mstarting[0m
+ [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mdomain[0m: https://my-service-f4744h0c.fra.unikraft.app
+ [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/httpserver-go121@sha256:b16d61bb7898e764d8c11ab5a0b995e8c25a25b5ff89e161fc994ebf25a75680
+ [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mmemory[0m: 256 MiB
+ [38;5;245m├[0m[38;5;245m──────[0m [38;5;245mservice[0m: my-service
+ [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: httpserver-go121-9a2wv.internal
+ [38;5;245m└[0m[38;5;245m───[0m [38;5;245mprivate ip[0m: 10.0.3.3
+```
 
-Use `curl` to query the Go web server:
+</CodeTabs>
 
-```bash title=""
-curl https://my-service-rrtckyyi.fra.unikraft.app
+
+In this case, the instance name is `httpserver-go121-9a2wv`.
+The address is `https://my-service-f4744h0c.fra.unikraft.app`.
+
+Use `curl` to query the Go HTTP server:
+
+```bash
+curl https://my-service-f4744h0c.fra.unikraft.app
 ```
 
 ```text title=""
-hello, world!
+Hello, world!
 ```
-
-:::tip
-
-If you specify a port with the publish flag when using the deploy or run flow, the command creates a service automatically.
-In that case the platform deletes the service when the instance ends, and you can't define the service name.
-
-:::
 
 That's it.
 
@@ -168,54 +284,34 @@ For example, the following creates the service `my-service` with three published
 <CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
-unikraft services create \
-  --set name=my-service \
-  --set metro=fra \
-  --set services=443:8080/tls+http \
-  --set services=80:8080/http+redirect \
-  --set services=10000:10000/tls
+unikraft services create --metro fra \
+  --name my-service \
+  --services 443:8080/tls+http \
+  --services 80:8080/http+redirect \
+  --services 10000:10000/tls
 ```
 
 ```bash title="kraft"
-kraft cloud service create --name my-service 443:8080/http+tls 80:8080/http+redirect 10000:10000/tls
+kraft cloud service create \
+  --name my-service \
+  443:8080/http+tls \
+  80:8080/http+redirect \
+  10000:10000/tls
 ```
 
 </CodeTabs>
 
-## `UDP` Support
+{/* vale off */}
+## UDP services
+{/* vale on */}
 
-`UDP` is a defined service protocol alongside `TCP`.
-Unikraft Cloud stores and reports it in the `protocol` field of each published port.
+:::caution[**Limited Access**]
+UDP services are only available in BYOC or on-prem Unikraft Cloud installations.
+CLI support is coming soon.
+:::
 
-You can use `UDP` for both internal VM-to-VM traffic and external traffic.
-
-### External `UDP` requirements
-
-To expose `UDP` externally for an user, the box must have an assigned IP address (primary or another assigned IP).
-That IP must appear in the `addresses` array in `users.json` for that user:
-
-```json title="users.json"
-{
-  [
-    "name": "user",
-    "addresses": [
-      {
-        "ip": "a.b.c.d",
-        "internal_ip": "x.y.z.w",
-        "host": "host_name"
-      }
-    ]
-  ]
-}
-```
-
-The `internal_ip` field is optional and used when the box routes traffic through an internal IP.
-
-You must also list the `UDP` IPs in the `additional_ip_addresses` directive in `nginx.conf.template` (space-separated).
-
-### Creating a `UDP` service
-
-To create a `UDP` service, set both `protocol` and `ip`:
+You can use UDP for both internal VM-to-VM traffic and external traffic.
+To create a UDP service, use `POST /services` and set both `protocol` and `ip`:
 
 ```json title="POST /services"
 {
@@ -230,7 +326,7 @@ To create a `UDP` service, set both `protocol` and `ip`:
 }
 ```
 
-The service `ip` must match an `addresses[].ip` value in `users.json` for the user.
+The IP address must be one of the IP addresses allocated to your user.
 
 ## Connection limits
 
@@ -238,34 +334,33 @@ Every service group has a soft and a hard connection limit that the load balance
 
 | Field | Default | Range | Description |
 |-------|---------|-------|-------------|
-| `soft_limit` | `1` | 1–65535 | The load balancer starts queuing new connections once the number of active connections reaches this value. |
-| `hard_limit` | `65535` | 1–65535 | The load balancer rejects new connections once the number of active connections reaches this value. |
+| `soft_limit` | `1` | `1-65535` | The load balancer starts queuing new connections once the number of active connections reaches this value. |
+| `hard_limit` | `65535` | `1-65535` | The load balancer rejects new connections once the number of active connections reaches this value. |
 
 `soft_limit` must be less than or equal to `hard_limit`.
 Setting `soft_limit > hard_limit` returns a `400` error.
 
-You can set both fields at service group creation time and update them later with `PATCH /services/{name}`.
+You can use the CLI to set the connection limits for a service:
 
-```json title="POST /services"
-{
-  "name": "my-service",
-  "soft_limit": 100,
-  "hard_limit": 500
-}
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft services create --metro fra \
+  --name my-service \
+  --services 443:8080/http+tls \
+  --soft-limit 5 \
+  --hard-limit 10
 ```
 
-## Persistent service groups
+```bash title="kraft"
+kraft cloud service create \
+  --name my-service \
+  443:8080/http+tls \
+  --soft-limit 5 \
+  --hard-limit 10
+```
 
-A service group is **persistent** when your user account owns it rather than a specific instance.
-
-- A service group created with the CLI (or `POST /services`) is persistent.
-  It survives independently of any instances attached to it.
-- A service group created implicitly via the publish flag on instance creation belongs to the instance.
-  The platform deletes it when you delete that instance.
-
-The `GET /services/{name}` response includes a `persistent` field (`bool`) that indicates which case applies.
-
-## Learn more
+</CodeTabs>
 
 * The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
-* Unikraft Cloud's [REST API reference](/api/platform/v1), in particular the section on [service groups](/api/platform/v1/service-groups).
+* Unikraft Cloud's [REST API reference](/api/platform/v1), in particular the section on [service groups](/api/platform/v1/servicegroups).

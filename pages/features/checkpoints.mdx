@@ -1,0 +1,313 @@
+---
+title: Checkpoints
+navigation_icon: save
+---
+
+{/* vale off */}
+:::caution[**Limited Access**]
+Checkpointing is a new feature which is available to enterprise customers, and is coming soon to the hosted platform.
+If you would like to try it out now, please reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
+:::
+
+:::caution
+Dedicated `unikraft` CLI subcommands for checkpointing are coming soon.
+In the meantime, configure checkpointing through the [API](/api/platform/v1/instances/checkpoints), which you can invoke with `curl` or the [`unikraft api`](/cli/unikraft/api) command.
+:::
+{/* vale on */}
+
+A **checkpoint** captures the full state of an instance—its memory and volume state—at any moment, so you can later start new instances that resume from exactly that state.
+Unlike a [branch](/features/branching), which creates a single independent copy right away, a checkpoint is a reusable, named restore point that you can load as many times as you like.
+
+You can take a checkpoint of a running instance without stopping it, keep a history of successive checkpoints, and create new instances from any checkpoint later on.
+
+## How it works
+
+Checkpointing builds on the same machinery as [branching](/features/branching).
+When you create a checkpoint, Unikraft Cloud:
+
+1. Branches the source instance using copy-on-write (CoW) asynchronous snapshotting.
+   Because the snapshot is copy-on-write and taken asynchronously, the source instance only pauses for a few milliseconds before it resumes running.
+2. Converts the resulting branch into an [instance template](/platform/instances#instance-templates) and marks it as a checkpoint.
+
+This means checkpoints reuse the entire template lifecycle—storage, cloning, autokill, tags, and delete locks—but with their own dedicated endpoints.
+
+A freshly created checkpoint starts in the `starting` state while the platform is still building its snapshot.
+Once the snapshot completes and the checkpoint becomes ready, it transitions to the `checkpoint` state.
+You can only [load](#loading-a-checkpoint) a checkpoint once it reaches the `checkpoint` state.
+
+## Creating a checkpoint
+
+To create a checkpoint, send a [`POST /instances/checkpoints`](/api/platform/v1/instances) request with a `from` field that names the source instance:
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft api /v1/instances/checkpoints \
+  -d '{
+    "name": "my-checkpoint",
+    "from": {
+      "name": "my-instance"
+    }
+  }'
+```
+
+</CodeTabs>
+
+The request accepts the following fields:
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `from` | Yes | The source instance to checkpoint, referenced by `name` or `uuid`. |
+| `name` | No | The checkpoint name. If omitted, Unikraft Cloud derives it from the source instance's name and appends a random suffix. |
+| `autokill` | No | An autokill policy with a `time_ms` field that removes the checkpoint automatically when nothing loads it for the configured time. See [Autokill](#autokill). |
+| `timeout_s` | No | Wait up to this many seconds for the checkpoint to become ready. By default the call returns immediately while the checkpoint is still in the `starting` state. |
+
+The response reports the new checkpoint and its current state:
+
+```json title="response"
+{
+  "status": "success",
+  "data": {
+    "instances": [
+      {
+        "status": "success",
+        "uuid": "c8186a7d-48e4-4663-ac13-a52b9502d8c7",
+        "name": "my-checkpoint",
+        "state": "starting"
+      }
+    ]
+  },
+  "op_time_us": 1234
+}
+```
+
+Because checkpoint creation is asynchronous, the checkpoint reports `starting` until its snapshot completes.
+Either poll its [status](#checkpoint-information) until it reaches the `checkpoint` state, or pass a `timeout_s` to have the request wait for you.
+
+## Checkpoint history
+
+Every instance keeps an ordered history of its checkpoints, spanning the full lineage rather than only the checkpoints taken directly from that instance.
+When you create an instance from a checkpoint and then take further checkpoints from that instance, its history includes the new checkpoints and the ones inherited from the parent checkpoint.
+
+For example, given this sequence:
+
+1. Create `inst1`.
+2. Create `chk1` from `inst1`.
+3. Create `inst2` from `chk1`.
+4. Create `chk2` from `inst2`.
+
+The history of `inst2` lists both `chk2` (taken directly from `inst2`) and `chk1` (inherited from the checkpoint `inst2` was loaded from).
+
+To query this history, call the instance history endpoint:
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft api "/v1/instances/history?name=my-instance"
+```
+
+</CodeTabs>
+
+```json title="response"
+{
+  "status": "success",
+  "data": {
+    "instances": [
+      {
+        "status": "success",
+        "uuid": "c014c3ff-79e9-4cc0-b074-4c9b40822163",
+        "name": "my-instance",
+        "history": [
+          {
+            "uuid": "1ea900f7-b6a7-4162-b848-f4fa0309fb96",
+            "name": "my-other-checkpoint",
+            "created_at": "2026-06-19T11:40:05Z"
+          },
+          {
+            "uuid": "c8186a7d-48e4-4663-ac13-a52b9502d8c7",
+            "name": "my-checkpoint",
+            "created_at": "2026-06-19T11:38:22Z"
+          }
+        ]
+      }
+    ]
+  },
+  "op_time_us": 113
+}
+```
+
+The checkpoints themselves also carry this history of their lineage.
+You can query it directly through the checkpoint history endpoint, which returns the same shape:
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft api "/v1/instances/checkpoints/history?name=my-checkpoint"
+```
+
+</CodeTabs>
+
+## Checkpoint information
+
+To retrieve detailed information about a checkpoint, including its instance configuration, and volumes, query it by name or UUID:
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft api "/v1/instances/checkpoints?name=my-checkpoint"
+```
+
+</CodeTabs>
+
+As with all status-like endpoints, you can list all available checkpoints by omitting the identifier:
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft api /v1/instances/checkpoints
+```
+
+</CodeTabs>
+
+## Loading a checkpoint
+
+You load a checkpoint by creating a new instance from it.
+Send a [`POST /instances`](/api/platform/v1/instances#create-instance) request with a `checkpoint` field that names the checkpoint:
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft api /v1/instances \
+  -d '{
+    "name": "my-new-instance",
+    "checkpoint": {
+      "name": "my-checkpoint"
+    }
+  }'
+```
+
+</CodeTabs>
+
+The new instance inherits the image, vCPUs, memory, arguments, environment, and saved memory and volume state from the checkpoint.
+As with [branching](/features/branching) and [instance templates](/platform/instances#instance-templates), you can configure the remaining properties—the instance `name`, [volumes](/platform/volumes), [ROMs](/features/roms), and [services](/platform/services).
+
+The checkpoint must be ready (in the `checkpoint` state) before you can load it.
+Loading a checkpoint that's still in the `starting` state fails (see [Error handling](#error-handling)).
+
+## Autokill
+
+Like instance templates, checkpoints persist on the machine once created, holding onto the storage their snapshot occupies.
+A checkpoint can carry an [autokill](/features/autokill) policy that removes it automatically when nothing loads it for a configured time, measured from the last load.
+
+Set the autokill policy (with the time in milliseconds) when you create the checkpoint:
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft api /v1/instances/checkpoints \
+  -d '{
+    "name": "my-checkpoint",
+    "from": {
+      "name": "my-instance"
+    },
+    "autokill": {
+      "time_ms": 3600000
+    }
+  }'
+```
+
+</CodeTabs>
+
+You can also set or update the policy later with a [patch](#patching):
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft api /v1/instances/checkpoints -X PATCH \
+  -d '[{
+    "name": "my-checkpoint",
+    "prop": "autokill",
+    "op": "set",
+    "value": {
+      "time_ms": 3600000
+    }
+  }]'
+```
+
+</CodeTabs>
+
+This example removes the checkpoint after 1 hour without a load.
+The configured policy appears as a `checkpoint_autokill` object in the checkpoint's [status](#checkpoint-information).
+
+## Patching
+
+Use the patch endpoint to update a checkpoint's tags, delete lock, and autokill policy.
+The request body is an array of patch operations, each naming the target checkpoint and the property to change:
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft api /v1/instances/checkpoints -X PATCH \
+  -d '[{
+    "name": "my-checkpoint",
+    "prop": "tags",
+    "op": "add",
+    "value": [
+      "my-new-tag"
+    ]
+  }]'
+```
+
+</CodeTabs>
+
+The endpoint supports the following properties:
+
+| Property | Operations | Value |
+|----------|------------|-------|
+| `tags` | `add`, `del`, `set` | An array of tag strings. |
+| `delete_lock` | `set` | A boolean enabling or disabling [deletion protection](/platform/delete-locks). |
+| `autokill` | `set` | An object with a `time_ms` field (see [Autokill](#autokill)). |
+
+## Deleting a checkpoint
+
+Delete a checkpoint by name or UUID:
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft api "/v1/instances/checkpoints?name=my-checkpoint" -X DELETE
+```
+
+</CodeTabs>
+
+:::note
+If a checkpoint has a [delete lock](/platform/delete-locks) set, the delete request fails until you remove the lock with a [patch](#patching).
+:::
+
+Deleting the instance that owns a set of checkpoints doesn't remove the checkpoints.
+They remain available to load until you delete them explicitly or their [autokill](#autokill) policy removes them.
+
+## Error handling
+
+| Error message | Cause |
+|---------------|-------|
+| `Insufficient license. Please make sure your license is valid and includes checkpointing` | Your account's license doesn't include the checkpointing feature. |
+| `A checkpoint with the name '<name>' already exists` | A checkpoint with the requested name already exists. Choose a different name. |
+| `Failed to create instance from checkpoint: ...` | The referenced checkpoint isn't ready yet. Wait until it reaches the `checkpoint` state before loading it. |
+| `Deletion protection enabled` | The checkpoint has a [delete lock](/platform/delete-locks) set. Remove the lock before deleting. |
+| `Failed to allocate checkpoint: ...` | The platform couldn't create the checkpoint (for example, it hit a quota limit). |
+
+## Limitations
+
+- Checkpointing builds on [branching](/features/branching), so it only works with block-based volumes (for example, `ext4`).
+  The checkpoint clones the source's volume state consistently with its memory snapshot, which isn't supported for other volume types.
+- Checkpointing requires a license that includes the feature (see the note at the top of this page).
+
+## Learn more
+
+* [Branching](/features/branching): create a single independent copy of a running instance—the mechanism checkpoints build on.
+* [Instance templates](/platform/instances#instance-templates): how templates work, the lifecycle checkpoints reuse.
+* [Autokill](/features/autokill): automatically removing checkpoints and templates the platform hasn't loaded recently.
+* [Snapshots](/features/snapshots): the copy-on-write snapshotting that underpins checkpoints.
+* [Serverless databases](/use-cases/serverless-databases): a use case that checkpoints a running PostgreSQL instance to capture and restore its state.
+* Unikraft Cloud's [REST API reference](/api/platform/v1), in particular the section on [instances](/api/platform/v1/instances).

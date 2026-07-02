@@ -23,10 +23,10 @@ To run this example, follow these steps:
 
 2. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/vsftpd` directory:
 
-```bash
-git clone https://github.com/unikraft-cloud/examples
-cd examples/vsftpd/
-```
+   ```bash
+   git clone https://github.com/unikraft-cloud/examples
+   cd examples/vsftpd/
+   ```
 
 Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪):
@@ -70,40 +70,40 @@ The output shows the instance address and other details:
 <CodeTabs syncKey="cli">
 
 ```ansi title="unikraft"
-metro:        fra
-name:         vsftpd
-uuid:         186a46a0-7c89-4bfd-83a8-649bcc60a96e
-state:        [92mstarting[0m
-image:        <my-org>/vsftpd
-resources:
-  memory:     1024MiB
-  vcpus:      1
-service:
-  uuid:       4814b43a-c1d3-48f0-ef3e-9dba8bcaba25
-  name:       broken-orangutan-jypu2z53
-  domains:
-  - fqdn:     broken-orangutan-jypu2z53.fra.unikraft.app
-networks:
-- uuid:       6adc6c29-5c9b-e472-70ff-fc3f3816d5a2
-  private-ip: 10.0.0.109
-  mac:        12:b0:17:ff:e4:c7
-timestamps:
-  created:    just now
+[1mmetro[22m:        fra
+[1mname[22m:         vsftpd
+[1muuid[22m:         186a46a0-7c89-4bfd-83a8-649bcc60a96e
+[1mstate[22m:        [38;2;144;161;185mstarting[0m
+[1mimage[22m:        <my-org>/vsftpd
+[1mresources[22m:
+[3m  memory[23m:     1024MiB
+[3m  vcpus[23m:      1
+[1mservice[22m:
+[3m  uuid[23m:       4814b43a-c1d3-48f0-ef3e-9dba8bcaba25
+[3m  name[23m:       broken-orangutan-jypu2z53
+[3m  domains[23m:
+[3m  - fqdn[23m:     broken-orangutan-jypu2z53.fra.unikraft.app
+[1mnetworks[22m:
+[3m- uuid[23m:       6adc6c29-5c9b-e472-70ff-fc3f3816d5a2
+[3m  private-ip[23m: 10.0.0.109
+[3m  mac[23m:        12:b0:17:ff:e4:c7
+[1mtimestamps[22m:
+[3m  created[23m:    just now
 ```
 
 ```ansi title="kraft"
-[90m[[0m[92m●[0m[90m][0m Deployed successfully!
- [90m│[0m
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mname[0m: vsftpd
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90muuid[0m: 186a46a0-7c89-4bfd-83a8-649bcc60a96e
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mmetro[0m: https://api.fra.unikraft.cloud/v1
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mstate[0m: [92mstarting[0m
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mdomain[0m: https://broken-orangutan-jypu2z53.fra.unikraft.app
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mimage[0m: oci://unikraft.io/<my-org>/vsftpd@sha256:31aad1619c31f499b11f1bef8fead6e6df76f235a57add011e5e414a3f51ee64
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mmemory[0m: 1024 MiB
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mservice[0m: broken-orangutan-jypu2z53
- [90m├[0m[90m─[0m [90mprivate fqdn[0m: vsftpd.internal
- [90m└[0m[90m─[0m[90m─[0m[90m─[0m [90mprivate ip[0m: 10.0.0.109
+[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
+ [38;5;245m│[0m
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mname[0m: vsftpd
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245muuid[0m: 186a46a0-7c89-4bfd-83a8-649bcc60a96e
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mstate[0m: [92mstarting[0m
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mdomain[0m: https://broken-orangutan-jypu2z53.fra.unikraft.app
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/vsftpd@sha256:31aad1619c31f499b11f1bef8fead6e6df76f235a57add011e5e414a3f51ee64
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmemory[0m: 1024 MiB
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mservice[0m: broken-orangutan-jypu2z53
+ [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: vsftpd.internal
+ [38;5;245m└[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mprivate ip[0m: 10.0.0.109
 ```
 
 </CodeTabs>
@@ -137,16 +137,18 @@ kraft cloud volume list
 
 </CodeTabs>
 
+<div style={{ marginTop: '0.8em' }} />
+
 <CodeTabs syncKey="cli">
 
 ```ansi title="unikraft"
-[1mMETRO[0m  [1mNAME[0m              [1mSTATE[0m    [1mSIZE[0m    [1mCREATED[0m
-fra    vsftpd-workspace  [92mmounted[0m  1.0GiB  9 minutes ago
+[1mMETRO[22m  [1mNAME[22m              [1mSTATE[22m    [1mSIZE[22m    [1mCREATED[22m
+fra    vsftpd-workspace  [38;2;0;188;125mmounted[0m  1.0GiB  9 minutes ago
 ```
 
 ```ansi title="kraft"
-[1mNAME[0m              [1mCREATED AT[0m     [1mSIZE[0m     [1mATTACHED TO[0m  [1mMOUNTED BY[0m  [1mSTATE[0m    [1mPERSISTENT[0m
-vsftpd-workspace  9 minutes ago  1.0 GiB  vsftpd       vsftpd      [92mmounted[0m  true
+[0;1;39mNAME[0m              [0;1;39mCREATED AT[0m     [0;1;39mSIZE[0m     [0;1;39mATTACHED TO[0m  [0;1;39mMOUNTED BY[0m  [0;1;39mSTATE[0m    [0;1;39mPERSISTENT[0m
+vsftpd-workspace  9 minutes ago  1.0 GiB  vsftpd       vsftpd      mounted  true
 ```
 
 </CodeTabs>
@@ -165,16 +167,18 @@ kraft cloud instance list
 
 </CodeTabs>
 
+<div style={{ marginTop: '0.8em' }} />
+
 <CodeTabs syncKey="cli">
 
 ```ansi title="unikraft"
-[1mMETRO[0m  [1mNAME[0m    [1mSTATE[0m    [1mIMAGE[0m            [1mARGS[0m  [1mMEMORY[0m  [1mVCPUS[0m  [1mFQDN[0m                                    [1mCREATED[0m
-fra    vsftpd  [94mstandby[0m  <my-org>/vsftpd        1.0GiB  1      broken-orangutan-jypu2z53.fra.unikraf…  2 minutes ago
+[1mMETRO[22m  [1mNAME[22m    [1mSTATE[22m    [1mIMAGE[22m            [1mARGS[22m  [1mMEMORY[22m  [1mVCPUS[22m  [1mFQDN[22m                                    [1mCREATED[22m
+fra    vsftpd  [38;2;43;127;255mstandby[0m  <my-org>/vsftpd        1.0GiB  1      broken-orangutan-jypu2z53.fra.unikraf…  2 minutes ago
 ```
 
 ```ansi title="kraft"
-[1mNAME[0m    [1mFQDN[0m                                        [1mSTATE[0m    [1mSTATUS[0m   [1mIMAGE[0m                                         [1mMEMORY[0m   [1mVCPUS[0m  [1mARGS[0m  [1mBOOT TIME[0m
-vsftpd  broken-orangutan-jypu2z53.fra.unikraft.app  [94mstandby[0m  standby  oci://unikraft.io/<my-org>/vsftpd@sha256:...  1.0 GiB  1            7.19 ms
+[0;1;39mNAME[0m    [0;1;39mFQDN[0m                                        [0;1;39mSTATE[0m    [0;1;39mSTATUS[0m   [0;1;39mIMAGE[0m                                         [0;1;39mMEMORY[0m   [0;1;39mVCPUS[0m  [0;1;39mARGS[0m  [0;1;39mBOOT TIME[0m
+vsftpd  broken-orangutan-jypu2z53.fra.unikraft.app  [0;36mstandby[0m  standby  oci://unikraft.io/<my-org>/vsftpd@sha256:...  1.0 GiB  1            7.19 ms
 ```
 
 </CodeTabs>

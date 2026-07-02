@@ -50,15 +50,22 @@ option to run them headless (no UI).
 
 To run it, follow these steps:
 
-1. Install the CLI and a container runtime engine (for example, [Docker](https://docs.docker.com/engine/install/)).
+1. Install the CLI.
    Use the [unikraft CLI](/docs/cli/unikraft) or the legacy [kraft CLI](https://unikraft.org/docs/cli/install).
+   You need a [BuildKit](https://github.com/moby/buildkit) builder. The easiest way to get one is via [Docker](https://docs.docker.com/engine/install/).
+   You can also set up and use BuildKit directly; see the [quick start](https://github.com/moby/buildkit#quick-start).
+
+   :::note
+   The unikraft CLI is the current standard, while kraft is the legacy version.
+   Choose one of the CLIs below and only run the commands associated with it for the rest of this guide.
+   :::
 
 1. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/node-express-puppeteer/` directory:
 
-```bash
-git clone https://github.com/unikraft-cloud/examples
-cd examples/node-express-puppeteer/
-```
+   ```bash
+   git clone https://github.com/unikraft-cloud/examples
+   cd examples/node-express-puppeteer/
+   ```
 
 Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪):
@@ -78,13 +85,9 @@ export UKC_METRO=fra
 
 </CodeTabs>
 
-The `UKC_TOKEN` and `UKC_METRO` environment variables are only supported by the legacy CLI.
-
-:::note
-
+:::caution
 A Puppeteer instance on Unikraft Cloud requires 4GB to run.
-Request an increase in the instance memory quota when you need more memory.
-
+Request an increase in the instance memory quota if you need more memory.
 :::
 
 When done, invoke the following command to deploy this app on Unikraft Cloud:
@@ -92,80 +95,127 @@ When done, invoke the following command to deploy this app on Unikraft Cloud:
 <CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
-unikraft build . --output <my-org>/node-express-puppeteer:latest
-unikraft run --metro=fra -p 443:3000/http+tls -m 4Gi --image=<my-org>/node-express-puppeteer:latest
+unikraft build . --output <my-org>/httpserver-node-express-puppeteer:latest
+unikraft run --metro fra \
+  -p 443:3000/tls+http \
+  -m 4G \
+  --scale-to-zero policy=idle,cooldown-time=1000,stateful=true \
+  --image <my-org>/httpserver-node-express-puppeteer:latest
 ```
 
 ```bash title="kraft"
-kraft cloud deploy -p 443:3000 -M 4Gi .
+kraft cloud deploy \
+  -M 4Gi \
+  -p 443:3000/tls+http \
+  --scale-to-zero idle \
+  --scale-to-zero-cooldown 1s \
+  --scale-to-zero-stateful \
+  .
 ```
 
 </CodeTabs>
 
 The output shows the instance address and other details:
 
-```ansi
-[90m[[0m[92m●[0m[90m][0m Deployed successfully!
- [90m│[0m
- [90m├[0m[90m──────────[0m [90mname[0m: node-express-puppeteer-7afg3
- [90m├[0m[90m──────────[0m [90muuid[0m: 7bb479d7-5b3e-444f-b07c-eae4da6f57cc
- [90m├[0m[90m─────────[0m [90mstate[0m: [92mstarting[0m
- [90m├[0m[90m────────[0m [90mdomain[0m: https://nameless-fog-0tvh1uov.fra.unikraft.app
- [90m├[0m[90m─────────[0m [90mimage[0m: node-express-puppeteer@sha256:78d0b180161c876f17d05116b93011ddcd44c76758d6fa0359f05938e67cea65
- [90m├[0m[90m────────[0m [90mmemory[0m: 4096 MiB
- [90m├[0m[90m───────[0m [90mservice[0m: little-snow-7qwu6vv5
- [90m├[0m[90m──[0m [90mprivate fqdn[0m: node-express-puppeteer-7afg3.internal
- [90m├[0m[90m────[0m [90mprivate ip[0m: 172.16.3.1
- [90m└[0m[90m──────────[0m [90margs[0m: /usr/bin/wrapper.sh /usr/bin/node /app/bin/www
+<CodeTabs syncKey="cli">
+
+```ansi title="unikraft"
+[1mmetro[22m:        fra
+[1mname[22m:         httpserver-node-express-puppeteer-7afg3
+[1muuid[22m:         7bb479d7-5b3e-444f-b07c-eae4da6f57cc
+[1mstate[22m:        [38;2;144;161;185mstarting[0m
+[1mimage[22m:        <my-org>/httpserver-node-express-puppeteer
+[1mresources[22m:
+[3m  memory[23m:     4096MiB
+[3m  vcpus[23m:      1
+[1mservice[22m:
+[3m  uuid[23m:       996b9cc1-5a51-e707-d443-5c98ea86ded8
+[3m  name[23m:       little-snow-7qwu6vv5
+[3m  domains[23m:
+[3m  - fqdn[23m:     little-snow-7qwu6vv5.fra.unikraft.app
+[1mnetworks[22m:
+[3m- uuid[23m:       034fa25e-9154-7842-ccdd-289256cc7a17
+[3m  private-ip[23m: 10.0.3.1
+[3m  mac[23m:        12:b0:8f:3c:f5:16
+[1mtimestamps[22m:
+[3m  created[23m:    just now
 ```
 
-In this case, the instance name is `node-express-puppeteer-7afg3`.
+```ansi title="kraft"
+[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
+ [38;5;245m│[0m
+ [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245mname[0m: httpserver-node-express-puppeteer-7afg3
+ [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245muuid[0m: 7bb479d7-5b3e-444f-b07c-eae4da6f57cc
+ [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
+ [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mstate[0m: [92mstarting[0m
+ [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mdomain[0m: https://nameless-fog-0tvh1uov.fra.unikraft.app
+ [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/httpserver-node-express-puppeteer@sha256:78d0b180161c876f17d05116b93011ddcd44c76758d6fa0359f05938e67cea65
+ [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mmemory[0m: 4096 MiB
+ [38;5;245m├[0m[38;5;245m──────[0m [38;5;245mservice[0m: little-snow-7qwu6vv5
+ [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: httpserver-node-express-puppeteer-7afg3.internal
+ [38;5;245m└[0m[38;5;245m───[0m [38;5;245mprivate ip[0m: 10.0.3.1
+```
+
+</CodeTabs>
+
+In this case, the instance name is `httpserver-node-express-puppeteer-7afg3`.
 They're different for each run.
 
 Use a browser to access the landing page of the Puppeteer (that uses [ExpressJS](https://expressjs.com/)).
 The app and the landing page are part of [this repository](https://github.com/christopher-talke/node-express-puppeteer-pdf-example).
 
-In the example run above, the landing page is at the address `https://nameless-fog-0tvh1uov.fra.unikraft.app`.
+In the example run above the landing page is at `https://nameless-fog-0tvh1uov.fra.unikraft.app`.
 You can use the landing page to generate the PDF version of a remote page.
 
-At any time, you can list information about the instance:
+You can list information about the instance by running:
 
 <CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
-unikraft instances list node-express-puppeteer-7afg3
+unikraft instances list
 ```
 
 ```bash title="kraft"
-kraft cloud instance list node-express-puppeteer-7afg3
+kraft cloud instance list
 ```
 
 </CodeTabs>
 
-```text
-NAME                          FQDN                                           STATE    STATUS        IMAGE                              MEMORY   ARGS                               BOOT TIME
-node-express-puppeteer-7afg3  node-express-puppeteer-7afg3.fra.unikraft.app  running  since 6mins   node-express-puppeteer-7afg3@s...  4.0 GiB  /usr/bin/wrapper.sh /usr/bin/n...  15.27 ms
+<div style={{ marginTop: '0.8em' }} />
+
+<CodeTabs syncKey="cli">
+
+```ansi title="unikraft"
+[1mMETRO[0m  [1mNAME[0m                                     [1mSTATE[0m    [1mIMAGE[0m                                       [1mARGS[0m  [1mMEMORY[0m   [1mVCPUS[0m  [1mFQDN[0m                                    [1mCREATED[0m
+fra    httpserver-node-express-puppeteer-7afg3  [38;2;0;188;125mrunning[0m  <my-org>/httpserver-node-express-puppeteer        4096MiB  1      nameless-fog-0tvh1uov.fra.unikraft.app  2 minutes ago
 ```
+
+```ansi title="kraft"
+[1mNAME[0m                                     [1mFQDN[0m                                    [1mSTATE[0m    [1mSTATUS[0m       [1mIMAGE[0m                                                              [1mMEMORY[0m   [1mVCPUS[0m  [1mARGS[0m  [1mBOOT TIME[0m
+httpserver-node-express-puppeteer-7afg3  nameless-fog-0tvh1uov.fra.unikraft.app  [0;32mrunning[0m  since 6mins  oci://unikraft.io/<my-org>/httpserver-node-express-puppeteer@s...  4.0 GiB  1            15.27 ms
+```
+
+</CodeTabs>
 
 When done, you can remove the instance:
 
 <CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
-unikraft instances delete node-express-puppeteer-7afg3
+unikraft instances delete httpserver-node-express-puppeteer-7afg3
 ```
 
 ```bash title="kraft"
-kraft cloud instance remove node-express-puppeteer-7afg3
+kraft cloud instance remove httpserver-node-express-puppeteer-7afg3
 ```
 
 </CodeTabs>
 
-### Customize your deployment
+## Customize your deployment
 
 The current deployment uses an ExpressJS service that uses the [PDF generating functionality of Puppeteer](https://devdocs.io/puppeteer/).
 Customizing the deployment means updating the service, such as adding new functionalities provided by Puppeteer.
-You can update the service itself to provide a Representational State Transfer (REST)-like interface.
+You can update the service to provide a REST-like interface.
 
 ## Learn more
 

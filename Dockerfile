@@ -37,6 +37,7 @@ RUN set -xe; \
     apk --no-cache add \
         ca-certificates \
         git \
+        python3 \
         wget \
     ;
 
@@ -66,6 +67,8 @@ COPY --from=build-kraft-docs /kraftkit/docs/kraft/cloud.mdx /docs/pages/cli/kraf
 # Unikraft (new CLI) docs -> /cli/unikraft/
 COPY --from=build-cli-docs /cli/dist/docs/mdx/unikraft/ /docs/pages/cli/unikraft/
 COPY --from=build-cli-docs /cli/dist/docs/mdx/unikraft.mdx /docs/pages/cli/unikraft.mdx
+
+RUN python3 scripts/update_zudoku_cli.py pages/cli/unikraft zudoku.config.tsx
 
 RUN pnpm run build
 

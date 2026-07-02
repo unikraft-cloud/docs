@@ -63,7 +63,7 @@ Follow this [guide](/platform/services) for instructions.
 
 #### With an access token and an app, what should you do?
 
-You'll need a Dockerfile and Kraftfile.
+You'll need a `Dockerfile` and `Kraftfile`.
 See any of the apps/langs guides [here](/guides/bun) to see examples.
 
 
@@ -74,6 +74,33 @@ See any of the apps/langs guides [here](/guides/bun) to see examples.
 `kraft` is Unikraft Cloud's legacy [open source CLI tool written in Go](https://github.com/unikraft/kraftkit).
 You can control Unikraft Cloud with it as well as build unikernels and try things out locally.
 If you want to interact with the latest features of Unikraft Cloud, you should use the new [open source `unikraft` CLI tool](https://github.com/unikraft/cli), written in Go as well.
+
+{/* vale off */}
+#### What is `Kraftfile`?
+{/* vale on */}
+
+A `Kraftfile` is used by the CLI toolchain to understand how to build and deploy your instance.
+Typically you can use the default `Kraftfile` found in each [Unikraft Cloud example](https://github.com/unikraft-cloud/examples).
+Below is a sample `Kraftfile` with a brief explanation:
+
+```yaml title="Kraftfile"
+spec: v0.7
+
+runtime: python:3.12
+
+rootfs:
+  source: ./Dockerfile
+  format: erofs
+
+cmd: ["/usr/bin/python3", "/src/server.py"]
+```
+
+The `runtime` specifies one of the Unikraft Cloud runtimes (microVMs) built to run different languages and apps.
+Here it specifies a Python runtime.
+
+The `rootfs` parameter tells the CLI to use a `Dockerfile` in the same directory to build the root filesystem as an [EROFS image](/tutorials/rootfs-formats).
+
+The `cmd` parameter tells the platform which command to run when deployed.
 
 
 #### How's millisecond scale-to-zero achieved?
@@ -181,13 +208,14 @@ When you're ready to deploy to cloud, use the [`unikraft`](https://github.com/un
 
 #### Does Unikraft Cloud work on Mac/Windows/Linux?
 
-Yes, the CLI can run on Mac, Windows or Linux.
+The CLI can run on Mac and Linux out of the box.
+Windows isn't officially supported, but you can use [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) to run the CLI on Windows.
 
 
 #### How can you track instances on Unikraft Cloud?
 
-Unikraft provides full log support for all users.
-Paying customers get access to Prometheus metrics.
+Unikraft provides full `stdout` and `stderr` log support for all users.
+Paying customers also get access to Prometheus metrics.
 
 
 {/* vale off */}
@@ -214,7 +242,7 @@ Other unikernel projects exist, but most are research efforts, unmaintained, or 
 
 #### Do you have a Kubernetes integration?
 
-[Yes!](/integrations/kubernetes/)
+[Yes!](/integrations/kubernetes)
 
 
 #### Do you have a Terraform integration?
@@ -229,7 +257,7 @@ Any time you encounter a problem, it's good to first try out the latest staging 
 There's also a chance that staging contains changes available only on non-stable nodes.
 
 
-#### What keywords does the CLI ignore from a Dockerfile?
+#### What keywords does the CLI ignore from a `Dockerfile`?
 
 This is the current list of ignored keywords: `EXPOSE`, `HEALTHCHECK`, `ONBUILD`, `SHELL`, `STOPSIGNAL`, `VOLUME`.
 The `USER` keyword is relevant for running subsequent `RUN` instructions in the Dockerfile, but not for the `ENTRYPOINT` and `CMD` commands.
@@ -238,10 +266,10 @@ At runtime, Unikraft Cloud instances run as `root` user, unless explicitly switc
 
 #### How does the image size and memory relate to boot times?
 
-When using `CPIO`, there is a [strong correlation](/tutorials/rootfs-formats) between the image size and the boot time.
+When using CPIO, there is a [strong correlation](/tutorials/rootfs-formats) between the image size and the boot time.
 This is because it needs to load the whole image into memory first.
 
-When using `EROFS`, there is no such correlation, as the operating system loads pages directly from disk, on demand.
+When using EROFS, there is no such correlation, as the operating system loads pages directly from disk, on demand.
 
 At the same time, there is a slight correlation between big memory allocations and higher boot times, though not significant.
 This is irrespective of the file system used.
@@ -251,19 +279,19 @@ This is irrespective of the file system used.
 
 End-result wise, cold and warm boots are no different, the instance still works.
 The server handles the request in both cases if the app is stateless.
-The main difference appears in [stateful](/features/snapshots) apps and when considering latency, hence the `--scale-to-zero-stateful` flag.
+The main difference appears in [stateful](/features/snapshots) apps and when considering latency.
 
 A cold boot equates to starting the instance every time and then stopping it if no traffic hit it for a while.
 
 A warm boot resembles the suspend and resume operations in virtual machines.
 The platform saves the system memory to disk and loads it when a request comes.
 
-Warm boots offer clear advantages over cold boots, having lower boot times, no setup time, and are better in general, with the trade off of using space on the disk.
+Warm boots offer clear advantages over cold boots, having lower boot times, no setup time, and are better in general, with the trade-off of using space on the disk.
 Thus, for most use cases, using [stateful scale-to-zero](/features/scale-to-zero#stateful-scale-to-zero) is the better alternative.
 
 Cases exist where short lived VMs are small enough to have a small boot time, but they use a lot of memory.
-In this case it might be better to use cold boots, to use disk efficiently.
-This should be first experimented or discussed with a Unikraft Engineer to verify it.
+In this case, it might be better to use cold boots to use disk efficiently.
+You should first experiment with this or discuss it with a Unikraft Engineer to verify it.
 
 
 #### What can you push as an image?
@@ -272,7 +300,7 @@ An image is specifically a pair of a kernel and a rootfs bundled together as dif
 To keep things light, certain optimizations are in place to not repush existing kernels and to reuse them from your account.
 If these aren't automatically detected, the CLI pushes the kernel again.
 
-At the same time, things like ROMs use the same packaging systems, but push images with a missing kernel and only a rootfs.
+At the same time, things like [ROMs](/features/roms) use the same packaging systems, but push images with a missing kernel and only a rootfs.
 These have specific metadata that identifies them as ROMs.
 
 Finally, kernels can also run without a rootfs.
@@ -296,13 +324,13 @@ Other small differences exist, which you should report to the Unikraft Team for 
 
 #### How does the [rootfs format](/tutorials/rootfs-formats) and size equate to the memory used?
 
-When using the `CPIO` file system, the memory allocated to the instance needs to be at least twice as big as the image size.
-This is because the system must load and unpack the `CPIO` rootfs format in memory before using it.
+When using the CPIO file system, the memory allocated to the instance needs to be at least twice as big as the image size.
+This is because the system must load and unpack the CPIO rootfs format in memory before using it.
 This is a bare minimum and to this you need to add also the memory your app needs to run.
 
-When using `EROFS`, there is no direct correlation between the image size and the memory needed.
+When using EROFS, there is no direct correlation between the image size and the memory needed.
 Ideally, the memory should be at least the image size to make sure the system can load all files in memory before using.
 The system loads files on demand and maps them directly from disk, ensuring lower memory usage and overhead.
 If you have files that you know are never used, it's better to remove them from the image to slim it down.
-Thus, in theory, `EROFS` uses only the allocated pages, but it's also highly dependent on the workload.
+Thus, in theory, EROFS uses only the allocated pages, but it's also highly dependent on the workload.
 An instance with a 3GB image might use 128MB of RAM at one point, whilst an instance with a 300MB image might use 1GB of RAM at some point.

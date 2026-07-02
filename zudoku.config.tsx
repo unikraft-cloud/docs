@@ -3,9 +3,17 @@ import type { ZudokuConfig } from "zudoku";
 const config: ZudokuConfig = {
   metadata: {
     title: "%s | Unikraft Cloud Docs",
+    description:
+      "Unikraft Cloud documentation: guides, platform reference, CLI, and API docs for the millisecond, Linux-based microVM cloud platform.",
     favicon: "/docs/favicon.ico",
   },
   basePath: "/docs",
+  // Emit <link rel="canonical"> on every docs page (origin + basePath + route),
+  // and generate a sitemap so docs pages are discoverable/indexable by agents.
+  canonicalUrlOrigin: "https://unikraft.com",
+  sitemap: {
+    siteUrl: "https://unikraft.com",
+  },
   site: {
     logo: {
       src: { light: "/logo-light.svg", dark: "/logo-dark.svg" },
@@ -76,8 +84,36 @@ const config: ZudokuConfig = {
             "/features/autoscale",
             "/features/roms",
             "/features/autokill",
+            "/features/on-demand-templates",
             "/features/cron-jobs",
             "/features/forking",
+            "/features/branching",
+            "/features/managed-volumes",
+            "/features/checkpoints",
+            "/features/plugins",
+            "/features/custom-network-configuration",
+            "/features/annotations",
+          ],
+        },
+        {
+          type: "category",
+          label: "Cloud Platform",
+          icon: "cloud",
+          collapsed: false,
+          items: [
+            "/platform/metros",
+            "/platform/instances",
+            "/platform/services",
+            "/platform/networking",
+            "/platform/domains",
+            "/platform/certificates",
+            "/platform/volumes",
+            "/platform/images",
+            "/platform/quotas",
+            "/platform/metrics",
+            "/platform/tagging",
+            "/platform/delete-locks",
+            "/platform/troubleshooting",
           ],
         },
         {
@@ -97,26 +133,6 @@ const config: ZudokuConfig = {
             "/use-cases/remote-ides",
             "/use-cases/game-servers",
             "/use-cases/remote-desktops",
-          ],
-        },
-        {
-          type: "category",
-          label: "Cloud Platform",
-          icon: "cloud",
-          collapsed: false,
-          items: [
-            "/platform/metros",
-            "/platform/instances",
-            "/platform/services",
-            "/platform/domains",
-            "/platform/certificates",
-            "/platform/volumes",
-            "/platform/images",
-            "/platform/quotas",
-            "/platform/metrics",
-            "/platform/tagging",
-            "/platform/delete-locks",
-            "/platform/troubleshooting",
           ],
         },
         {
@@ -171,6 +187,8 @@ const config: ZudokuConfig = {
         "/guides/memcached1.6", // Memcached
         "/guides/minio", // Minio
         "/guides/mongodb", // MongoDB
+        "/guides/mysql", // MySQL
+        "/guides/neo4j", // Neo4j
         "/guides/httpserver-node21-nextjs", // Next.js HTTP Server
         "/guides/nginx", // Nginx
         "/guides/node24-karaoke", // Node AllKaraoke
@@ -231,8 +249,6 @@ const config: ZudokuConfig = {
         "/tutorials/rootfs-compression",
         "/tutorials/rootfs-volumes-roms",
         "/tutorials/scale-to-zero-triggers",
-        "/tutorials/instance-metrics",
-        "/tutorials/network-communication"
       ]
     },
     {
@@ -248,7 +264,7 @@ const config: ZudokuConfig = {
           collapsed: false,
           items: [
             "/cli/registries",
-            "/cli/filters",
+            "/cli/fields",
           ],
         },
         {
@@ -257,15 +273,32 @@ const config: ZudokuConfig = {
           icon: "terminal",
           collapsed: false,
           items: [
+            // AUTO-GENERATED:UNIKRAFT-CLI-START
             "/cli/unikraft",
+            "/cli/unikraft/api",
+            "/cli/unikraft/build",
+            "/cli/unikraft/completion",
             "/cli/unikraft/login",
             "/cli/unikraft/logout",
-            "/cli/unikraft/completion",
+            "/cli/unikraft/quotas",
             "/cli/unikraft/run",
-            "/cli/unikraft/build",
             "/cli/unikraft/tui",
             "/cli/unikraft/upgrade",
             "/cli/unikraft/version",
+            {
+              type: "category",
+              label: "unikraft certificates",
+              icon: "shield-check",
+              collapsed: false,
+              items: [
+                "/cli/unikraft/certificates",
+                "/cli/unikraft/certificates/create",
+                "/cli/unikraft/certificates/delete",
+                "/cli/unikraft/certificates/get",
+                "/cli/unikraft/certificates/list",
+                "/cli/unikraft/certificates/wait",
+              ],
+            },
             {
               type: "category",
               label: "unikraft config",
@@ -278,25 +311,16 @@ const config: ZudokuConfig = {
             },
             {
               type: "category",
-              label: "unikraft profile",
-              icon: "user-circle",
+              label: "unikraft images",
+              icon: "package",
               collapsed: false,
               items: [
-                "/cli/unikraft/profile",
-                "/cli/unikraft/profile/get",
-                "/cli/unikraft/profile/list",
-                "/cli/unikraft/profile/use",
-              ],
-            },
-            {
-              type: "category",
-              label: "unikraft metros",
-              icon: "earth",
-              collapsed: false,
-              items: [
-                "/cli/unikraft/metros",
-                "/cli/unikraft/metros/get",
-                "/cli/unikraft/metros/list",
+                "/cli/unikraft/images",
+                "/cli/unikraft/images/build",
+                "/cli/unikraft/images/copy",
+                "/cli/unikraft/images/delete",
+                "/cli/unikraft/images/get",
+                "/cli/unikraft/images/list",
               ],
             },
             {
@@ -315,23 +339,45 @@ const config: ZudokuConfig = {
                 "/cli/unikraft/instances/restart",
                 "/cli/unikraft/instances/start",
                 "/cli/unikraft/instances/stop",
+                "/cli/unikraft/instances/suspend",
                 "/cli/unikraft/instances/wait",
+                {
+                  type: "category",
+                  label: "unikraft instances template",
+                  icon: "terminal",
+                  collapsed: false,
+                  items: [
+                    "/cli/unikraft/instances/template",
+                    "/cli/unikraft/instances/template/create",
+                    "/cli/unikraft/instances/template/delete",
+                    "/cli/unikraft/instances/template/edit",
+                    "/cli/unikraft/instances/template/get",
+                    "/cli/unikraft/instances/template/list",
+                  ],
+                },
               ],
             },
             {
               type: "category",
-              label: "unikraft volumes",
-              icon: "cylinder",
+              label: "unikraft metros",
+              icon: "earth",
               collapsed: false,
               items: [
-                "/cli/unikraft/volumes",
-                "/cli/unikraft/volumes/clone",
-                "/cli/unikraft/volumes/create",
-                "/cli/unikraft/volumes/delete",
-                "/cli/unikraft/volumes/edit",
-                "/cli/unikraft/volumes/get",
-                "/cli/unikraft/volumes/list",
-                "/cli/unikraft/volumes/wait",
+                "/cli/unikraft/metros",
+                "/cli/unikraft/metros/get",
+                "/cli/unikraft/metros/list",
+              ],
+            },
+            {
+              type: "category",
+              label: "unikraft profile",
+              icon: "user-circle",
+              collapsed: false,
+              items: [
+                "/cli/unikraft/profile",
+                "/cli/unikraft/profile/get",
+                "/cli/unikraft/profile/list",
+                "/cli/unikraft/profile/use",
               ],
             },
             {
@@ -351,30 +397,38 @@ const config: ZudokuConfig = {
             },
             {
               type: "category",
-              label: "unikraft certificates",
-              icon: "shield-check",
+              label: "unikraft volumes",
+              icon: "cylinder",
               collapsed: false,
               items: [
-                "/cli/unikraft/certificates",
-                "/cli/unikraft/certificates/create",
-                "/cli/unikraft/certificates/delete",
-                "/cli/unikraft/certificates/get",
-                "/cli/unikraft/certificates/list",
-                "/cli/unikraft/certificates/wait",
+                "/cli/unikraft/volumes",
+                "/cli/unikraft/volumes/attach",
+                "/cli/unikraft/volumes/clone",
+                "/cli/unikraft/volumes/create",
+                "/cli/unikraft/volumes/delete",
+                "/cli/unikraft/volumes/detach",
+                "/cli/unikraft/volumes/edit",
+                "/cli/unikraft/volumes/get",
+                "/cli/unikraft/volumes/import",
+                "/cli/unikraft/volumes/list",
+                "/cli/unikraft/volumes/wait",
+                {
+                  type: "category",
+                  label: "unikraft volumes template",
+                  icon: "terminal",
+                  collapsed: false,
+                  items: [
+                    "/cli/unikraft/volumes/template",
+                    "/cli/unikraft/volumes/template/create",
+                    "/cli/unikraft/volumes/template/delete",
+                    "/cli/unikraft/volumes/template/edit",
+                    "/cli/unikraft/volumes/template/get",
+                    "/cli/unikraft/volumes/template/list",
+                  ],
+                },
               ],
             },
-            {
-              type: "category",
-              label: "unikraft images",
-              icon: "package",
-              collapsed: false,
-              items: [
-                "/cli/unikraft/images",
-                "/cli/unikraft/images/copy",
-                "/cli/unikraft/images/get",
-                "/cli/unikraft/images/list",
-              ],
-            },
+            // AUTO-GENERATED:UNIKRAFT-CLI-END
           ]
         },
         {
@@ -458,20 +512,6 @@ const config: ZudokuConfig = {
             },
             {
               type: "category",
-              label: "kraft cloud scale",
-              icon: "arrow-up-1-0",
-              collapsed: false,
-              items: [
-                "/cli/kraft/scale",
-                "/cli/kraft/scale/add",
-                "/cli/kraft/scale/get",
-                "/cli/kraft/scale/init",
-                "/cli/kraft/scale/remove",
-                "/cli/kraft/scale/reset",
-              ],
-            },
-            {
-              type: "category",
               label: "kraft cloud service",
               icon: "split",
               collapsed: false,
@@ -526,6 +566,12 @@ const config: ZudokuConfig = {
       label: "Platform API",
       icon: "unplug",
       to: "/api/platform/v1",
+    },
+    {
+      type: "link",
+      label: "Glossary",
+      icon: "book-a",
+      to: "https://unikraft.com/glossary",
     },
   ],
   search: {

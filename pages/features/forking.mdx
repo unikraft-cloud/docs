@@ -3,16 +3,14 @@ title: Instance Forking
 navigation_icon: git-fork
 ---
 
-:::caution
+:::caution[**Limited Access**]
 Instance forking is a preview feature and isn't yet available on stable.
 The interface described here reflects the current implementation and may change before general availability.
 :::
 
 Instance forking lets a running instance create an independent copy of itself at a snapshot boundary.
 Both the original instance (the **parent**) and the copy (the **child**) resume execution from the same memory state.
-This works like `fork(2)` in a POSIX process.
-
-The app inside an instance triggers the fork through a filesystem interface.
+This works like [`fork(2)`](https://man7.org/linux/man-pages/man2/fork.2.html) in a POSIX process.
 
 ## Filesystem interface
 
@@ -48,12 +46,12 @@ This is how an app determines whether it's the parent or the child after a fork.
 
 ### Concurrent fork requests
 
-The `ukp-fuse` daemon serializes fork operations.
+The platform serializes fork operations.
 Only one fork can run at a time.
-If a second fork request arrives while one runs, the daemon queues it.
+If a second fork request arrives while one runs, the platform queues it.
 If the queue fills up, the write returns `EBUSY`.
 
-The daemon processes queued requests in order once the current fork completes.
+The platform processes queued requests in order once the current fork completes.
 
 ## Tracking child instances
 
@@ -82,7 +80,7 @@ After the write completes, reading `wait` returns the numeric exit code.
 If the child has already stopped by the time you write to `wait`, the write completes immediately.
 
 Many processes can wait on the same child concurrently.
-The daemon notifies each one when the child exits.
+The platform notifies each one when the child exits.
 
 For non-blocking usage, `poll()` on the `wait` file descriptor returns `POLLIN` when the exit status becomes available.
 
@@ -110,10 +108,10 @@ Possible states and their numeric values:
 
 ## Child lifecycle
 
-- Children have `delete-on-stop` enabled automatically.
-The platform removes them when they stop.
+- Children have [`delete-on-stop`](/platform/instances#delete-on-stop) enabled automatically.
+  The platform removes them when they stop.
 - The child's `/uk/libukp/vm/` directory starts empty.
-The child doesn't inherit any children from the parent—it only sees children from forks it starts itself.
+  The child doesn't inherit any children from the parent—it only sees children from forks it starts itself.
 - A parent can have many children alive at the same time.
 - A child can itself fork, becoming a parent to its own children.
 
@@ -125,12 +123,7 @@ The child doesn't inherit any children from the parent—it only sees children f
 | `EIO` | Hardware signal to the platform failed, or the request belonged to a parent before a fork occurred. |
 | `ESTALE` | A child VM directory access occurred after the child's cleanup (for example, after the current instance became a child via fork). |
 
-## Constraints
-
-- The REST API and `kraft` can't trigger a fork.
-You must start it from within the instance via the `/uk/libukp/fork` file.
-
 ## Learn more
 
-- [Instance templates](/platform/instances#instance-templates): a related snapshot-based feature for creating instances from a stopped template
-- [Instances](/platform/instances)
+* [Instance templates](/platform/instances#instance-templates): a related snapshot-based feature for creating instances from a stopped template.
+* Unikraft Cloud's [REST API reference](/api/platform/v1), in particular the section on [instances](/api/platform/v1/instances).

@@ -1,0 +1,444 @@
+---
+title: Fields
+description: Display, sort, filter, and edit resource fields in the unikraft CLI
+navigation_icon: table
+---
+
+Every resource in the `unikraft` CLI (instances, images, services, volumes, and more) has a set of **fields**.
+Fields are the named pieces of data the platform stores about a resource, such as its `name`, `state`, `image`, or memory `resources`.
+The same fields power table output, sorting, filtering, and editing, so once you learn a resource's field names you can use them everywhere.
+
+This page covers what fields are, how to control which fields appear, how to sort and filter on them, and how to edit them with `edit`.
+
+## The field model
+
+To see all fields in the model, run `unikraft instances list --help` or `unikraft instances get --help`.
+To view instances' values for all these fields, use `unikraft instances list -fall` or `unikraft instances get <name> -fall`.
+
+To view the default set of fields and their current values for an instance, inspect it with `get`.
+The output is a tree of fields, where some fields hold scalars and others hold nested objects or lists.
+
+```ansi
+[90m$[0m unikraft instances get httpserver-rust175-tokio
+[90mmetro:[0m           fra
+[90mname:[0m            httpserver-rust175-tokio
+[90muuid:[0m            78ad8c05-ed7a-4886-abd3-07613dce7c28
+[90mstate:[0m           [94mstandby[0m
+[90mimage:[0m           <my-org>/httpserver-rust175-tokio
+[90mresources:[0m
+  [90mmemory:[0m        256MiB
+  [90mvcpus:[0m         1
+[90mservice:[0m
+  [90mname:[0m          nameless-silence-donj1yl2
+  [90muuid:[0m          cd2910d2-b709-410c-9e04-f5539a7d020a
+  [90mdomains:[0m
+  [90m- fqdn:[0m        nameless-silence-donj1yl2.fra.unikraft.app
+[90mnetworks:[0m
+[90m- uuid:[0m          d8700d21-63c0-448a-806d-54014584b082
+  [90mprivate-ip:[0m    10.0.0.25
+  [90mmac:[0m           12:b0:0a:00:00:19
+[90mtimestamps:[0m
+  [90mcreated:[0m       1 day ago
+[90mscale-to-zero:[0m
+  [90menabled:[0m       true
+  [90mpolicy:[0m        on
+  [90mcooldown-time:[0m 1s
+[90mstop:[0m
+  [90mreason:[0m        platform stop
+  [90mexit-code:[0m     1
+```
+
+### Field paths
+
+Use dot-separated paths to address nested fields.
+A path walks down the tree, one field name per segment.
+
+```bash
+name                  # top-level field
+resources.memory      # nested field
+service.name          # nested field
+timestamps.created    # nested field
+networks.0.private-ip # array element by zero-based index
+```
+
+The `--field`, `--sort`, `--filter` flags, and the `edit` command, all use these same paths (described below).
+
+## Choosing which fields to display
+
+Listing resources prints a default set of columns.
+Use `--field` (short form `-f`) to select which fields to display.
+
+When you pass a parent field, the CLI expands it into a column for each of its child fields.
+
+```ansi
+[90m$[0m unikraft instances list --field service
+[1mNAME                      UUID                                 FQDN[0m
+falling-sky-k20dl7a7      32b81f2f-8767-4961-a55f-520e7462395b falling-sky-k20dl7a7.fra.unikraft.app
+nameless-silence-donj1yl2 cd2910d2-b709-410c-9e04-f5539a7d020a nameless-silence-donj1yl2.fra.unikraft.app
+```
+For a single instance, `get` with `--field` shows the same nested structure:
+
+```ansi
+[90m$[0m unikraft instances get httpserver-rust175-tokio --field service
+[90mservice:[0m
+  [90mname:[0m          nameless-silence-donj1yl2
+  [90muuid:[0m          cd2910d2-b709-410c-9e04-f5539a7d020a
+  [90mdomains:[0m
+  [90m- fqdn:[0m        nameless-silence-donj1yl2.fra.unikraft.app
+    [90mcertificate:[0m
+      [90mname:[0m
+      [90muuid:[0m
+```
+Pass a specific field path to display only that value.
+
+```ansi
+[90m$[0m unikraft instances list --field service.name
+[1mNAME[0m
+falling-sky-k20dl7a7
+nameless-silence-donj1yl2
+```
+```ansi
+[90m$[0m unikraft instances get httpserver-rust175-tokio --field service.name
+[90mservice:[0m
+  [90mname:[0m  nameless-silence-donj1yl2
+```
+You can pass fields as a comma-separated list, or repeat `--field` several times.
+
+```ansi
+[90m$[0m unikraft instances list --field service.name,resources.memory
+[1mNAME                       MEMORY[0m
+falling-sky-k20dl7a7       256MiB
+nameless-silence-donj1yl2  256MiB
+```
+```ansi
+[90m$[0m unikraft instances get httpserver-rust175-tokio --field service.name,resources.memory
+[90mservice:[0m
+  [90mname:[0m    nameless-silence-donj1yl2
+[90mresources:[0m
+  [90mmemory:[0m  256MiB
+```
+
+### Adding and removing from the default field set
+
+Prefix a field name with `+` to add it to the default set, or `-` to remove it.
+This lets you fine-tune the output without listing every field you want.
+
+```ansi
+[90m$[0m unikraft instances get httpserver-rust175-tokio --field +timing,-networks
+[90mmetro:[0m           fra
+[90mname:[0m            httpserver-rust175-tokio
+[90muuid:[0m            78ad8c05-ed7a-4886-abd3-07613dce7c28
+[90mstate:[0m           [94mstandby[0m
+[90mimage:[0m           <my-org>/httpserver-rust175-tokio
+[90mresources:[0m
+  [90mmemory:[0m        256MiB
+  [90mvcpus:[0m         1
+[90mservice:[0m
+  [90mname:[0m          nameless-silence-donj1yl2
+  [90muuid:[0m          cd2910d2-b709-410c-9e04-f5539a7d020a
+  [90mdomains:[0m
+  [90m- fqdn:[0m        nameless-silence-donj1yl2.fra.unikraft.app
+[90mtimestamps:[0m
+  [90mcreated:[0m       1 day ago
+[90mscale-to-zero:[0m
+  [90menabled:[0m       true
+  [90mpolicy:[0m        on
+  [90mcooldown-time:[0m 1s
+[90mstop:[0m
+  [90mreason:[0m        platform stop
+  [90mexit-code:[0m     1
+[90mtiming:[0m
+  [90muptime:[0m        4m22.163s
+  [90mboot-time:[0m     78.247ms
+  [90mnet-time:[0m      85.486ms
+```
+
+The `networks` field is absent because `-networks` removed it, and `timing` appears at the end because `+timing` added it.
+
+The same syntax works with `list`:
+
+```ansi
+[90m$[0m unikraft instances list --field +timing,-networks
+[1mMETRO NAME                     STATE   IMAGE                                ARGS MEMORY VCPUS FQDN                                       CREATED    UPTIME     BOOT-TIME NET-TIME[0m
+fra   httpserver-rust175-tokio [94mstandby[0m <my-org>/httpserver-rust175-tokio         256MiB 1     nameless-silence-donj1yl2.fra.unikraft.app 1 day ago  4m22.163s  78.247ms  85.486ms
+fra   nginx-fj704              [92mrunning[0m <my-org>/nginx                            256MiB 1     falling-sky-k20dl7a7.fra.unikraft.app      1 hour ago 12m5.002s  45.123ms  52.897ms
+```
+
+## Sorting
+
+Use `--sort` with a field path to order the output by that field.
+
+```ansi
+[90m$[0m unikraft instances list --sort timestamps.created
+[1mMETRO NAME                     STATE   IMAGE                                ARGS MEMORY VCPUS FQDN                                       CREATED[0m
+fra   httpserver-rust175-tokio [94mstandby[0m <my-org>/httpserver-rust175-tokio         256MiB 2     nameless-silence-donj1yl2.fra.unikraft.app 1 day ago
+fra   nginx-fj704              [92mrunning[0m <my-org>/nginx                            256MiB 1     falling-sky-k20dl7a7.fra.unikraft.app      1 hour ago
+```
+
+## Filtering
+
+Use `--filter` with a field path and an operator to show only the resources that match.
+
+```ansi
+[90m$[0m unikraft instances list --filter state==standby
+[1mMETRO NAME                     STATE   IMAGE                             ARGS MEMORY VCPUS FQDN                                       CREATED[0m
+fra   httpserver-rust175-tokio [94mstandby[0m <my-org>/httpserver-rust175-tokio      256MiB 2     nameless-silence-donj1yl2.fra.unikraft.app 1 day ago
+```
+
+`--filter` is available on the `list` and `delete` subcommands throughout the `unikraft` CLI.
+
+The filter expression language supports nested paths, wildcards, regular expressions, and combining expressions.
+See the [filter expression reference](#filter-expression-reference) for the full grammar, operators, and examples.
+
+### The `--until` flag
+
+The `--until` flag uses the same expression syntax as `--filter`.
+`--until` is available on the `wait` subcommand.
+The command polls until every targeted resource matches the expression.
+
+```bash
+unikraft instances wait my-instance --until state==running
+```
+
+## Editing fields
+
+The `edit` command modifies a resource's fields in place, and the `create` command uses the same flags when creating a new resource.
+`edit` prints a diff of the change, where `+` lines are additions and `-`/`+` pairs show a replaced value.
+
+### Setting a field with `--set`
+
+Use `--set <path>=<value>` to set or replace a field.
+Setting a field that doesn't exist yet creates it, including any parent fields.
+
+Many common fields also have dedicated shorthand flags—for example, `--memory` instead of `--set resources.memory=`.
+These are shortcuts for `--set` and are a bit easier to remember and type.
+You don't need to use field-based editing for fields that have a dedicated flag.
+
+```ansi
+[90m$[0m unikraft instances edit httpserver-rust175-tokio --set runtime.env=MYSECRET=secret
+  [90mmetro:[0m           fra
+  [90mname:[0m            httpserver-rust175-tokio
+  [90muuid:[0m            78ad8c05-ed7a-4886-abd3-07613dce7c28
+  [90mstate:[0m           [94mstandby[0m
+  [90mimage:[0m           <my-org>/httpserver-rust175-tokio
+[92m+ runtime:[0m
+[92m+   env:[0m
+[92m+     MYSECRET:    *[0m
+  [90mresources:[0m
+    [90mmemory:[0m        256MiB
+    [90mvcpus:[0m         1
+[90m  ...[0m
+```
+
+### Adding and removing with `--add` and `--del`
+
+Use `--add <name>=<value>` to append to a list or map field, and `--del <name>` to remove an entry from one.
+
+For example, remove an environment variable:
+
+```ansi
+[90m$[0m unikraft instances edit httpserver-rust175-tokio --del runtime.env=MYSECRET
+  [90mmetro:[0m           fra
+  [90mname:[0m            httpserver-rust175-tokio
+  [90muuid:[0m            78ad8c05-ed7a-4886-abd3-07613dce7c28
+  [90mstate:[0m           [94mstandby[0m
+  [90mimage:[0m           <my-org>/httpserver-rust175-tokio
+[91m- runtime:[0m
+[91m-   env:[0m
+[91m-     MYSECRET:    *[0m
+```
+
+The `--add` flag works the same way, appending the given value instead of removing it.
+
+```ansi
+[90m$[0m unikraft instances edit httpserver-rust175-tokio --add runtime.env=MYSECRET=secret
+  [90mmetro:[0m           fra
+  [90mname:[0m            httpserver-rust175-tokio
+  [90muuid:[0m            78ad8c05-ed7a-4886-abd3-07613dce7c28
+  [90mstate:[0m           [94mstandby[0m
+  [90mimage:[0m           <my-org>/httpserver-rust175-tokio
+[92m+ runtime:[0m
+[92m+   env:[0m
+[92m+     MYSECRET:    *[0m
+  [90mresources:[0m
+    [90mmemory:[0m        256MiB
+    [90mvcpus:[0m         1
+[90m  ...[0m
+```
+
+You can combine `--set`, `--add`, and `--del` flags in a single `edit` invocation.
+
+## Visual editing
+
+Pass `--visual` to open the resource in your editor and edit its fields interactively.
+The CLI launches the program named by the `$VISUAL` or `$EDITOR` environment variable.
+
+```bash
+export EDITOR=vim
+unikraft instances edit httpserver-rust175-tokio --visual
+```
+
+If neither variable has a value, the command fails with `no editor set: please set $VISUAL or $EDITOR`.
+
+When you save and close the editor, the CLI applies your changes and prints the resulting diff.
+
+```ansi
+[90m$[0m unikraft instances edit httpserver-rust175-tokio --visual
+  [90mmetro:[0m           fra
+  [90mname:[0m            httpserver-rust175-tokio
+  [90muuid:[0m            78ad8c05-ed7a-4886-abd3-07613dce7c28
+  [90mstate:[0m           [94mstandby[0m
+  [90mimage:[0m           demo/httpserver-rust175-tokio
+  [90mruntime:[0m
+    [90menv:[0m
+      [90mMYSECRET:[0m    *
+  [90mresources:[0m
+    [90mmemory:[0m        256MiB
+[91m-   vcpus:         1[0m
+[92m+   vcpus:         2[0m
+[90m  ...[0m
+```
+## Dry-run
+
+Pass `--dry-run` to any `edit` or `create` command to print the diff of what *would* change without actually applying it.
+This is useful for previewing changes before committing them, and pairs especially well with `--visual`.
+
+```ansi
+[90m$[0m unikraft instances edit httpserver-rust175-tokio --set resources.vcpus=2 --dry-run
+resources.vcpus := 2
+```
+## Filter expression reference
+
+The `--filter` and `--until` flags accept filter expressions that match resources based on their field values.
+The syntax extends the [containerd filter grammar](https://github.com/containerd/containerd/blob/main/pkg/filters/filter.go) with negated regex matching, wildcards, and alternative quoting.
+
+### Grammar
+
+```
+expression := selector ( "," selector )*
+selector   := fieldpath [ operator value ]
+           |  fieldpath? "*" ( "." selector | operator value )?
+fieldpath  := field ( "." field )*
+field      := quoted-string | identifier | index
+identifier := [A-Za-z] [A-Za-z0-9_-]*
+index      := [0-9]+
+operator   := "=" | "==" | "!=" | "!==" | "~=" | "!~="
+value      := quoted-string | regex-string | unquoted-string
+```
+
+A **quoted-string** uses Go string syntax (double quotes with standard
+backslash escapes: `\n`, `\t`, `\\`, `\"`, `\xNN`, `\uNNNN`, `\UNNNNNNNN`,
+octal `\NNN`).
+
+A **regex-string** may only appear after `~=` or `!~=`.
+You can delimit it with `/` or `|` instead of `"`, which is convenient when the pattern contains double-quotes or backslashes (for example, `name~=/[abc]{0,2}/` or `path~=|foo/bar|`).
+
+An **unquoted-string** is any run of non-whitespace, non-comma characters.
+
+### Operators
+
+| Operator | Alias | Description                       | Example           |
+| -------- | ----- | --------------------------------- | ----------------- |
+| `==`     | `=`   | Equals                            | `state==running`  |
+| `!=`     | `!==` | Not equals                        | `state!=stopped`  |
+| `~=`     |       | Matches regular expression        | `name~="^web-.*"` |
+| `!~=`    |       | Doesn't match regular expression | `name!~="^test-"` |
+| _(none)_ |       | Field is present and non-empty    | `description`     |
+
+Regular expressions use Go `regexp` syntax.
+
+### Wildcards
+
+A `*` in a field path iterates over all entries of a map or array field.
+The wildcard can appear at any level, and you can chain wildcards.
+
+```bash
+labels.*                     # true if any label entry exists
+labels.*==value              # true if any label entry equals "value"
+authors.*.email==a@b.com     # true if any author's email matches
+nested.*.*==true             # double wildcard
+```
+
+**Negation semantics with wildcards:** positive operators (`==`, `~=`) match if
+**any** entry meets the condition.
+Negated operators (`!=`, `!~=`) match only if **all** entries meet the condition (that is, no entry matches the negated pattern).
+
+### Indexed access
+
+You can also access array elements by zero-based numeric index.
+
+```bash
+authors.0.name==Alice        # first author's name
+authors.1.email==b@b.com     # second author's email
+```
+
+### Combining expressions
+
+#### And (comma-separated within one flag)
+
+Comma-separated selectors within a single `--filter` value must **all** match for the filter to include a resource.
+
+```bash
+--filter 'state==running,name~="^web"'
+```
+
+#### Or (repeated flags)
+
+When you specify `--filter` several times, the filter includes a resource if it matches **any** of the expressions.
+
+```bash
+--filter 'state==running' --filter 'state==stopped'
+```
+
+#### Combining both operators
+
+The two mechanisms compose:
+
+```bash
+--filter 'state==running,metro==fra0' --filter 'state==stopped,metro==was1'
+```
+
+This matches resources that are (running in fra0) **or** (stopped in was1).
+
+### Special fields
+
+The `metro` field receives special handling: when present in a filter, it restricts which metros the CLI queries rather than filtering results after the fact.
+This means `--filter metro==fra0` avoids fetching data from other metros entirely.
+
+### Examples
+
+```bash
+# List only running instances
+unikraft instances list --filter state==running
+
+# List instances NOT in the "stopped" state
+unikraft instances list --filter 'state!=stopped'
+
+# List images whose ref contains "nginx"
+unikraft image list --filter 'ref~="/nginx"'
+
+# Exclude images matching a pattern
+unikraft image list --filter 'ref!~="test"'
+
+# Regex with slash delimiters (avoids escaping issues)
+unikraft image list --filter 'ref~=/nginx[0-9]{1,3}/'
+
+# Wait for an instance to reach the running state
+unikraft instances wait my-instance --until state==running
+
+# Delete all stopped instances (with confirmation)
+unikraft instances delete --filter state==stopped
+
+# Combine filters: running instances in fra0, OR stopped in was1
+unikraft instances list --filter 'state==running,metro==fra0' \
+                       --filter 'state==stopped,metro==was1'
+
+# Filter on nested fields
+unikraft instances list --filter 'settings.autoscale==true'
+
+# Filter using array wildcard
+unikraft instances list --filter 'volumes.*.name==data'
+
+# Check that no label matches a pattern (all must satisfy !=)
+unikraft instances list --filter 'labels.*!=temporary'
+```

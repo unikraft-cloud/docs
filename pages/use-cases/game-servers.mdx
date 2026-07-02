@@ -42,22 +42,22 @@ The base image is built from [itzg/minecraft-server](https://hub.docker.com/r/it
 
 ### Prerequisites
 
-1. Install the [unikraft CLI](/docs/cli/unikraft).
+1. Install the CLI.
+   Use the [unikraft CLI](/docs/cli/unikraft) or the legacy [kraft CLI](https://unikraft.org/docs/cli/install).
    You need a [BuildKit](https://github.com/moby/buildkit) builder. The easiest way to get one is via [Docker](https://docs.docker.com/engine/install/).
+   You can also set up and use BuildKit directly; see the [quick start](https://github.com/moby/buildkit#quick-start).
+
+   :::note
+   The unikraft CLI is the current standard, while kraft is the legacy version.
+   Choose one of the CLIs below and only run the commands associated with it for the rest of this guide.
+   :::
 
 2. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/minecraft/` directory:
 
-```bash
-git clone https://github.com/unikraft-cloud/examples
-cd examples/minecraft/
-```
-
-Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
-This guide uses `fra` (Frankfurt, 🇩🇪):
-
-```bash title="unikraft"
-unikraft login
-```
+   ```bash
+   git clone https://github.com/unikraft-cloud/examples
+   cd examples/minecraft/
+   ```
 
 3. Review and adjust the base server settings in [`base/.env`](https://github.com/unikraft-cloud/examples/tree/main/minecraft/base/.env).
    You can check out [this documentation](https://docker-minecraft-server.readthedocs.io/en/latest/) for available configuration options.
@@ -65,13 +65,44 @@ unikraft login
    Optionally, create per-config overrides in `<config>/.env`.
    All `.env` files are packaged as [auxiliary ROMs](/features/roms) and mounted at `/rom/<config>`.
 
+Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
+This guide uses `fra` (Frankfurt, 🇩🇪):
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft login
+```
+
+```bash title="kraft"
+# Set Unikraft Cloud access token
+export UKC_TOKEN=token
+export UKC_METRO=fra
+```
+
+</CodeTabs>
+
 ### Step 1: Package and push the base image
 
 First, package and push the base Minecraft server image:
 
+<CodeTabs syncKey="cli">
+
 ```bash title="unikraft"
 unikraft build . --output <my-org>/minecraft:latest
 ```
+
+```bash title="kraft"
+kraft pkg \
+  --name index.unikraft.io/<my-org>/minecraft:latest \
+  --plat kraftcloud \
+  --arch x86_64 \
+  --rootfs-type erofs \
+  --push \
+  .
+```
+
+</CodeTabs>
 
 The image contains the files from the Docker image [itzg/minecraft-server](https://hub.docker.com/r/itzg/minecraft-server) and includes a few tweaks:
 
@@ -89,49 +120,76 @@ The startup script snapshots it into a template before world generation, then th
 
 Pass your server settings as a ROM:
 
+<CodeTabs syncKey="cli">
+
 ```bash title="unikraft"
 unikraft run --metro fra \
-    --name minecraft-tpl \
-    -m 4096M \
-    --vcpus 4 \
-    --image <my-org>/minecraft:latest \
-    --rom dir=base,at=/rom/base
+  --name minecraft-tpl \
+  -m 4096M \
+  --vcpus 4 \
+  --image <my-org>/minecraft:latest \
+  --rom dir=base,at=/rom/base
 ```
+
+```bash title="kraft"
+# kraft does not support creating instances with attached ROMs
+# use unikraft CLI
+```
+
+</CodeTabs>
 
 The output shows the instance details:
 
+<CodeTabs syncKey="cli">
+
 ```ansi title="unikraft"
-metro:        fra
-name:         minecraft-tpl
-uuid:         d9d7be54-5495-45d0-b5af-48be7f30d1d8
-state:        [94mstarting[0m
-image:        <my-org>/minecraft
-resources:
-  memory:     4GiB
-  vcpus:      4
-roms:
-- name:       rom
-  image:      c99125f6-6b8c-4f94-b94c-e2d9551b253b
-  at:         /rom
-networks:
-- uuid:       123b0ed0-9f2f-417c-9307-34424d80e4cb
-  private-ip: 10.0.0.29
-  mac:        12:b0:0a:00:00:1d
-timestamps:
-  created:    just now
+[1mmetro[22m:        fra
+[1mname[22m:         minecraft-tpl
+[1muuid[22m:         d9d7be54-5495-45d0-b5af-48be7f30d1d8
+[1mstate[22m:        [38;2;144;161;185mstarting[0m
+[1mimage[22m:        <my-org>/minecraft
+[1mresources[22m:
+[3m  memory[23m:     4GiB
+[3m  vcpus[23m:      4
+[1mroms[22m:
+[3m- name[23m:       rom
+[3m  image[23m:      c99125f6-6b8c-4f94-b94c-e2d9551b253b
+[3m  at[23m:         /rom
+[1mnetworks[22m:
+[3m- uuid[23m:       123b0ed0-9f2f-417c-9307-34424d80e4cb
+[3m  private-ip[23m: 10.0.0.29
+[3m  mac[23m:        12:b0:0a:00:00:1d
+[1mtimestamps[22m:
+[3m  created[23m:    just now
 ```
+
+```bash title="kraft"
+# kraft does not support creating instances with attached ROMs
+# use unikraft CLI
+```
+
+</CodeTabs>
 
 If you also have per-config overrides (for example in `bingo/.env`), create the instance with more ROMs:
 
+<CodeTabs syncKey="cli">
+
 ```bash title="unikraft"
 unikraft run --metro fra \
-    --name minecraft-tpl \
-    -m 4096M \
-    --vcpus 4 \
-    --image <my-org>/minecraft:latest \
-    --rom dir=base,at=/rom/base \
-    --rom dir=bingo,at=/rom/bingo
+  --name minecraft-tpl \
+  -m 4096M \
+  --vcpus 4 \
+  --image <my-org>/minecraft:latest \
+  --rom dir=base,at=/rom/base \
+  --rom dir=bingo,at=/rom/bingo
 ```
+
+```bash title="kraft"
+# kraft does not support creating instances with attached ROMs
+# use unikraft CLI
+```
+
+</CodeTabs>
 
 The instance runs until initialization completes, then the platform snapshots it as a template and immediately deletes it.
 You can configure the exact moment of snapshotting in [`patches/start-finalExec`](https://github.com/unikraft-cloud/examples/tree/main/minecraft/patches/start-finalExec) or with the following environment variable:
@@ -141,65 +199,118 @@ You can configure the exact moment of snapshotting in [`patches/start-finalExec`
 
 Follow the template instance logs until they stop:
 
+<CodeTabs syncKey="cli">
+
 ```bash title="unikraft"
 unikraft instances logs minecraft-tpl -f
 ```
 
+```bash title="kraft"
+kraft cloud instance logs minecraft-tpl -f
+```
+
+</CodeTabs>
+
 Confirm the template is ready:
+
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft instances templates list
 ```
 
+```bash title="kraft"
+kraft cloud instance template list
+```
+
+</CodeTabs>
+
+<div style={{ marginTop: '0.8em' }} />
+
+<CodeTabs syncKey="cli">
+
 ```ansi title="unikraft"
 [1mMETRO[0m  [1mNAME[0m           [1mSTATE[0m     [1mIMAGE[0m               [1mARGS[0m  [1mMEMORY[0m  [1mVCPUS[0m  [1mCREATED[0m
-fra    minecraft-tpl  [94mtemplate[0m  <my-org>/minecraft        4GiB    4      5 seconds ago
+fra    minecraft-tpl  [38;2;43;127;255mtemplate[0m  <my-org>/minecraft        4GiB    4      5 seconds ago
 ```
+
+```ansi title="kraft"
+[1mNAME[0m           [1mIMAGE[0m                                                                                                         [1mARGS[0m  [1mCREATED AT[0m
+minecraft-tpl  oci://unikraft.io/<my-org>/minecraft@sha256:fdb4887e84362ebbaf54c713e0d85f547e8ee173fe63a6ab39e94b7e612a9892        5 seconds ago
+```
+
+</CodeTabs>
 
 ### Step 3: Launch a server from the template
 
+<CodeTabs syncKey="cli">
+
 ```bash title="unikraft"
 unikraft run --metro fra \
-    --name minecraft \
-    -p 2222:2222/tls \
-    -p 25565:25565/tls \
-    --scale-to-zero policy=on,cooldown-time=5000,stateful=true \
-    --template minecraft-tpl
+  --name minecraft \
+  -p 2222:2222/tls \
+  -p 25565:25565/tls \
+  --scale-to-zero policy=on,cooldown-time=5000,stateful=true \
+  --template minecraft-tpl
 ```
+
+```bash title="kraft"
+# kraft does not support creating instances from templates
+# use unikraft CLI
+```
+
+</CodeTabs>
 
 The output includes the service address:
 
+<CodeTabs syncKey="cli">
+
 ```ansi title="unikraft"
-metro:         fra
-name:          minecraft
-uuid:          56787b5d-14fb-4908-88d0-e9609d1ac1e0
-state:         [92mrunning[0m
-image:         <my-org>/minecraft
-resources:
-  memory:      4GiB
-  vcpus:       4
-service:       hidden-water-ewr8l9sp
-roms:
-- name:        rom
-  image:       c99125f6-6b8c-4f94-b94c-e2d9551b253b
-  at:          /rom
-networks:
-- uuid:        b6c7d615-7e74-49d6-a8b6-14c39323233b
-  private-ip:  10.0.0.29
-  mac:         12:b0:0a:00:00:1d
-timestamps:
-  created:     just now
-scale-to-zero: policy=on,stateful=true,cooldown-time=5s
+[1mmetro[22m:         fra
+[1mname[22m:          minecraft
+[1muuid[22m:          56787b5d-14fb-4908-88d0-e9609d1ac1e0
+[1mstate[22m:         [38;2;0;188;125mrunning[0m
+[1mimage[22m:         <my-org>/minecraft
+[1mresources[22m:
+[3m  memory[23m:      4GiB
+[3m  vcpus[23m:       4
+[1mservice[22m:       hidden-water-ewr8l9sp
+[1mroms[22m:
+[3m- name[23m:        rom
+[3m  image[23m:       c99125f6-6b8c-4f94-b94c-e2d9551b253b
+[3m  at[23m:          /rom
+[1mnetworks[22m:
+[3m- uuid[23m:        b6c7d615-7e74-49d6-a8b6-14c39323233b
+[3m  private-ip[23m:  10.0.0.29
+[3m  mac[23m:         12:b0:0a:00:00:1d
+[1mtimestamps[22m:
+[3m  created[23m:     just now
+[1mscale-to-zero[22m: policy=on,stateful=true,cooldown-time=5s
 ```
+
+```bash title="kraft"
+# kraft does not support creating instances from templates
+# use unikraft CLI
+```
+
+</CodeTabs>
 
 The instance address is `https://hidden-water-ewr8l9sp.fra.unikraft.app`.
 Follow the logs until the server is ready:
+
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft instances logs minecraft -f
 ```
 
-```text
+```bash title="kraft"
+kraft cloud instance logs minecraft -f
+```
+
+</CodeTabs>
+
+```ansi
 [12:59:45] [Server thread/INFO]: Preparing spawn area: 100%
 [12:59:45] [Server thread/INFO]: Time elapsed: 3641 ms
 [12:59:45] [Server thread/INFO]: Done (3.850s)! For help, type "help"
@@ -217,7 +328,7 @@ unikraft instances logs minecraft -f
 
 ## Connect to the server
 
-:::caution[**DISCLAIMER**]
+:::caution[**Limited Access**]
 At the moment, Unikraft Cloud exposes services over TLS.
 Minecraft and SSH clients speak plain TCP, so use `socat` to end TLS locally.
 :::
@@ -250,7 +361,7 @@ rcon-cli --host 127.0.0.1
 
 Example commands:
 
-```text
+```text title=""
 say Hello from Unikraft Cloud!
 /op <username>
 ```
@@ -266,18 +377,37 @@ import hashlib, uuid; h = hashlib.md5(b'OfflinePlayer:<username>').digest(); u =
 
 ## Cleanup
 
+<CodeTabs syncKey="cli">
+
 ```bash title="unikraft"
 unikraft instances delete minecraft
 unikraft instances template delete minecraft-tpl
 ```
 
+```bash title="kraft"
+kraft cloud instance remove minecraft
+kraft cloud instance template remove minecraft-tpl
+```
+
+</CodeTabs>
+
 ## Learn more
+
+Use the `--help` option for detailed information on using Unikraft Cloud:
+
+<CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft --help
 ```
 
-Or visit the [CLI Reference](/docs/cli/unikraft).
+```bash title="kraft"
+kraft cloud --help
+```
+
+</CodeTabs>
+
+Or visit the [CLI Reference](/docs/cli/unikraft) or the [legacy CLI reference](/docs/cli/kraft/overview).
 
 For more information on the features used in this use case and how to use them, check out the following documentation:
 

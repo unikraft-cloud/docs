@@ -1,0 +1,274 @@
+---
+title: On-Demand Templates
+navigation_icon: layers
+---
+
+[Instance templates](/platform/instances#instance-templates) let you pay an expensive initialization cost once, snapshot the warmed-up instance, and then stamp out new instances from that snapshot in milliseconds.
+The straightforward way to use them is to manage the template explicitly: create the template first, then create instances that reference it by name.
+
+*On-demand template creation* removes that explicit step.
+Instead of managing templates yourself, you embed the template's specification directly in your instance-create call.
+If the template doesn't exist yet, the platform creates it on the fly.
+If it already exists, the platform reuses it.
+This means you issue the same instance create operation every time and template management happens transparently in the background.
+
+This works for any instance-create call—not only one-off instances.
+In particular, you can create the template of an [autoscaled service](/features/autoscale) this way, so the platform prepares and manages the template autoscale clones from, without a separate template step.
+
+:::caution
+Currently, there is no unikraft CLI support for on-demand instance template creation.
+You must do this by calling the platform [API](/api/platform/v1/instances#create-instance) with `unikraft api` or curl.
+:::
+
+## On-demand template creation
+
+To create a template on demand, add `prepare: true` and a `create_args` object to the `template` block of a normal instance-create request:
+
+```bash title="POST /instances"
+unikraft api /v1/instances --metro=fra \
+   -d '{
+   "name": "my-instance",
+   "template": {
+      "name": "my-template",
+      "prepare": true,
+      "create_args": {
+         "image": "<my-org>/my-image:v1.0",
+         "memory_mb": 512,
+         "vcpus": 1
+      }
+   },
+   "service_group": {
+      "services": [
+         {
+            "port": 443,
+            "destination_port": 8080,
+            "handlers": ["tls", "http"]
+         }
+      ]
+   },
+   "autostart": true
+}'
+```
+
+The platform processes the `template` block first:
+
+- If a template named `my-template` already exists, the platform uses it directly.
+- If it doesn't exist, the platform creates it from `create_args`, then creates your instance from the resulting snapshot.
+
+Because the call carries everything needed to build the template, you can issue the *exact same* request, irrespective of whether the template already exists.
+The action is idempotent.
+
+### How `prepare` works
+
+When you set `prepare: true` and the template doesn't yet exist, the platform:
+
+1. Starts an instance from `create_args`.
+2. Waits for the guest to convert itself into a template by writing to `/uk/libukp/template_instance` (see [Instance templates](/platform/instances#instance-templates)).
+3. Takes a snapshot once the guest signals readiness—this snapshot becomes the template.
+4. Starts your actual instance from that snapshot.
+
+If the template already exists, the platform skips steps 1–3 and your instance starts right away.
+
+The guest controls the exact moment of snapshotting.
+It does heavy, instance-independent initialization up front, then writes to `/uk/libukp/template_instance` at the point where the state is worth capturing.
+
+:::caution
+The image you specify in `create_args` **must** write to `/uk/libukp/template_instance` at some point during its execution.
+If it never does, the platform waits indefinitely: the instance stays in the `running` state and is never snapshotted, so your actual instance never starts.
+Make sure the image you use for template preparation includes this write.
+:::
+
+### The `create_args` object
+
+`create_args` accepts the same fields as a top-level instance-create body—`image`, `memory_mb`, `vcpus`, `restart_policy`, `scale_to_zero`, `roms`, `autokill`, and more.
+In other words, it fully describes the instance that becomes the template.
+
+This symmetry is what makes the feature composable: anything you can specify when creating an instance, you can specify for the instance that becomes your template—including another `template` block (see [Nested templates](#nested-templates) below).
+
+## Injecting per-instance data
+
+A template snapshot locks in the environment and arguments captured at snapshot time, so every instance cloned from it starts from identical state.
+To pass data that differs per instance—a session ID, a config file, a function payload—attach an [inline ROM](/features/roms#inline-roms) to the instance-create call:
+
+```bash title="POST /instances"
+unikraft api /v1/instances --metro=fra \
+   -d '{
+   "name": "my-instance",
+   "template": {
+      "name": "my-template",
+      "prepare": true,
+      "create_args": {
+         "image": "<my-org>/my-image:v1.0",
+         "memory_mb": 512
+      }
+   },
+   "roms": [
+      {
+         "name": "session",
+         "at": "/mnt/session",
+         "files": [
+            {
+               "path": "session.txt",
+               "encoding": "text",
+               "data": "sessionID=XYZ"
+            }
+         ]
+      }
+   ],
+   "service_group": {
+      "services": [
+         {
+            "port": 443,
+            "destination_port": 8080,
+            "handlers": ["tls", "http"]
+         }
+      ]
+   },
+   "autostart": true
+}'
+```
+
+The ROM attaches to the new instance, not to the template.
+This means each instance can carry different data while sharing the same warm snapshot.
+
+The write to `/uk/libukp/template_instance` blocks until the platform clones the instance from the template.
+This means the guest can then write to the file and read its instance-specific data from the ROM once the write returns.
+
+## Nested templates
+
+Because `create_args` mirrors a top-level instance-create body, it can itself contain a `template` block with its own `create_args`.
+This lets you nest layers of templates—and the final instance—in a single API call.
+
+A common shape is a generic worker template, a more specific function template built on top of it, and finally the concrete instance:
+
+```bash title="POST /instances"
+unikraft api /v1/instances --metro=fra \
+   -d '{
+   "name": "my-instance",
+   "template": {
+      "name": "my-function-template",
+      "prepare": true,
+      "create_args": {
+         "template": {
+            "name": "my-node-worker",
+            "prepare": true,
+            "create_args": {
+               "image": "<my-org>/my-node-worker:v1.0",
+               "memory_mb": 1024
+            }
+         },
+         "roms": [
+            {
+               "name": "function",
+               "at": "/mnt/function",
+               "image": "<my-org>/my-function:v1.0"
+            }
+         ]
+      }
+   },
+   "service_group": {
+      "services": [
+         {
+            "port": 443,
+            "destination_port": 8080,
+            "handlers": ["tls", "http"]
+         }
+      ]
+   },
+   "autostart": true
+}'
+```
+
+The platform resolves the levels from the innermost outward.
+The platform reuses any level whose template already exists.
+It creates the rest on demand.
+This means a single call can create the worker template, the function template, and the instance—or reuse whichever levels already exist.
+
+## Automatic cleanup with autokill
+
+Named templates persist on the machine once created, holding onto the storage their snapshot occupies.
+To release that space automatically, give the template an [autokill](/features/autokill#instance-template-autokill) policy inside its `template` block:
+
+```bash title="POST /instances"
+unikraft api /v1/instances --metro=fra \
+   -d '{
+   "name": "my-instance",
+   "template": {
+      "name": "my-template",
+      "prepare": true,
+      "autokill": {
+         "time_ms": 60000
+      },
+      "create_args": {
+         "image": "<my-org>/my-image:v1.0",
+         "memory_mb": 512
+      }
+   },
+   "service_group": {
+      "services": [
+         {
+            "port": 443,
+            "destination_port": 8080,
+            "handlers": ["tls", "http"]
+         }
+      ]
+   },
+   "autostart": true
+}'
+```
+
+Template autokill deletes the template when nothing clones it for the configured time (measured from the last clone).
+Because your instance create call still contains all the information needed to rebuild it, the template is transparently recreated the next time a request references it.
+You pay the preparation cost again only after autokill removes the template and you need it once more.
+
+### Hash-based template names
+
+Combine autokill with a naming convention to remove explicit template management entirely: instead of a fixed name like `my-template`, use a hash of the `create_args` object as the template `name`.
+
+```json title="POST /instances"
+{
+   "name": "my-instance",
+   "template": {
+      "name": "93ab8429c863343d",
+      "prepare": true,
+      "autokill": {
+         "time_ms": 60000
+      },
+      "create_args": {
+         "image": "<my-org>/my-image:v1.0",
+         "memory_mb": 512
+      }
+   },
+   "service_group": {
+      "services": [
+         {
+            "port": 443,
+            "destination_port": 8080,
+            "handlers": ["tls", "http"]
+         }
+      ]
+   }
+}
+```
+
+With this convention:
+
+- Whenever `create_args` changes, its hash changes, so the template `name` changes.
+  The platform automatically creates the new template and uses it for this and all later instances that hash to the same name.
+- The old template is no longer referenced, so its autokill timer eventually removes it.
+
+Template management collapses into your standard instance create calls: to switch templates, you change `create_args` and the platform creates, reuses, or cleans up the right template.
+
+:::note
+Use real version tags (for example `v1.0`), not `latest`, in `create_args`.
+If you push a new image under the same `latest` tag, `create_args` doesn't change, so the hash and template name stay the same and the template is never updated.
+Bumping the tag to `v2.0` changes `create_args`, which produces a new hash, a new template name, and a freshly prepared template.
+:::
+
+## Learn more
+
+* [Instance templates](/platform/instances#instance-templates)—how templates work, the guest-side `template_instance` write, and template hierarchies.
+* [ROMs](/features/roms) and [Inline ROMs](/features/roms#inline-roms)—injecting per-instance data into instances cloned from a template.
+* [Autokill](/features/autokill#instance-template-autokill)—automatically removing templates the platform hasn't cloned recently.
+* [Autoscale](/features/autoscale)—using on-demand templates as the source for autoscaled instances.
+* Unikraft Cloud's [REST API reference](/api/platform/v1), in particular the section on [instances](/api/platform/v1/instances).

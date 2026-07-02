@@ -1,0 +1,85 @@
+---
+title: Networking
+navigation_icon: network
+---
+
+The platform separates Unikraft Cloud instances on a per-user level.
+This means that all instances within a user's scope can "see" each other on the private internal network and communicate with each other.
+This communication is private and unencrypted, and doesn't reach the outside world.
+You can communicate internally by using the Private IP or Private FQDN.
+
+At the same time, when using the Public FQDN the connection goes through the external load balancer applied to every public instance.
+This means that an entirely different code path resolves the connection, and also the connection is always TLS encrypted.
+
+## External communication
+
+External communication refers to every request going over the public FQDN of an instance.
+This means that the request goes through the external load balancer, and as such, TLS encryption is mandatory.
+This also means that the instance will be load balanced with all other public instances behind the same [service](/features/load-balancing).
+The request will do a round trip from the client through the load balancer and to the instance.
+This communication is best suited for frontend-to-service communication, public APIs, web services, and more.
+
+## Internal communication
+
+Internal communication refers to every request going over a user's private network.
+This means that the request stays within the user internal network, and doesn't go through the external load balancer.
+This also means that the system won't encrypt the connection by default.
+This communication is best suited for service-to-service communication, microservices, databases, caches, and more.
+For example, you wouldn't want to expose your database publicly, but you would want your app to be able to connect to it internally.
+
+:::tip
+Even when using internal communication, scale-to-zero triggers will still work as expected, and your instances will scale down to zero when not in use.
+:::
+
+Every instance, by default, receives a private IP and a private FQDN (of the format `<instance-name>.internal`).
+You can see the private IP of your instance by grabbing its details:
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft instance get <instance-name>
+```
+
+```bash title="kraft"
+kraft cloud instance get <instance-name>
+```
+
+</CodeTabs>
+
+<div style={{ marginTop: '0.8em' }} />
+
+<CodeTabs syncKey="cli">
+
+```ansi title="unikraft"
+...
+[1mnetworks[22m:
+[3m- uuid[23m:       afbd8ce2-daf5-4c47-888a-96bbf1c4a347
+[3m  private-ip[23m: 10.0.0.49
+[3m  mac[23m:        12:b0:0a:00:00:31
+...
+```
+
+```ansi title="kraft"
+...
+           private fqdn: httpserver-go121-rs85y.internal
+             private ip: 10.0.0.49
+...
+```
+
+</CodeTabs>
+
+Check out this [guide](/guides/httpserver-flask-redis) for an example of how to use internal communication to connect a Flask app to a Redis instance, without exposing the latter to the internet.
+
+:::tip
+When using the [legacy CLI tunnel](/cli/kraft/tunnel) command to connect to your instances you are using the internal network to reach your instance.
+The command creates a public-facing instance that tunnels your requests to the private instance over the internal network.
+This is a good way to keep your instances private while still being able to access them from your local machine.
+:::
+
+## Learn more
+
+* [Load balancing](/features/load-balancing) of services.
+* [Platform services](/platform/services) and how they work.
+* [Scale to zero triggers](/tutorials/scale-to-zero-triggers) for automatic instance scaling.
+* Deploy a [Go HTTP server with Redis](/guides/httpserver-go1.22-redis) using internal communication.
+* The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).

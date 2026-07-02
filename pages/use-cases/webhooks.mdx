@@ -46,24 +46,40 @@ This guide shows you how to deploy a GitHub webhook receiver that listens for re
 The example uses Node.js with Express and the official [Octokit webhooks library](https://www.npmjs.com/package/@octokit/webhooks).
 To run it, follow these steps:
 
-1. Install the [`kraft` CLI tool](https://unikraft.org/docs/cli/install) and a container runtime engine (for example, [Docker](https://docs.docker.com/engine/install/)).
+1. Install the CLI.
+   Use the [unikraft CLI](/docs/cli/unikraft) or the legacy [kraft CLI](https://unikraft.org/docs/cli/install).
+   You need a [BuildKit](https://github.com/moby/buildkit) builder. The easiest way to get one is via [Docker](https://docs.docker.com/engine/install/).
+   You can also set up and use BuildKit directly; see the [quick start](https://github.com/moby/buildkit#quick-start).
 
-1. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/webhook-github-node/` directory:
+   :::note
+   The unikraft CLI is the current standard, while kraft is the legacy version.
+   Choose one of the CLIs below and only run the commands associated with it for the rest of this guide.
+   :::
 
-```bash
-git clone https://github.com/unikraft-cloud/examples
-cd examples/webhook-github-node/
-```
+1. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/github-webhook-node/` directory:
 
-Make sure to log into Unikraft Cloud by setting your token and a [metro](/platform/metros) close to you.
+   ```bash
+   git clone https://github.com/unikraft-cloud/examples
+   cd examples/github-webhook-node/
+   ```
+
+Make sure to log into Unikraft Cloud and set your token and a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪):
 
-```bash
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft login
+```
+
+```bash title="kraft"
 # Set Unikraft Cloud access token
 export UKC_TOKEN=token
 # Set metro to Frankfurt, DE
 export UKC_METRO=fra
 ```
+
+</CodeTabs>
 
 Follow the instructions in the example's README to set it up and grab the server's FQDN.
 After that, check that the service is up:
@@ -72,7 +88,7 @@ After that, check that the service is up:
 curl https://<your-server-fqdn>/health
 ```
 
-```text
+```text title=""
 {"status":"healthy","timestamp":"2025-12-17T14:55:20.953Z","uptime":0.063799807}
 ```
 
@@ -94,6 +110,10 @@ Also follow [Webhooks.fyi](https://webhooks.fyi/) for best practices.
 Use the `--help` option for detailed information on using Unikraft Cloud:
 
 <CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft --help
+```
 
 ```bash title="kraft"
 kraft cloud --help

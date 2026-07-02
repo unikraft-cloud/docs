@@ -23,10 +23,10 @@ To run this example, follow these steps:
 
 2. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/httpserver-perl5.42/` directory:
 
-```bash
-git clone https://github.com/unikraft-cloud/examples
-cd examples/httpserver-perl5.42/
-```
+   ```bash
+   git clone https://github.com/unikraft-cloud/examples
+   cd examples/httpserver-perl5.42/
+   ```
 
 Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪):
@@ -66,40 +66,40 @@ The output shows the instance address and other details:
 <CodeTabs syncKey="cli">
 
 ```ansi title="unikraft"
-metro:        fra
-name:         httpserver-perl542-xue8j
-uuid:         59d08bbc-cbb7-4c6b-a2cb-847828845db9
-state:        [92mstarting[0m
-image:        <my-org>/httpserver-perl542
-resources:
-  memory:     512MiB
-  vcpus:      1
-service:
-  uuid:       b62c0c0a-2de6-9068-1e93-223fa8f1edbf
-  name:       fragrant-water-wau08gaw
-  domains:
-  - fqdn:     fragrant-water-wau08gaw.fra.unikraft.app
-networks:
-- uuid:       22bdfc9c-2f69-eb7e-5b5e-929aba51a2c0
-  private-ip: 10.0.1.161
-  mac:        12:b0:d4:aa:c1:98
-timestamps:
-  created:    just now
+[1mmetro[22m:        fra
+[1mname[22m:         httpserver-perl542-xue8j
+[1muuid[22m:         59d08bbc-cbb7-4c6b-a2cb-847828845db9
+[1mstate[22m:        [38;2;144;161;185mstarting[0m
+[1mimage[22m:        <my-org>/httpserver-perl542
+[1mresources[22m:
+[3m  memory[23m:     512MiB
+[3m  vcpus[23m:      1
+[1mservice[22m:
+[3m  uuid[23m:       b62c0c0a-2de6-9068-1e93-223fa8f1edbf
+[3m  name[23m:       fragrant-water-wau08gaw
+[3m  domains[23m:
+[3m  - fqdn[23m:     fragrant-water-wau08gaw.fra.unikraft.app
+[1mnetworks[22m:
+[3m- uuid[23m:       22bdfc9c-2f69-eb7e-5b5e-929aba51a2c0
+[3m  private-ip[23m: 10.0.1.161
+[3m  mac[23m:        12:b0:d4:aa:c1:98
+[1mtimestamps[22m:
+[3m  created[23m:    just now
 ```
 
 ```ansi title="kraft"
-[90m[[0m[92m●[0m[90m][0m Deployed successfully!
- [90m│[0m
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mname[0m: httpserver-perl542-xue8j
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90muuid[0m: 59d08bbc-cbb7-4c6b-a2cb-847828845db9
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mmetro[0m: https://api.fra.unikraft.cloud/v1
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mstate[0m: [92mstarting[0m
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mdomain[0m: https://fragrant-water-wau08gaw.fra.unikraft.app
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mimage[0m: oci://unikraft.io/<my-org>/httpserver-perl542@sha256:af86e8f03c0d4cfd596ccfd9a9d18ea75ac68c996c9cde31f64db24dc11100fe
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mmemory[0m: 512 MiB
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mservice[0m: fragrant-water-wau08gaw
- [90m├[0m[90m─[0m [90mprivate fqdn[0m: httpserver-perl542-xue8j.internal
- [90m└[0m[90m─[0m[90m─[0m[90m─[0m [90mprivate ip[0m: 10.0.1.161
+[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
+ [38;5;245m│[0m
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mname[0m: httpserver-perl542-xue8j
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245muuid[0m: 59d08bbc-cbb7-4c6b-a2cb-847828845db9
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mstate[0m: [92mstarting[0m
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mdomain[0m: https://fragrant-water-wau08gaw.fra.unikraft.app
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/httpserver-perl542@sha256:af86e8f03c0d4cfd596ccfd9a9d18ea75ac68c996c9cde31f64db24dc11100fe
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmemory[0m: 512 MiB
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mservice[0m: fragrant-water-wau08gaw
+ [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: httpserver-perl542-xue8j.internal
+ [38;5;245m└[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mprivate ip[0m: 10.0.1.161
 ```
 
 </CodeTabs>
@@ -131,16 +131,18 @@ kraft cloud instance list
 
 </CodeTabs>
 
+<div style={{ marginTop: '0.8em' }} />
+
 <CodeTabs syncKey="cli">
 
 ```ansi title="unikraft"
-[1mMETRO[0m  [1mNAME[0m                      [1mSTATE[0m    [1mIMAGE[0m                        [1mARGS[0m  [1mMEMORY[0m  [1mVCPUS[0m  [1mFQDN[0m                                      [1mCREATED[0m
-fra    httpserver-perl542-xue8j  [94mstandby[0m  <my-org>/httpserver-perl542        512MiB  1      fragrant-water-wau08gaw.fra.unikraft.app  2 minutes ago
+[1mMETRO[22m  [1mNAME[22m                      [1mSTATE[22m    [1mIMAGE[22m                        [1mARGS[22m  [1mMEMORY[22m  [1mVCPUS[22m  [1mFQDN[22m                                      [1mCREATED[22m
+fra    httpserver-perl542-xue8j  [38;2;43;127;255mstandby[0m  <my-org>/httpserver-perl542        512MiB  1      fragrant-water-wau08gaw.fra.unikraft.app  2 minutes ago
 ```
 
 ```ansi title="kraft"
-[1mNAME[0m                      [1mFQDN[0m                                      [1mSTATE[0m    [1mSTATUS[0m   [1mIMAGE[0m                                                     [1mMEMORY[0m   [1mVCPUS[0m  [1mARGS[0m  [1mBOOT TIME[0m
-httpserver-perl542-xue8j  fragrant-water-wau08gaw.fra.unikraft.app  [94mstandby[0m  standby  oci://unikraft.io/<my-org>/httpserver-perl542@sha256:...  512 MiB  1            109.46 ms
+[0;1;39mNAME[0m                      [0;1;39mFQDN[0m                                      [0;1;39mSTATE[0m    [0;1;39mSTATUS[0m   [0;1;39mIMAGE[0m                                                     [0;1;39mMEMORY[0m   [0;1;39mVCPUS[0m  [0;1;39mARGS[0m  [0;1;39mBOOT TIME[0m
+httpserver-perl542-xue8j  fragrant-water-wau08gaw.fra.unikraft.app  [0;36mstandby[0m  standby  oci://unikraft.io/<my-org>/httpserver-perl542@sha256:...  512 MiB  1            109.46 ms
 ```
 
 </CodeTabs>

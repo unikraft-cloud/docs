@@ -22,47 +22,213 @@ An instance can be in one of the following states:
 | `standby`  | The instance has scaled-to-zero. The instance isn't running, but will be automatically started when there are incoming requests. |
 
 Unikraft Cloud reports these as instance `state` values via the endpoints.
+You can visualize these states with the CLI.
+Here is an example of an instance that's in `stopped` state:
 
-## Stop reason
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft instance get httpserver-go121-taud8
+```
+
+```bash title="kraft"
+kraft instance list httpserver-go121-taud8
+```
+
+</CodeTabs>
+
+<div style={{ marginTop: '0.8em' }} />
+
+<CodeTabs syncKey="cli">
+
+```ansi title="unikraft"
+[1mmetro[22m:           fra
+[1mname[22m:            httpserver-go121-taud8
+[1muuid[22m:            bd281cc4-7640-4cbc-af48-5a44c2bd7b74
+[1mstate[22m:           [38;2;43;127;255mstandby[0m
+[1mimage[22m:           <my-org>/httpserver-go121
+[1mresources[22m:
+[3m  memory[23m:        256MiB
+[3m  vcpus[23m:         1
+[1mservice[22m:
+[3m  name[23m:          floral-sun-54ixkmi6
+[3m  uuid[23m:          d20c8a02-53a8-4917-8c25-94b99ab59a88
+[3m  domains[23m:
+[3m  - fqdn[23m:        floral-sun-54ixkmi6.fra.unikraft.app
+[1mnetworks[22m:
+[3m- uuid[23m:          16ca6566-a368-45d3-b759-3abf0cc37d03
+[3m  private-ip[23m:    10.0.0.37
+[3m  mac[23m:           12:b0:0a:00:00:25
+[1mtimestamps[22m:
+[3m  created[23m:       6 days ago
+[1mscale-to-zero[22m:
+[3m  enabled[23m:       true
+[3m  policy[23m:        on
+[3m  cooldown-time[23m: 1s
+[1mstop[22m:
+[3m  reason[23m:        platform stop
+[3m  exit-code[23m:     1
+```
+
+```ansi title="kraft"
+                   uuid: bd281cc4-7640-4cbc-af48-5a44c2bd7b74
+                   name: httpserver-go121-taud8
+                   fqdn: floral-sun-54ixkmi6.fra.unikraft.app
+           private fqdn: httpserver-go121-taud8.internal
+             private ip: 10.0.0.37
+                  state: [0;36mstandby[0m
+                created: 2026-05-28T13:53:40Z
+                started: 2026-05-28T13:54:43Z
+                stopped: 2026-05-28T13:54:45Z
+            start count: 3
+          restart count: 0
+       restart attempts:
+           next restart:
+         restart policy: never
+            stop origin:
+            stop reason:
+          app exit code: 1
+                  image: oci://unikraft.io/<my-org>/httpserver-go121:latest@sha256:7785ebdf6c1ffaf05c3beab4cffc2548790c088233a0ee51ac5d047e21e43d77
+                 memory: 256 MiB
+                  vcpus: 1
+                   args:
+                    env:
+                volumes:
+                service: floral-sun-54ixkmi6
+          scale to zero: on
+ scale to zero cooldown: 1000
+ scale to zero stateful: false
+              boot time: 75.70 ms
+                up time: 47.521s
+```
+
+</CodeTabs>
+
+You can retrieve even more instance details via the API:
+
+```bash title="GET /instances/bd281cc4-7640-4cbc-af48-5a44c2bd7b74"
+curl -X GET \
+  -H "Authorization: Bearer ${UKC_TOKEN}" \
+  -H "Accept: application/json" \
+  https://api.fra.unikraft.cloud/v1/instances/bd281cc4-7640-4cbc-af48-5a44c2bd7b74
+```
+
+```json title=""
+{
+  "status": "success",
+  "data": {
+    "instances": [
+      {
+        "status": "success",
+        "uuid": "bd281cc4-7640-4cbc-af48-5a44c2bd7b74",
+        "name": "httpserver-go121-taud8",
+        "created_at": "2026-05-28T13:53:40Z",
+        "state": "standby",
+        "private_fqdn": "httpserver-go121-taud8.internal",
+        "image": "oci://unikraft.io/<my-org>/httpserver-go121:latest@sha256:7785ebdf6c1ffaf05c3beab4cffc2548790c088233a0ee51ac5d047e21e43d77",
+        "memory_mb": 256,
+        "vcpus": 1,
+        "stop_reason": 39,
+        "exit_code": 1,
+        "stop_code": 33024,
+        "restart_policy": "never",
+        "scale_to_zero": {
+          "enabled": true,
+          "policy": "on",
+          "cooldown_time_ms": 1000,
+          "notify_time_ms": 0,
+          "stateful": false
+        },
+        "boot_time_us": 75698,
+        "net_time_us": 79067,
+        "start_count": 3,
+        "started_at": "2026-05-28T13:54:43Z",
+        "stopped_at": "2026-05-28T13:54:45Z",
+        "uptime_ms": 47521,
+        "service_group": {
+          "uuid": "d20c8a02-53a8-4917-8c25-94b99ab59a88",
+          "name": "floral-sun-54ixkmi6",
+          "domains": [
+            {
+              "fqdn": "floral-sun-54ixkmi6.fra.unikraft.app"
+            }
+          ]
+        },
+        "network_interfaces": [
+          {
+            "uuid": "16ca6566-a368-45d3-b759-3abf0cc37d03",
+            "private_ip": "10.0.0.37",
+            "mac": "12:b0:0a:00:00:25"
+          }
+        ],
+        "private_ip": "10.0.0.37",
+        "volumes": []
+      }
+    ]
+  }
+}
+```
+
+### Stop reason
 
 To understand why Unikraft Cloud stopped an instance or is shutting it down, it provides information about the stop reason.
 You can retrieve this information via the [`GET /instances`](/api/platform/v1/instances#list-instances) endpoint when an instance is in the `draining`, `stopping`, `stopped` or `standby` state.
 
 The `stop_reason` contains a bitmask that tells you the origin of the shutdown:
-| Bit  | 4 [F]                     | 3 [U]                      | 2 [P]                      | 1 [A]                              | 0 [K]                                 |
-|------|---------------------------|----------------------------|----------------------------|------------------------------------|---------------------------------------|
-|Desc. | This was a force stop[^1] | Stop initiated by user[^2] | Stop initiated by platform | App exited - `exit_code` available | Kernel exited - `stop_code` available |
+
+| Bit  | 5 [Z]                     | 4 [F]                     | 3 [U]                      | 2 [P]                          | 1 [A]                              | 0 [K]                                 |
+|------|---------------------------|---------------------------|----------------------------|--------------------------------|------------------------------------|---------------------------------------|
+| Desc.| Stop due to scale-to-zero | This was a force stop[^1] | Stop initiated by user[^2] | Stop initiated by platform[^3] | App exited - `exit_code` available | Kernel exited - `stop_code` available |
 
 For example, the `stop_reason` has the following values in these scenarios:
 
-| Value | Bitmask         | Scenario |
-|-------|-----------------|----------|
-| `28`  | `11100`/`FUP--` | Forced user-initiated shutdown. |
-| `15`  | `01111`/`-UPAK` | Regular user-initiated shutdown. The app and kernel have exited. The `exit_code` and `stop_code` show if the app and kernel shut down cleanly. |
-| `13`  | `01101`/`-UP-K` | The user initiated a shutdown but the app was forcefully killed by the kernel during shutdown. This can be the case if the image doesn't support a clean app exit or the app crashed after receiving a termination signal. Unikraft Cloud ignores the `exit_code` in this scenario. |
-| `7`   | `00111`/`--PAK` | Unikraft Cloud initiated the shutdown (for example, due to [scale-to-zero](/features/scale-to-zero)). The app and kernel have exited. The `exit_code` and `stop_code` show if the app and kernel shut down cleanly. |
-| `3`   | `00011`/`---AK` | The app exited. The `exit_code` and `stop_code` show if the app and kernel shut down cleanly. |
-| `1`   | `00001`/`----K` | The instance likely experienced a fatal crash and the `stop_code` contains more information about the cause of the crash. |
-| `0`   | `00000`/`-----` | The stop reason is unknown. |
+| Value | Bitmask           | Scenario |
+|-------|-------------------|----------|
+| `39`  | `100111`/`Z--PAK` | Scale-to-zero shutdown. The platform initiated the stop because the instance scaled to zero, and both the app and kernel exited. |
+| `31`  | `011111`/`-FUPAK` | Forced user-initiated shutdown where the app and kernel still reported clean exits before the stop completed. |
+| `28`  | `011100`/`-FUP--` | Forced user-initiated shutdown without app or kernel exit information. |
+| `15`  | `001111`/`--UPAK` | Regular user-initiated shutdown. The app and kernel have exited. The `exit_code` and `stop_code` show if the app and kernel shut down cleanly. |
+| `13`  | `001101`/`--UP-K` | The user initiated a shutdown but the app was forcefully killed by the kernel during shutdown. This can happen if the image doesn't support a clean app exit or the app crashed after receiving a termination signal. In this case, ignore `exit_code`. |
+| `7`   | `000111`/`---PAK` | Platform-initiated shutdown. The app and kernel have exited. The `exit_code` and `stop_code` show if they shut down cleanly. |
+| `3`   | `000011`/`----AK` | The app exited. The `exit_code` and `stop_code` show if the app and kernel shut down cleanly. |
+| `1`   | `000001`/`-----K` | The instance likely experienced a fatal crash and the `stop_code` contains more information about the cause of the crash. |
+| `0`   | `000000`/`------` | The stop reason is unknown. |
 
 :::note
 There can be a short delay of a few milliseconds between the instance reaching the `stopped` state and Unikraft Cloud updating the `stop_reason` (or vice versa).
 :::
 
-### Exitcode
+:::note
+The scale-to-zero shutdown is a special case where the platform initiates the stop because the instance scaled to zero, and both the app and kernel exited.
+In the API, the instance appears in the `standby` state, instead of `stopped`.
+:::
+
+#### Exitcode
 
 The app exit code is what the app returns upon leaving its main entry point.
 The encoding of the `exit_code` is app specific.
 See the documentation of the app for more details.
 An `exit_code` of `0` indicates success or no failure.
 
-### Stopcode
+#### Stopcode
 
-Unikraft Cloud defines the `stop_code` by the kernel and has the following encoding irrespective of the app.
+{/* vale off */}
+If bit 0 [K] is set in `stop_reason`, `stop_code` contains the 32-bit code reported by the guest kernel.
+Unikraft Cloud also uses platform-defined values when the stop originates in the platform before the guest kernel can report its own code.
+{/* vale on */}
+
+Currently the platform-defined values are:
+
+| Value | Symbol       | Scenario |
+|-------|--------------|----------|
+| `0`   | `UNKNOWN`    | No platform-specific stop code is available. |
+| `1`   | `NOMEDIUM`   | The instance couldn't start because the image or another required medium wasn't available, for example because an image pull failed. |
+
+When the guest kernel reports a stop code, it uses the following encoding:
 
 | Bits | 31 - 24 (8 bits) | 23 - 16 (8 bits) | 15 [T]         | 14 - 8 (7 bits) | 7 - 0 (8 bits) |
 |------|------------------|------------------|----------------|-----------------|----------------|
-| Desc.| Reserved[^3]     | `errno`          | `shutdown_bit` | `initlvl`       | `reason`       |
+| Desc.| Reserved[^4]     | `errno`          | `shutdown_bit` | `initlvl`       | `reason`       |
 
 #### Reason
 
@@ -97,7 +263,7 @@ A level of `127` means the instance was executing the app.
 
 :::note
 For example, an out-of-memory (OOM) situation triggers a page fault `PGFAULT(4)` with `errno` set to `ENOMEM(12)`.
-In that case the `stop_code` is `0x000C7F04=818948` and the `stop_reason` is `----K (1)` if the stop occurred during app execution.
+In that case the `stop_code` is `0x000C7F04=818948` and the `stop_reason` is `-----K (1)` if the stop occurred during app execution.
 :::
 
 
@@ -122,41 +288,15 @@ The `restart.next_at` field indicates when the next restart occurs if a back-off
 
 A manual start or stop of the instance aborts the restart sequence and resets the back-off delay.
 
-
+{/* vale off */}
 [^1]: A forced stop doesn't give the instance a chance to perform a clean shutdown.
-      Bits 0 [K] and 1 [A] can thus never occur for forced shutdowns.
-      As a result, there won't be an `exit_code` or `stop_code`.
+      Often, `exit_code` and `stop_code` are therefore not available.
+      If the guest reports an exit while the forced shutdown is in progress, bits 0 [K] and 1 [A] can still be set.
 [^2]: A stop command originating from the user travels through the platform controller.
       This is why bit 2 [P] will also always occur for user-initiated stops.
-[^3]: The system sets reserved bits to 0. Ignore them.
-
-## Instance templates
-
-An instance template is a snapshotted instance that acts as a source for cloning new instances.
-Cloning a template creates a new instance that resumes from the exact original system state. 
-It preserves memory contents, open files, and populated caches to bypass the standard boot sequence.
-Once you convert an instance into a template, you can't reverse the process.
-
-To transition an actively running instance into a template, from the guest write the value 1 to `/uk/libukp/template_instance`:
-
-```bash title="Convert instance to template"
-echo 1 > /uk/libukp/template_instance
-```
-
-This action instructs the controller to freeze running processes and save the instance as a reusable template.
-
-Templates support [delete locks](/platform/delete-locks), [tags](/platform/tagging), and [autokill](/features/autokill).
-The platform measures autokill on a template from the time of last clone, not from instance stop time.
-
-### Nested templates
-
-You can clone a template from another template, creating a hierarchy.
-Each clone inherits the parent's full state at clone time and can independently accumulate further state before you convert it into its own template.
-This enables layered configurations, for example a base template with a warm database connection pool, and child templates specialized for different query workloads.
-
-No depth limit applies to nesting, and circular references aren't possible because the template state is immutable once set.
-
-For more information, check out the API reference for instance templates [here](/api/platform/v1/instances#create-template-instances-from-instances).
+[^3]: Internally this bit is set when ukpd, the platform controller, initiates the stop.
+[^4]: The system sets reserved bits to 0. Ignore them.
+{/* vale on */}
 
 ## Creating instances
 
@@ -173,6 +313,20 @@ The [`POST /instances`](/api/platform/v1/instances#create-instance) request acce
 All instances share the same image, memory, arguments, and service group configuration.
 Replicas receive independent names and UUIDs.
 
+You can do this with the CLI as well:
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft instance create --replicas 2 ...
+```
+
+```bash title="kraft"
+kraft cloud deploy --replicas 2 ...
+```
+
+</CodeTabs>
+
 ### Wait for running
 
 By default [`POST /instances`](/api/platform/v1/instances#create-instance) returns as soon as the platform queues the instance.
@@ -184,6 +338,7 @@ For example:
   ...
   "image": "nginx:latest",
   "memory_mb": 256,
+  "autostart": true,
   "timeout_s": 10,
   ...
 }
@@ -193,6 +348,12 @@ For example:
 `wait_timeout_ms` is a deprecated compatibility field.
 When set, the platform rounds the value up to the next full second.
 Use `timeout_s` instead.
+:::
+
+:::note
+The `unikraft` CLI automatically waits for the instance to be running after creation, up until a preconfigured timeout of 10 seconds.
+The `kraft` CLI doesn't support this feature yet.
+Additionally, if you create an instance using `kraft cloud instance create`, you need to specify the `--start` flag to autostart the instance.
 :::
 
 ### Delete on stop
@@ -211,6 +372,20 @@ Pass `delete-on-stop` in the features array to automatically delete the instance
 ```
 
 This is useful for ephemeral workloads—batch jobs, one-shot tasks—where you don't need to keep the stopped instance.
+
+You can also use the CLI to set this up:
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft instance create --rm ...
+```
+
+```bash title="kraft"
+# not supported, use unikraft CLI instead
+```
+
+</CodeTabs>
 
 :::note
 To use the "delete-on-stop" feature, set the `restart_policy` to `never`.
@@ -238,6 +413,20 @@ Set `drain_timeout_ms` to allow the instance to finish serving in-flight connect
 }
 ```
 
+You can also use the CLI to set this up:
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft instance stop --drain-timeout 5s my-instance
+```
+
+```bash title="kraft"
+kraft cloud instance stop --wait 5s my-instance
+```
+
+</CodeTabs>
+
 While draining, the instance enters the `draining` state.
 The platform accepts no new connections.
 The instance stops once all connections close or the timeout elapses.
@@ -247,45 +436,170 @@ You can't combine `drain_timeout_ms` with `force: true`.
 Setting both returns a `400` error.
 :::
 
+## Instance templates
+
+An instance template is a snapshotted instance that acts as a source for cloning new instances.
+Cloning a template creates a new instance that resumes from the exact original system state.
+It preserves memory contents, open files, and populated caches to bypass the standard boot sequence.
+Once you convert an instance into a template, you can't reverse the process.
+
+To transition an actively running instance into a template, from the guest write the value 1 to `/uk/libukp/template_instance`:
+
+```bash title="Convert instance to template"
+echo 1 > /uk/libukp/template_instance
+```
+
+This action instructs the controller to freeze running processes and save the instance as a reusable template.
+The write blocks until the platform has snapshotted the instance and created the new instance from the resulting template.
+When the write returns, the guest is already running as the freshly cloned instance, restored from the snapshot rather than continuing as the original.
+This lets the guest finish any instance-specific setup—such as reading per-instance data from an attached [inline ROM](/features/roms#inline-roms)—immediately after the write completes.
+If the template already exists, the clone happens right away and the write returns without re-snapshotting.
+You can also create a template from an instance (even when it's running) by calling [`POST /instances/templates`](/api/platform/v1/instances#create-template-instances-from-instances), or using the CLI:
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft instance template create httpserver-go121-taud8
+```
+
+```bash title="kraft"
+kraft cloud instance template create
+```
+
+</CodeTabs>
+
+<div style={{ marginTop: '0.8em' }} />
+
+<CodeTabs syncKey="cli">
+
+```ansi title="unikraft"
+[1mmetro[22m:           fra
+[1mname[22m:            httpserver-go121-taud8
+[1muuid[22m:            bd281cc4-7640-4cbc-af48-5a44c2bd7b74
+[1mstate[22m:           [38;2;43;127;255mtemplate[0m
+[1mimage[22m:           <my-org>/httpserver-go121
+[1mresources[22m:
+[3m  memory[23m:        256MiB
+[3m  vcpus[23m:         1
+[1mtimestamps[22m:
+[3m  created[23m:       6 days ago
+[1mscale-to-zero[22m:
+[3m  enabled[23m:       true
+[3m  policy[23m:        on
+[3m  cooldown-time[23m: 1s
+```
+
+```ansi title="kraft"
+bd281cc4-7640-4cbc-af48-5a44c2bd7b74
+```
+
+</CodeTabs>
+
+You can list templates with [`GET /instances/templates`](/api/platform/v1/instances#list-template-instances) or the CLI:
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft instance template list
+```
+
+```bash title="kraft"
+kraft instance template list
+```
+
+</CodeTabs>
+
+<div style={{ marginTop: '0.8em' }} />
+
+<CodeTabs syncKey="cli">
+
+```ansi title="unikraft"
+[1mMETRO[22m  [1mNAME[22m                    [1mSTATE[22m     [1mIMAGE[22m                      [1mARGS[22m  [1mMEMORY[22m  [1mVCPUS[22m  [1mCREATED[22m
+fra    httpserver-go121-taud8  [38;2;43;127;255mtemplate[0m  <my-org>/httpserver-go121        256MiB  1      6 days ago
+```
+
+```ansi title="kraft"
+[0;1;39mNAME[0m                    [0;1;39mIMAGE[0m                                                                                                                       [0;1;39mARGS[0m  [0;1;39mCREATED AT[0m
+httpserver-go121-taud8  oci://unikraft.io/<my-org>/httpserver-go121:latest@sha256:7785ebdf6c1ffaf05c3beab4cffc2548790c088233a0ee51ac5d047e21e43d77        6 days ago
+```
+
+</CodeTabs>
+
+Now, you can create an instance from the template using the `unikraft` CLI:
+
+```bash title="unikraft"
+unikraft instance create --metro fra \
+  --template httpserver-go121-taud8 \
+  --name httpserver-go121-clone
+```
+
+```ansi title="unikraft"
+[1mmetro[22m:           fra
+[1mname[22m:            httpserver-go121-clone
+[1muuid[22m:            91796fdb-bd41-4c7b-856f-9e60356c96bd
+[1mstate[22m:           [38;2;43;127;255mstandby[0m
+[1mimage[22m:           acioc/httpserver-go121
+[1mresources[22m:
+[3m  memory[23m:        256MiB
+[3m  vcpus[23m:         1
+[1mnetworks[22m:
+[3m- uuid[23m:          8c778b8b-6ede-4e87-a825-159a2269fd19
+[3m  private-ip[23m:    10.0.0.85
+[3m  mac[23m:           12:b0:0a:00:00:55
+[1mtimestamps[22m:
+[3m  created[23m:       just now
+[1mscale-to-zero[22m:
+[3m  enabled[23m:       true
+[3m  policy[23m:        on
+[3m  cooldown-time[23m: 1s
+```
+
+Templates support [delete locks](/platform/delete-locks), [tags](/platform/tagging), and [autokill](/features/autokill).
+The platform measures autokill on a template from the time of last clone, not from instance stop time.
+
+:::info
+You can also have the platform create a template implicitly as part of an instance-create call, instead of converting and managing it yourself.
+See [On-demand templates](/features/on-demand-templates).
+:::
+
+### Nested templates
+
+You can clone a template from another template, creating a hierarchy.
+Each clone inherits the parent's full state at clone time and can independently accumulate further state before you convert it into its own template.
+This enables layered configurations, for example a base template with a warm database connection pool, and child templates specialized for different query workloads.
+
+No depth limit applies to nesting, and circular references aren't possible because the template state is immutable once set.
+
+:::info
+You can also build such a hierarchy in a single API call with [on-demand templates](/features/on-demand-templates#nested-templates), where the platform creates each level only if it doesn't already exist.
+:::
+
+For more information, check out the API reference for instance templates [here](/api/platform/v1/instances#create-template-instances-from-instances).
+
 ## Instance metrics
 
 Use the [`GET /instances/metrics`](/api/platform/v1/instances#get-instances-metrics) endpoint to retrieve runtime statistics for one or more instances.
 With no identifiers, the platform returns metrics for all instances in your account.
-
-### Response format
-
-Include the header `Accept: application/json` to receive a JSON response.
-Otherwise, you will receive metrics in Prometheus text format, that you can parse with Prometheus client libraries.
-
-**JSON response**: each instance object contains:
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `state` | string | Current instance state. |
-| `start_count` | int | Number of times the instance has started. |
-| `restart_count` | int | Number of restarts (omitted if 0). |
-| `started_at` | timestamp | Time of last start (omitted if unset). |
-| `stopped_at` | timestamp | Time of last stop (omitted if unset). |
-| `uptime_ms` | int64 | Current uptime in milliseconds. |
-| `boot_time_us` | int | Boot time in microseconds (omitted if 0). |
-| `net_time_us` | int | Network setup time in microseconds (omitted if 0). |
-| `rss_bytes` | int64 | Resident set size in bytes. |
-| `cpu_time_ms` | int64 | Consumed CPU time in milliseconds. |
-| `rx_bytes` | int64 | Bytes received over the network. |
-| `rx_packets` | int64 | Packets received from the network. |
-| `tx_bytes` | int64 | Bytes transmitted over the network. |
-| `tx_packets` | int64 | Packets transmitted over the network. |
-| `nconns` | int | Number of active connections. |
-| `nreqs` | int | Number of active HTTP requests. |
-| `nqueued` | int | Number of queued connections or requests. |
-| `ntotal` | int64 | Total connections or requests processed since start. |
-| `wakeup_latency` | array | Histogram buckets. Each bucket has `bucket_ms` (upper bound, or `null` for overflow) and `count`. |
-| `wakeup_latency_sum` | uint64 | Sum of all recorded wakeup latencies. |
+For more information, check out this dedicated section on [instance metrics](/platform/metrics).
 
 ## Instance logs
 
 Use the [`GET /instances/logs`](/api/platform/v1/instances#get-instances-logs) endpoint to retrieve logs for one or more instances.
 The logs capture the instance's `stdout` and `stderr` output, and they're preserved across restarts and stops.
+
+With the CLI, you can also follow the logs in real time:
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft instance logs --follow my-instance
+```
+
+```bash title="kraft"
+kraft cloud instance logs --follow my-instance
+```
+
+</CodeTabs>
 
 ## Learn more
 

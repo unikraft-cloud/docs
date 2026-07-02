@@ -3,30 +3,18 @@ title: Domains
 navigation_icon: globe
 ---
 
-This guide shows how to deploy an app and link it to a domain you own (for example, `mydomain.com`).
-
-:::note
-Unikraft Cloud can take a few seconds before issuing the certificate.
-If there are misconfigurations or DNS changes that your external DNS provider hasn't propagated yet, this can take much longer.
-You can check the validation status of the certificate with the CLI (more on this below).
-The controller retries at these intervals: [1,5,10,30] minutes, then [1,6,12,24] hours, then it fails.
-:::
-
-The setup is complete.
-Test the deployment with `curl`.
-
+When attaching a [service](/platform/services) to an instance, Unikraft Cloud exposes the instance on a subdomain of `unikraft.app` by default.
+You can also use your own custom domain instead.
 
 ## Configuring your external DNS provider
 
 Before Unikraft Cloud can launch an app, you need to ensure that you have configured things correctly with your DNS provider:
 
-ALIAS (apex alias) and ANAME (authoritative alias) are DNS record types some providers support.
+* For a subdomain you own such as `docs.mydomain.com`, a CNAME is enough.
+  In this case, you can just add a CNAME record with your sub-domain (`docs`) as the host and point the record to Unikraft Cloud's metro (for example, `fra.unikraft.app`).
 
-* For a subdomain you own such as docs.mydomain.com, a CNAME is enough.
-  In this case, you can just add a `CNAME` record with your sub-domain (`docs`) as the host and point the record to Unikraft Cloud's metro (for example, `fra.unikraft.app`).
-
-* For an apex domain (for example, mydomain.com), add one of: ALIAS, ANAME, or a flattened CNAME record.
-  Depending on your provider, leave the host field empty or enter @.
+* For an apex domain (for example, `mydomain.com`), add one of: ALIAS[^1], ANAME[^1], or a flattened CNAME record.
+  Depending on your provider, leave the host field empty or enter `@`.
   Point the record to the metro (for example, `fra.unikraft.app`).
   If the provider doesn't support these record types, add an A record pointing to the metro IP address.
 
@@ -48,9 +36,12 @@ kraft cloud metro ls
 
 :::note
 You can have many domains for the same service.
-Unikraft Cloud also supports wildcard domains.
-See the [certificates API](/api/platform/v1/certificates) for details.
+Unikraft Cloud also supports [wildcard domains](/platform/certificates).
 :::
+
+{/* vale off */}
+[^1]: ALIAS (apex alias) and ANAME (authoritative alias) are DNS record types some providers support.
+{/* vale on */}
 
 ## Launching your app
 
@@ -62,8 +53,7 @@ cd examples/nginx
 ```
 
 Log into Unikraft Cloud and select a [metro](/platform/metros) close to you.
-This guide uses `fra` (Frankfurt, 🇩🇪).
-Set the following:
+This guide uses `fra` (Frankfurt, DE):
 
 <CodeTabs syncKey="cli">
 
@@ -89,51 +79,125 @@ Unikraft Cloud does this through the domain flag:
 
 ```bash title="unikraft"
 unikraft build . --output <my-org>/nginx:latest
-unikraft run --metro=fra -p 443:8080/http+tls --domain mydomain.com --image=<my-org>/nginx:latest
+unikraft run --metro fra \
+  -m 256M \
+  -p 443:8080/http+tls \
+  --domain mydomain.com \
+  --image <my-org>/nginx:latest
 ```
 
 ```bash title="kraft"
-kraft cloud deploy -p 443:8080 -d mydomain.com .
+kraft cloud deploy \
+  -M 256Mi \
+  -p 443:8080 \
+  -d mydomain.com \
+  .
 ```
 
 </CodeTabs>
 
-The resulting output of the `deploy` command should be like:
+The resulting output of the deploy command should be like:
 
-```ansi title=""
-[90m[[0m[92m●[0m[90m][0m Deployed successfully!
- [90m│[0m
- [90m├[0m[90m──────────[0m [90mname[0m: nginx-67zbu
- [90m├[0m[90m──────────[0m [90muuid[0m: 269019de-f7dc-4077-9568-012ad594ca87
- [90m├[0m[90m─────────[0m [90mstate[0m: [92mrunning[0m
- [90m├[0m[90m───────────[0m [90murl[0m: https://mydomain.com
- [90m├[0m[90m─────────[0m [90mimage[0m: nginx@sha256:6abb4f2ba4501068a84885d7b8b127adaf3d83c25fd43e79d5a142f6d8703c93
- [90m├[0m[90m─────[0m [90mboot time[0m: 11.13ms
- [90m├[0m[90m────────[0m [90mmemory[0m: 1024 MiB
- [90m├[0m[90m───────[0m [90mservice[0m: wispy-moon-dpg6d54i
- [90m├[0m[90m──[0m [90mprivate fqdn[0m: nginx-67zbu.internal
- [90m├[0m[90m────[0m [90mprivate ip[0m: 172.16.6.5
- [90m└[0m[90m──────────[0m [90margs[0m: /usr/bin/nginx -c /etc/nginx/nginx.conf
+
+<CodeTabs syncKey="cli">
+
+```ansi title="unikraft"
+[1mmetro[22m:           fra
+[1mname[22m:            nginx-67zbu
+[1muuid[22m:            8a8bc1b9-0af6-420e-a426-190dc2da9eaa
+[1mstate[22m:           [38;2;144;161;185mstarting[0m
+[1mimage[22m:           <my-org>/nginx
+[1mresources[22m:
+[3m  memory[23m:        256MiB
+[3m  vcpus[23m:         1
+[1mservice[22m:
+[3m  uuid[23m:          a942b9b5-ad17-3ffe-dcd2-ef4331f9087a
+[3m  name[23m:          nameless-fog-0tvh1uov
+[3m  domains[23m:
+[3m  - fqdn[23m:        mydomain.com
+[3m    certificate[23m:
+[3m      name[23m:      mydomain.com-savtl
+[3m      uuid[23m:      51efebaf-4858-450c-8ba5-8bd1df96c20b
+[1mnetworks[22m:
+[3m- uuid[23m:          62d9bbf0-aec8-61f6-7bdb-86edf63dd068
+[3m  private-ip[23m:    10.0.3.3
+[3m  mac[23m:           12:b0:c6:23:ed:15
+[1mtimestamps[22m:
+[3m  created[23m:       just now
 ```
 
-When you issue the domain flag, Unikraft Cloud requests a
-new certificate from the public certificate authority.
+```ansi title="kraft"
+[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
+ [38;5;245m│[0m
+ [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245mname[0m: nginx-67zbu
+ [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245muuid[0m: 8a8bc1b9-0af6-420e-a426-190dc2da9eaa
+ [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
+ [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mstate[0m: [92mstarting[0m
+ [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mdomain[0m: https://mydomain.com
+ [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/nginx@sha256:f51ecc121c9ca34abb88a2bc6a69765501304f7893f7e85af15fbec3dc86e2bd
+ [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mmemory[0m: 256 MiB
+ [38;5;245m├[0m[38;5;245m──────[0m [38;5;245mservice[0m: nameless-fog-0tvh1uov
+ [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: nginx-67zbu.internal
+ [38;5;245m└[0m[38;5;245m───[0m [38;5;245mprivate ip[0m: 10.0.3.3
+```
 
-:::note
-Issuing the certificate can take a few seconds.
-If there are misconfigurations or pending DNS changes, it can take longer.
-Check the validation status with the CLI (more on this command below).
-The Unikraft Cloud controller retries at these intervals: [1,5,10,30] minutes, then [1,6,12,24] hours, then it fails.
+</CodeTabs>
+
+When you issue the domain flag, Unikraft Cloud requests a new [certificate](/platform/certificates) from the public certificate authority.
+To check the validation status of the certificate, use the CLI:
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft certificates list
+```
+
+```bash title="kraft"
+kraft cloud certificates list
+```
+
+</CodeTabs>
+
+You should see it first in `pending`:
+
+<CodeTabs syncKey="cli">
+
+```ansi title="unikraft"
+[1mMETRO[22m  [1mNAME[22m                [1mCOMMON-NAME[22m   [1mSTATE[22m    [1mCREATED[22m   [1mNOT-AFTER[22m
+fra    mydomain.com-savtl  mydomain.com  pending  just now  never
+```
+
+```ansi title="kraft"
+[0;1;39mNAME[0m                [0;1;39mSTATE[0m    [0;1;39mCOMMON NAME[0m   [0;1;39mCREATED AT[0m
+mydomain.com-savtl  pending  mydomain.com  just now
+```
+
+</CodeTabs>
+
+{/* vale off */}
+:::caution
+Unikraft Cloud requests a certificate from Let's Encrypt using the [ACME protocol](https://letsencrypt.org/how-it-works/).
+It can take a few seconds before issuing the certificate.
+If there are misconfigurations or DNS changes that your external DNS provider hasn't propagated yet, this can take much longer.
 :::
+{/* vale on */}
 
-The setup is complete.
-Test the deployment with `curl`:
+After their state changes to `valid`, check the deployment with `curl`:
 
 ```bash
 curl https://mydomain.com
 ```
 
+```text title=""
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+[...]
+```
+
 ## Learn more
 
 * The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
-* Unikraft Cloud's [REST API reference](/api/platform/v1), in particular the sections on [instances](/api/platform/v1/instances) and [service groups](/api/platform/v1/service-groups).
+* Unikraft Cloud's [REST API reference](/api/platform/v1), in particular the sections on [instances](/api/platform/v1/instances), [service groups](/api/platform/v1/servicegroups) and [certificates](/api/platform/v1/certificates).
+* The [certificates documentation](/platform/certificates) for more information on how to use custom certificates with your services.

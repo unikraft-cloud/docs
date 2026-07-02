@@ -61,24 +61,40 @@ It allows MCP clients to browse and analyze papers.
 
 To run an example based on it, follow these steps:
 
-1. Install the [`kraft` CLI tool](https://unikraft.org/docs/cli/install) and a container runtime engine (for example, [Docker](https://docs.docker.com/engine/install/)).
+1. Install the CLI.
+   Use the [unikraft CLI](/docs/cli/unikraft) or the legacy [kraft CLI](https://unikraft.org/docs/cli/install).
+   You need a [BuildKit](https://github.com/moby/buildkit) builder. The easiest way to get one is via [Docker](https://docs.docker.com/engine/install/).
+   You can also set up and use BuildKit directly; see the [quick start](https://github.com/moby/buildkit#quick-start).
+
+   :::note
+   The unikraft CLI is the current standard, while kraft is the legacy version.
+   Choose one of the CLIs below and only run the commands associated with it for the rest of this guide.
+   :::
 
 1. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/mcp-server-arxiv/` directory:
 
-```bash
-git clone https://github.com/unikraft-cloud/examples
-cd examples/mcp-server-arxiv/
-```
+   ```bash
+   git clone https://github.com/unikraft-cloud/examples
+   cd examples/mcp-server-arxiv/
+   ```
 
-Make sure to log into Unikraft Cloud by setting your token and a [metro](/platform/metros) close to you.
+Make sure to log into Unikraft Cloud and set your token and a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪):
 
-```bash
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft login
+```
+
+```bash title="kraft"
 # Set Unikraft Cloud access token
 export UKC_TOKEN=token
 # Set metro to Frankfurt, DE
 export UKC_METRO=fra
 ```
+
+</CodeTabs>
 
 Follow the instructions in the example's README to set it up and grab the server's FQDN.
 
@@ -127,21 +143,40 @@ This shows the core patterns for building your own MCP tools.
 
 To run it, follow these steps:
 
-1. Install the [`kraft` CLI tool](https://unikraft.org/docs/cli/install) and a container runtime engine (for example, [Docker](https://docs.docker.com/engine/install/)).
+1. Install the CLI.
+   Use the [unikraft CLI](/docs/cli/unikraft) or the legacy [kraft CLI](https://unikraft.org/docs/cli/install).
+   You need a [BuildKit](https://github.com/moby/buildkit) builder. The easiest way to get one is via [Docker](https://docs.docker.com/engine/install/).
+   You can also set up and use BuildKit directly; see the [quick start](https://github.com/moby/buildkit#quick-start).
+
+   :::note
+   The unikraft CLI is the current standard, while kraft is the legacy version.
+   Choose one of the CLIs below and only run the commands associated with it for the rest of this guide.
+   :::
 
 1. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/mcp-server-simple/` directory:
 
-```bash
-git clone https://github.com/unikraft-cloud/examples
-cd examples/mcp-server-simple/
+   ```bash
+   git clone https://github.com/unikraft-cloud/examples
+   cd examples/mcp-server-simple/
+   ```
+
+Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
+This guide uses `fra` (Frankfurt, 🇩🇪).
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft login
 ```
 
-Make sure to set your Unikraft Cloud token and metro:
-
-```bash
+```bash title="kraft"
+# Set Unikraft Cloud access token
 export UKC_TOKEN=token
+# Set metro to Frankfurt, DE
 export UKC_METRO=fra
 ```
+
+</CodeTabs>
 
 Follow the instructions in the example's README to set it up and grab the server's FQDN.
 
@@ -195,6 +230,10 @@ Unikraft Cloud's instant deployment and scale-to-zero model makes it ideal for h
 Use the `--help` option for detailed information on using Unikraft Cloud:
 
 <CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft --help
+```
 
 ```bash title="kraft"
 kraft cloud --help

@@ -71,11 +71,13 @@ FROM image:latest
 Then create a matching `Kraftfile`:
 
 ```yaml title="Kraftfile"
-spec: v0.6
+spec: v0.7
 
 runtime: base-compat:latest
 
-rootfs: ./Dockerfile
+rootfs:
+  source: ./Dockerfile
+  format: erofs
 
 cmd: ["/path/from-entrypoint", "arg1", "arg2"]
 ```
@@ -90,7 +92,7 @@ Replace the placeholder command with the exact values extracted from `docker ima
 For example, if the image reports `Entrypoint=["/usr/local/bin/docker-entrypoint.sh"]` and `Cmd=["postgres"]`, then use `cmd: ["/usr/local/bin/docker-entrypoint.sh", "postgres"]`.
 
 :::caution
-These Dockerfile keywords aren't deployment controls on Unikraft Cloud.
+These `Dockerfile` keywords aren't deployment controls on Unikraft Cloud.
 In particular, `EXPOSE`, `HEALTHCHECK`, `ONBUILD`, `SHELL`, `STOPSIGNAL`, and `VOLUME` are ignored as Docker deployment semantics.
 Also note that instances run as `root` unless you explicitly switch users at runtime.
 :::
@@ -104,14 +106,18 @@ This confirms that the runtime, filesystem, and command line are valid.
 
 ```bash title="unikraft"
 unikraft build . --output <my-org>/docker-port:latest
-unikraft run --metro=fra -p 443:<container-port> -m 512MiB --image=<my-org>/docker-port:latest
+unikraft run --metro fra \
+  -p 443:<container-port> \
+  -m 512M \
+  --image <my-org>/docker-port:latest
 ```
 
 ```bash title="kraft"
 kraft cloud deploy \
-		-p 443:<container-port> \
-		-M 512Mi \
-		.
+  -p 443:<container-port> \
+  -M 512Mi \
+  --rootfs-type erofs \
+  .
 ```
 
 </CodeTabs>
@@ -122,7 +128,7 @@ Take this value from the image documentation or from the `ExposedPorts` field yo
 If the instance fails to boot, inspect the logs and fix the command line first.
 In most broken first attempts, the issue is either a wrong executable path, a missing wrapper script, or insufficient memory.
 
-:::note
+:::tip
 If the upstream image depends on a specific `WORKDIR`, verify whether absolute paths are enough.
 If not, add a small wrapper script that changes directory and then `exec`s the original command.
 :::
@@ -158,8 +164,8 @@ If the image doesn't contain a shell, use a temporary debug image or inspect the
 The goal is the same in both cases: copy only what the final process needs at runtime.
 
 :::tip
-Verify whether the upstream image is glibc-based or musl-based before copying the loader and shared libraries.
-The sample paths above use musl-flavoured locations because that's a common pattern in the examples, but your image may differ.
+Verify whether the upstream image is `glibc`-based or `musl`-based before copying the loader and shared libraries.
+The sample paths above use `musl`-flavoured locations because that's a common pattern in the examples, but your image may differ.
 :::
 
 ### Strip binaries and libraries
@@ -170,7 +176,7 @@ This helps most with native apps and compiled dependencies.
 The common tool for this is `strip` from `binutils`.
 It removes symbol and debug information that the app doesn't need at runtime.
 
-:::note
+:::tip
 Use stripping only after the app already boots correctly.
 :::
 
@@ -208,7 +214,7 @@ As a rule of thumb, strip these files only when they're part of your runtime pat
 Don't strip files if you will need them for debugging later.
 :::
 
-### Convert the Dockerfile to a multi-stage build
+### Convert the `Dockerfile` to a multi-stage build
 
 Start from the upstream image in a build stage.
 Then copy only the final executable, its direct shared libraries, and the app files into a `scratch` stage.
@@ -236,26 +242,35 @@ COPY --from=upstream /etc/os-release /etc/os-release
 COPY --from=upstream /app /app
 ```
 
-This is the same shape used by examples such as [`node21-nextjs`](https://github.com/unikraft-cloud/examples/blob/main/node21-nextjs/Dockerfile), where the final image keeps only the Node binary, its required libraries, `/etc/os-release`, and the built app output.
+This is the same shape used by examples such as [`httpserver-node21-nextjs`](https://github.com/unikraft-cloud/examples/tree/main/httpserver-node21-nextjs), where the final image keeps only the Node binary, its required libraries, `/etc/os-release`, and the built app output.
 
 ## Recommended deployment settings for the slim image
 
-After reducing the filesystem, deploy it with [`EROFS`](/tutorials/rootfs-formats) when possible.
-This often gives better cold-boot behaviour and lower memory pressure than `CPIO` for larger images.
+After reducing the filesystem, deploy it with [EROFS](/tutorials/rootfs-formats) when possible.
+This often gives better cold-boot behaviour and lower memory pressure than CPIO for larger images.
 
 <CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
+# make sure to specify the erofs format in Kraftfile
+# ...
+# rootfs:
+#    source: ./Dockerfile
+#    format: erofs
+# ...
 unikraft build . --output <my-org>/docker-port:latest
-unikraft run --metro=fra -p 443:<container-port> -m 256MiB --image=<my-org>/docker-port:latest
+unikraft run --metro fra \
+  -p 443:<container-port> \
+  -m 256M \
+  --image <my-org>/docker-port:latest
 ```
 
 ```bash title="kraft"
 kraft cloud deploy \
-		-p 443:<container-port> \
-		-M 256Mi \
-		--rootfs-type erofs \
-		.
+  -p 443:<container-port> \
+  -M 256Mi \
+  --rootfs-type erofs \
+  .
 ```
 
 </CodeTabs>
@@ -271,33 +286,35 @@ Before calling the image minimized, check the following:
 * copy only runtime files into the final stage;
 * no package manager cache or compiler output remains;
 * expose the instance port through the CLI `-p` flag;
-* use [`EROFS`](/tutorials/rootfs-formats) unless you have a reason to stay on `CPIO`.
+* use [EROFS](/tutorials/rootfs-formats) unless you have a reason to stay on CPIO.
 
 ## More configurations
 
 ### Environment variables
 
 If the upstream image depends on environment variables, you can optionally carry them over explicitly.
-The most reliable method at deployment time is to pass them through the CLI with `--env` or `-e`.
+The most reliable method at deployment time is to pass them through the CLI with `--env` or `-e`:
 
 <CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft build . --output <my-org>/docker-port:latest
-unikraft run --metro=fra -p 443:<container-port> -m 256MiB \
+unikraft run --metro fra \
+  -p 443:<container-port> \
+  -m 256M \
   -e APP_ENV=production \
   -e LOG_LEVEL=info \
-  --image=<my-org>/docker-port:latest
+  --image <my-org>/docker-port:latest
 ```
 
 ```bash title="kraft"
 kraft cloud deploy \
-		-p 443:<container-port> \
-		-M 256Mi \
-		--rootfs-type erofs \
-		-e APP_ENV=production \
-		-e LOG_LEVEL=info \
-		.
+  -p 443:<container-port> \
+  -M 256Mi \
+  --rootfs-type erofs \
+  -e APP_ENV=production \
+  -e LOG_LEVEL=info \
+  .
 ```
 
 </CodeTabs>
@@ -305,8 +322,8 @@ kraft cloud deploy \
 If the image expects a wrapper entrypoint that prepares environment variables before starting the main process, keep that wrapper in your `cmd` line or replace it with your own script.
 The [Environment Variables](/tutorials/environment-variables) tutorial describes the wrapper pattern in more detail.
 
-:::note
-Dockerfile `ENV` instructions carry over into the image, but you might want to set them explicitly at deployment time for better visibility and control.
+:::tip
+`Dockerfile` `ENV` instructions carry over into the image, but you might want to override them at deployment time for better visibility and control.
 :::
 
 ### Users and permissions
@@ -321,11 +338,11 @@ When slimming the image, check permission-sensitive paths such as:
 
 * runtime directories under `/var` or `/run`;
 * app state directories under `/app`, `/srv`, or `/data`;
-* Unix sockets or process ID files created by the upstream entrypoint.
+* UNIX sockets or process ID files created by the upstream entrypoint.
 
 If the original image relied on a specific unprivileged user, you may need to preserve passwd and group metadata files as well:
 
-```dockerfile
+```dockerfile title="Dockerfile"
 COPY --from=upstream /etc/passwd /etc/passwd
 COPY --from=upstream /etc/group /etc/group
 ```
@@ -343,21 +360,22 @@ The simplest way to test scale-to-zero is to deploy with an explicit scale-to-ze
 
 ```bash title="unikraft"
 unikraft build . --output <my-org>/docker-port:latest
-unikraft run --metro=fra -p 443:<container-port> -m 256MiB \
-  --scale-to-zero \
-  --scale-to-zero-cooldown-time-ms=5000 \
-  --image=<my-org>/docker-port:latest
+unikraft run --metro fra \
+  -p 443:<container-port> \
+  -m 256M \
+  --scale-to-zero policy=on,cooldown-time=5000,stateful=true \
+  --image <my-org>/docker-port:latest
 ```
 
 ```bash title="kraft"
 kraft cloud deploy \
-		-p 443:<container-port> \
-		-M 256Mi \
-		--rootfs-type erofs \
-		--scale-to-zero on \
-        --scale-to-zero-stateful \
-		--scale-to-zero-cooldown 5s \
-		.
+  -p 443:<container-port> \
+  -M 256Mi \
+  --scale-to-zero on \
+  --scale-to-zero-stateful \
+  --scale-to-zero-cooldown 5s \
+  --rootfs-type erofs \
+  .
 ```
 
 </CodeTabs>
@@ -379,11 +397,11 @@ kraft cloud instance list
 If everything is working, the instance should transition to `standby` when idle and wake up again on the next request.
 
 Apps with long initialization phases, background work, or long-lived connections may need extra adjustments before scale-to-zero behaves well.
-In those cases, review the [Scale-to-Zero](/features/scale-to-zero) feature page and consider a longer cooldown, stateful mode, or temporarily disabling scale-to-zero from inside the app during startup.
+In those cases, review the [Scale-to-Zero](/features/scale-to-zero) feature page and consider a longer cooldown, stateful mode, or [temporarily disabling scale-to-zero](/tutorials/scale-to-zero-triggers#manual-triggers) from inside the app during startup.
 
 ## Learn more
 
 * [Images](/platform/images) and how `Dockerfile`s, `Kraftfile`s, and runtimes fit together.
-* [Rootfs Formats](/tutorials/rootfs-formats) for understanding the `CPIO` and `EROFS` tradeoffs.
-* The [Kraftfile reference](https://unikraft.org/docs/cli/reference/kraftfile) for all supported top-level fields.
-* The [Next.js guide](/guides/nextjs) as a concrete example of a multi-stage Docker build trimmed down for deployment.
+* [Rootfs Formats](/tutorials/rootfs-formats) for understanding the CPIO and EROFS tradeoffs.
+* The [`Kraftfile` reference](/docs/kraftfile/v0.7) for all supported top-level fields.
+* The [Next.js guide](/guides/httpserver-node21-nextjs) as a concrete example of a multi-stage Docker build trimmed down for deployment.

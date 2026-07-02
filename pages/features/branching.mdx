@@ -1,0 +1,100 @@
+---
+title: Branching
+navigation_icon: git-branch
+---
+
+{/* vale off */}
+:::caution[**Limited Access**]
+Branching is a new feature which is available to enterprise customers, and is coming soon to the hosted platform.
+If you would like to try it out now, please reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
+:::
+
+:::caution
+Dedicated `unikraft` CLI subcommands for branching are coming soon.
+In the meantime, configure branching through the [API](/api/platform/v1/instances#create-instance), which you can invoke with `curl` or the [`unikraft api`](/cli/unikraft/api) command.
+:::
+{/* vale on */}
+
+Branching lets you create a clone (a **branch**) of an existing instance, including its memory and volume state.
+The branch is an identical but independent copy of the source.
+It starts from the same memory state instead of going through a cold boot, and from then on runs on its own without affecting the source.
+
+This resembles creating an instance from an [instance template](/platform/instances#instance-templates), but the source must be an ordinary instance, not a template.
+
+## How it works
+
+Branching builds on copy-on-write (CoW) asynchronous snapshotting.
+When you create a branch, Unikraft Cloud snapshots the source instance's memory and volume state.
+The snapshot becomes the starting point for the new instance.
+Because the snapshot is copy-on-write and taken asynchronously, the source instance only pauses for a few milliseconds before it resumes running.
+
+The source instance's [state](/platform/instances#instance-states) determines how Unikraft Cloud populates the branch:
+
+| Source state | Behavior |
+|--------------|----------|
+| Running | Unikraft Cloud takes an asynchronous CoW snapshot of the source. The branch waits for that snapshot to complete and then starts from it. |
+| Stopped or Standby | Unikraft Cloud creates the branch right away from the source's existing snapshot, or from its image if the source has none. |
+
+## Creating a branch
+
+To create a branch, send a [`POST /instances`](/api/platform/v1/instances#create-instance) request with a `branch_from` field that names the source instance:
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft api /v1/instances \
+  -d '{
+    "name": "my-branch",
+    "branch_from": {
+      "name": "my-instance"
+    }
+  }'
+```
+
+</CodeTabs>
+
+You can also reference the source by its UUID instead of its name.
+
+Apart from `branch_from`, the request accepts the same fields as a regular instance creation.
+You can attach [ROMs](/features/roms) and [volumes](/platform/volumes), configure a [service](/platform/services), and set other options as when you create an instance from a template.
+
+## What the branch inherits
+
+A branch derives the following from its source, so you **can't** set these fields in the create request:
+
+- The image
+- The number of vCPUs (`vcpus`)
+- The memory size (`memory_mb`)
+- The app arguments (`args`)
+- The environment variables (`env`)
+- The memory and volume state at the time of the snapshot
+
+Setting any of these alongside `branch_from` makes the request fail (see [Error handling](#error-handling)).
+
+You can still give the branch its own configuration, as when instantiating a template, including a `name`, [ROMs](/features/roms), [volumes](/platform/volumes), and a [service](/platform/services).
+
+## Error handling
+
+A `branch_from` request can fail for the following reasons:
+
+| Error message | Cause |
+|---------------|-------|
+| `Cannot specify 'image' when 'branch_from' is set` | The request sets both `image` and `branch_from`. A branch derives its image from the source. |
+| `Cannot specify 'branch_from' when creating an instance from a template` | The request sets both `template` and `branch_from`. Choose one creation source, not both. |
+| `Cannot specify '<field>' when branching from an existing instance` | The request sets a field the branch inherits from its source (`args`, `env`, `memory_mb`, or `vcpus`). |
+| `Cannot branch from VM with pending snapshot` | The source already has a snapshot in progress. Retry once it completes. |
+| `Cannot branch from VM in state '<state>'` | The source is in a state that branching doesn't support. |
+| `Insufficient license. Please make sure your license is valid and includes branching` | Your account's license doesn't include the branching feature. |
+
+## Limitations
+
+- Branching only works with block-based volumes (for example, `ext4`).
+  The branch clones the source's volume state consistently with its memory snapshot, which isn't supported for other volume types.
+- Branching requires a license that includes the feature (see the note at the top of this page).
+
+## Learn more
+
+* [Instance templates](/platform/instances#instance-templates): create instances from a stopped, snapshotted template.
+* [Instance forking](/features/forking): create a copy of an instance from within the instance itself.
+* [Serverless databases](/use-cases/serverless-databases): a use case that branches a running PostgreSQL instance to clone its state.
+* Unikraft Cloud's [REST API reference](/api/platform/v1), in particular the [create instance endpoint](/api/platform/v1/instances#create-instance).

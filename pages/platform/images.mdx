@@ -14,29 +14,21 @@ You can choose to push an image directly to a node's local registry instead.
 This bypasses the central registry entirely.
 Skipping this extra network round trip speeds up deployments.
 It also reduces bandwidth consumption.
-Read more about this in the [Registries documentation](/cli/registries).
+Read more about this in the [registries documentation](/cli/registries).
 
-:::caution[DISCLAIMER] 
-The local registry isn't currently available for the public Unikraft Cloud offering.
+:::caution[**Limited Access**]
+The local registry is only available in BYOC or on-prem Unikraft Cloud installations.
 :::
 
-1. **build**: You execute `unikraft build` with the
-`--output` flag. This single command reads your Dockerfile or Kraftfile, compiles
-the app locally, packages the resulting files into an OCI image, and
-uploads that image directly to the Unikraft Cloud registry.
-
-1. **run**: You execute unikraft run and provide the uploaded image
-name. The Unikraft Cloud controller pulls the image from the registry,
-allocates the necessary system resources, and starts your app as a
-running instance.
-
-## `Dockerfiles`, `Kraftfiles` and runtimes
+{/* vale off */}
+## Dockerfile, Kraftfile and runtime
+{/* vale on */}
 
 On Unikraft Cloud, a `Dockerfile` guides the process of building images, and a `Kraftfile` guides the process of deploying the resulting image.
 
 Use the Python running example:
 
-```bash title=""
+```bash
 git clone https://github.com/unikraft-cloud/examples
 cd examples/httpserver-python3.12
 ```
@@ -56,17 +48,14 @@ cmd: ["/usr/bin/python3", "/src/server.py"]
 ```
 
 The file is simple. 
-It defines the start command, instructs the unikraft CLI to build the root filesystem, and specifies the base-compat:latest runtime.
+It defines the start command, instructs the CLI to build the root filesystem, and specifies the `base-compat:latest` runtime.
+
 On Unikraft Cloud, a runtime provides a base image containing the minimal code your app needs to execute.
-The unikraft CLI combines your app files with this base image during the build step. 
-It uses the Dockerfile as the source to generate the directory structure.
-When packaging these files into a root filesystem, Unikraft offers two main options: cpio and erofs.
-The file specifies the erofs format to create a read-only disk image. 
-The erofs format decompresses data block-by-block only when the system accesses it. 
-This selective approach saves RAM and improves boot times.
-In contrast, the cpio format must remove its entire contents into memory on startup.
-Check out this [tutorial](/tutorials/rootfs-formats) comparing rootfs types to understand why Unikraft favors erofs.
-For a more in depth explanation of the Kraftfile you can check the [reference](/kraftfile/v0.7)
+The CLI combines your app files with this base image during the build step. 
+It uses the `Dockerfile` as the source to generate the directory structure.
+When packaging these files into a root filesystem, Unikraft offers two main options: [CPIO and EROFS](/tutorials/rootfs-formats).
+The file specifies the EROFS format to create a read-only disk image, which is the [preferred format for Unikraft Cloud](/tutorials/rootfs-formats#conclusion).
+For a more in depth explanation of the `Kraftfile` you can check the [reference](/kraftfile/v0.7).
 
 The `Dockerfile` itself for the app looks as follows:
 
@@ -92,10 +81,11 @@ COPY --from=build /etc/ld.so.cache /etc/ld.so.cache
 COPY ./server.py /src/server.py
 ```
 
-If you're familiar with `Dockerfiles` there is nothing unusual here, other than that Unikraft Cloud prefers usage of `FROM scratch` to keep images lean.
-This multi-stage build creates a minimal container.
+If you're familiar with `Dockerfile`s there is nothing unusual here, other than that Unikraft Cloud prefers usage of `FROM scratch` to keep images lean.
+
+This multi-stage build creates a minimal image.
 First, the process loads a standard Python 3.12 image to configure system dependencies.
-Next, it starts an empty filesystem called scratch.
+Next, it starts an empty filesystem called `scratch`.
 The builder extracts the compiled Python binary and essential shared system libraries from the first stage.
 It moves these exact files into the empty environment.
 Finally, the builder copies your app script into the container.
@@ -105,7 +95,8 @@ All [guides](/guides/overview) on Unikraft Cloud, and the [examples](https://git
 
 :::tip
 You can also try a standard base image (for example, `FROM python:alpine`).
-This choice may increase image size, memory use, and boot time.
+This is a good start for [porting existing Dockerfiles to Unikraft Cloud](/tutorials/docker-to-ukc).
+Be aware that this choice may increase image size, memory use, and boot time.
 :::
 
 
@@ -126,11 +117,17 @@ Start with the simplest workflow: create an image from a Python app and start an
 
 ```bash title="unikraft"
 unikraft build . --output <my-org>/httpserver-python312:latest
-unikraft run --metro=fra -p 443:8080/http+tls -m 512M --image <my-org>/httpserver-python312:latest
+unikraft run --metro fra \
+  -p 443:8080/http+tls \
+  -m 512M \
+  --image <my-org>/httpserver-python312:latest
 ```
 
 ```bash title="kraft"
-kraft cloud deploy -p 443:8080 -M 512Mi .
+kraft cloud deploy \
+  -p 443:8080 \
+  -M 512Mi \
+  .
 ```
 
 </CodeTabs>
@@ -140,40 +137,40 @@ The output should look like:
 <CodeTabs syncKey="cli">
 
 ```ansi title="unikraft"
-metro:        fra
-name:         httpserver-python312-ma2i9
-uuid:         e7389eee-9808-4152-b2ec-1f3c0541fd05
-state:        [92mrunning[0m
-image:        <my-org>/httpserver-python312
-resources:
-  memory:     512MiB
-  vcpus:      1
-service:
-  uuid:       51a41f63-7e88-c443-b9bf-83cd7c04d975
-  name:       young-night-5fpf0jj8
-  domains:
-  - fqdn:     young-night-5fpf0jj8.fra.unikraft.app
-networks:
-- uuid:       53da3490-c6f5-3718-25f1-219a65163c73
-  private-ip: 10.0.3.3
-  mac:        12:b0:18:0c:cb:aa
-timestamps:
-  created:    just now
+[1mmetro[22m:        fra
+[1mname[22m:         httpserver-python312-ma2i9
+[1muuid[22m:         e7389eee-9808-4152-b2ec-1f3c0541fd05
+[1mstate[22m:        [38;2;0;188;125mrunning[0m
+[1mimage[22m:        <my-org>/httpserver-python312
+[1mresources[22m:
+[3m  memory[23m:     512MiB
+[3m  vcpus[23m:      1
+[1mservice[22m:
+[3m  uuid[23m:       51a41f63-7e88-c443-b9bf-83cd7c04d975
+[3m  name[23m:       young-night-5fpf0jj8
+[3m  domains[23m:
+[3m  - fqdn[23m:     young-night-5fpf0jj8.fra.unikraft.app
+[1mnetworks[22m:
+[3m- uuid[23m:       53da3490-c6f5-3718-25f1-219a65163c73
+[3m  private-ip[23m: 10.0.3.3
+[3m  mac[23m:        12:b0:18:0c:cb:aa
+[1mtimestamps[22m:
+[3m  created[23m:    just now
 ```
 
 ```ansi title="kraft"
-[90m[[0m[92m●[0m[90m][0m Deployed successfully!
- [90m│[0m
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mname[0m: httpserver-python312-ma2i9
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90muuid[0m: e7389eee-9808-4152-b2ec-1f3c0541fd05
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mmetro[0m: https://api.fra.unikraft.cloud/v1
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mstate[0m: [92mstarting[0m
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mdomain[0m: https://young-night-5fpf0jj8.fra.unikraft.app
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mimage[0m: oci://unikraft.io/<my-org>/httpserver-python312@sha256:278cb8b14f9faf9c2702dddd8bfb6124912d82c11b4a2c6590b6e32fc4049472
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mmemory[0m: 512 MiB
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mservice[0m: young-night-5fpf0jj8
- [90m├[0m[90m─[0m [90mprivate fqdn[0m: httpserver-python312-ma2i9.internal
- [90m└[0m[90m─[0m[90m─[0m[90m─[0m [90mprivate ip[0m: 10.0.3.3
+[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
+ [38;5;245m│[0m
+ [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245mname[0m: httpserver-python312-ma2i9
+ [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245muuid[0m: e7389eee-9808-4152-b2ec-1f3c0541fd05
+ [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
+ [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mstate[0m: [92mstarting[0m
+ [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mdomain[0m: https://young-night-5fpf0jj8.fra.unikraft.app
+ [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/httpserver-python312@sha256:278cb8b14f9faf9c2702dddd8bfb6124912d82c11b4a2c6590b6e32fc4049472
+ [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mmemory[0m: 512 MiB
+ [38;5;245m├[0m[38;5;245m──────[0m [38;5;245mservice[0m: young-night-5fpf0jj8
+ [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: httpserver-python312-ma2i9.internal
+ [38;5;245m└[0m[38;5;245m───[0m [38;5;245mprivate ip[0m: 10.0.3.3
 ```
 
 </CodeTabs>
@@ -181,7 +178,7 @@ timestamps:
 
 This command builds an image named `httpserver-python312@sha256:278cb8b1...` using the `Kraftfile` and `Dockerfile`.
 It then packages it, pushes it to the registry, and starts an instance named `httpserver-python312-ma2i9` from it.
-The controller fetches the image from the registry to start the instance.
+The platform fetches the image from the registry to start the instance.
 
 You can see your images by running the following command:
 
@@ -200,14 +197,14 @@ kraft cloud image ls
 You should see output like:
 
 <CodeTabs>
-```text title="unikraft"
-REF                                              DIGEST
-<my-org>/httpserver-python312                    sha256:efcf60c1ab4677464f50f5fc7c0011efef7ea66d371586a22d1960bbeb53e2ee
+```ansi title="unikraft"
+[1mREF[22m                            [1mDIGEST[22m
+<my-org>/httpserver-python312  sha256:278cb8b14f9faf9c2702dddd8bfb6124912d82c11b4a2c6590b6e32fc4049472
 ```
 
-```bash title="kraft"
-NAME                                     VERSION  SIZE
-<my-org>/http-python                     latest   120 MB
+```ansi title="kraft"
+[0;1;39mNAME[0m                           [0;1;39mVERSION[0m  [0;1;39mSIZE[0m
+<my-org>/httpserver-python312  latest   114 MB
 ```
 </CodeTabs>
 
@@ -215,11 +212,11 @@ And you can remove an image from the central registry with the following command
 
 <CodeTabs>
 ```bash title="unikraft"
-unikraft img rm httpserver-python312
+unikraft images rm httpserver-python312
 ```
 
 ```bash title="kraft"
-kraft cloud img rm httpserver-python312
+kraft cloud image rm httpserver-python312
 ```
 
 </CodeTabs>
@@ -236,91 +233,103 @@ For the next workflow, start many instances:
 
 ```bash title="unikraft"
 unikraft build . --output <my-org>/httpserver-python312:latest
-unikraft run --metro=fra -p 443:8080/http+tls -m 512M --replicas 2 --image <my-org>/httpserver-python312:latest
+unikraft run --metro fra \
+  -p 443:8080/http+tls \
+  -m 512M \
+  --replicas 2 \
+  --image <my-org>/httpserver-python312:latest
 ```
 
 ```bash title="kraft"
-kraft cloud deploy -p 443:8080 -M 512Mi --replicas 2 .
+kraft cloud deploy \
+  -p 443:8080 \
+  -M 512Mi \
+  --replicas 2 \
+  .
 ```
 
 </CodeTabs>
 
+<div style={{ marginTop: '0.8em' }} />
+
 <CodeTabs syncKey="cli">
 ```ansi title="unikraft"
-metro:        fra
-name:         httpserver-python312-lscmn
-uuid:         1121225d-a678-45a2-a8ce-335a9a6a2683
-state:        [92mrunning[0m
-image:        dragosgheorghioiu/httpserver-python312
-resources:
-  memory:     512MiB
-  vcpus:      1
-service:
-  name:       restless-orangutan-1lklj6z5
-  uuid:       16f4b86d-df8f-452c-b189-41ec34250e58
-  domains:
-  - fqdn:     restless-orangutan-1lklj6z5.fra.unikraft.app
-networks:
-- uuid:       da9445a3-c7b7-4327-8499-3bd7001cd829
-  private-ip: 10.0.6.37
-  mac:        12:b0:0a:00:06:25
-timestamps:
-  created:    just now
+[1mmetro[22m:        fra
+[1mname[22m:         httpserver-python312-lscmn
+[1muuid[22m:         1121225d-a678-45a2-a8ce-335a9a6a2683
+[1mstate[22m:        [38;2;0;188;125mrunning[0m
+[1mimage[22m:        <my-org>/httpserver-python312
+[1mresources[22m:
+[3m  memory[23m:     512MiB
+[3m  vcpus[23m:      1
+[1mservice[22m:
+[3m  name[23m:       restless-orangutan-1lklj6z5
+[3m  uuid[23m:       16f4b86d-df8f-452c-b189-41ec34250e58
+[3m  domains[23m:
+[3m  - fqdn[23m:     restless-orangutan-1lklj6z5.fra.unikraft.app
+[1mnetworks[22m:
+[3m- uuid[23m:       da9445a3-c7b7-4327-8499-3bd7001cd829
+[3m  private-ip[23m: 10.0.6.37
+[3m  mac[23m:        12:b0:0a:00:06:25
+[1mtimestamps[22m:
+[3m  created[23m:    just now
 
-metro:        fra
-name:         httpserver-python312-xfgvc
-uuid:         d021379d-9e03-4d0b-92a6-6fdf038e076a
-state:        [92mrunning[0m
-image:        dragosgheorghioiu/httpserver-python312
-resources:
-  memory:     512MiB
-  vcpus:      1
-service:
-  name:       icy-violet-hce1qwm5
-  uuid:       4cd63083-d538-44df-92b9-74bd6eb54ec0
-  domains:
-  - fqdn:     icy-violet-hce1qwm5.fra.unikraft.app
-networks:
-- uuid:       51c147cc-8f8d-4347-b628-d2e0f4f9b3be
-  private-ip: 10.0.0.121
-  mac:        12:b0:0a:00:00:79
-timestamps:
-  created:    just now
+[1mmetro[22m:        fra
+[1mname[22m:         httpserver-python312-xfgvc
+[1muuid[22m:         d021379d-9e03-4d0b-92a6-6fdf038e076a
+[1mstate[22m:        [38;2;0;188;125mrunning[0m
+[1mimage[22m:        <my-org>/httpserver-python312
+[1mresources[22m:
+[3m  memory[23m:     512MiB
+[3m  vcpus[23m:      1
+[1mservice[22m:
+[3m  name[23m:       icy-violet-hce1qwm5
+[3m  uuid[23m:       4cd63083-d538-44df-92b9-74bd6eb54ec0
+[3m  domains[23m:
+[3m  - fqdn[23m:     icy-violet-hce1qwm5.fra.unikraft.app
+[1mnetworks[22m:
+[3m- uuid[23m:       51c147cc-8f8d-4347-b628-d2e0f4f9b3be
+[3m  private-ip[23m: 10.0.0.121
+[3m  mac[23m:        12:b0:0a:00:00:79
+[1mtimestamps[22m:
+[3m  created[23m:    just now
 
-metro:        fra
-name:         httpserver-python312-7lha2
-uuid:         0706c648-0c56-4c74-8dda-5a1aeff7d8b8
-state:        [92mrunning[0m
-image:        dragosgheorghioiu/httpserver-python312
-resources:
-  memory:     512MiB
-  vcpus:      1
-service:
-  name:       hidden-silence-l3g520dw
-  uuid:       38703973-ccbd-47ae-b4c0-f9f59c1751e7
-  domains:
-  - fqdn:     hidden-silence-l3g520dw.fra.unikraft.app
-networks:
-- uuid:       6c20f9b2-dc39-41d1-a4bd-250a52a75b19
-  private-ip: 10.0.9.185
-  mac:        12:b0:0a:00:09:b9
-timestamps:
-  created:    just now
+[1mmetro[22m:        fra
+[1mname[22m:         httpserver-python312-7lha2
+[1muuid[22m:         0706c648-0c56-4c74-8dda-5a1aeff7d8b8
+[1mstate[22m:        [38;2;0;188;125mrunning[0m
+[1mimage[22m:        <my-org>/httpserver-python312
+[1mresources[22m:
+[3m  memory[23m:     512MiB
+[3m  vcpus[23m:      1
+[1mservice[22m:
+[3m  name[23m:       hidden-silence-l3g520dw
+[3m  uuid[23m:       38703973-ccbd-47ae-b4c0-f9f59c1751e7
+[3m  domains[23m:
+[3m  - fqdn[23m:     hidden-silence-l3g520dw.fra.unikraft.app
+[1mnetworks[22m:
+[3m- uuid[23m:       6c20f9b2-dc39-41d1-a4bd-250a52a75b19
+[3m  private-ip[23m: 10.0.9.185
+[3m  mac[23m:        12:b0:0a:00:09:b9
+[1mtimestamps[22m:
+[3m  created[23m:    just now
 ```
+
 ```ansi title="kraft"
-[90m[[0m[92m●[0m[90m][0m Deployed successfully!
- [90m│[0m
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mname[0m: httpserver-python312-lscmn
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90muuid[0m: 1121225d-a678-45a2-a8ce-335a9a6a2683
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mmetro[0m: https://api.fra.unikraft.cloud/v1
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mstate[0m: [92mrunning[0m
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mdomain[0m: https://restless-orangutan-1lklj6z5.fra.unikraft.app
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mimage[0m: oci://unikraft.io/<my-org>/httpserver-python312@sha256:5b922dfa1632af38c476b98fdd9f4314fb9c5e587d3d31255e6479108c057e88
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mmemory[0m: 512 MiB
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mservice[0m: restless-orangutan-1lklj6z5
- [90m├[0m[90m─[0m [90mprivate fqdn[0m: httpserver-python312-8mxq5.internal
- [90m└[0m[90m─[0m[90m─[0m[90m─[0m [90mprivate ip[0m: 10.0.6.37
+[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
+ [38;5;245m│[0m
+ [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245mname[0m: httpserver-python312-lscmn
+ [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245muuid[0m: 1121225d-a678-45a2-a8ce-335a9a6a2683
+ [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
+ [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mstate[0m: [0;32mrunning[0m
+ [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mdomain[0m: https://restless-orangutan-1lklj6z5.fra.unikraft.app
+ [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/httpserver-python312@sha256:5b922dfa1632af38c476b98fdd9f4314fb9c5e587d3d31255e6479108c057e88
+ [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mmemory[0m: 512 MiB
+ [38;5;245m├[0m[38;5;245m──────[0m [38;5;245mservice[0m: restless-orangutan-1lklj6z5
+ [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: httpserver-python312-lscmn.internal
+ [38;5;245m└[0m[38;5;245m───[0m [38;5;245mprivate ip[0m: 10.0.6.37
 ```
+
 </CodeTabs>
 
 Check that it worked by listing all instances with:
@@ -337,24 +346,27 @@ kraft cloud instance list
 
 </CodeTabs>
 
+<div style={{ marginTop: '0.8em' }} />
+
 <CodeTabs>
+
 ```ansi title="unikraft"
-METRO        NAME                        STATE    IMAGE                          ARGS  MEMORY  VCPUS  FQDN                                             CREATED
-fra          httpserver-python312-7lha2  running  <my-org>/httpserver-python312        512MiB  1      hidden-silence-l3g520dw.fra.unikraft.app         just now
-fra          httpserver-python312-xfgvc  running  <my-org>/httpserver-python312        512MiB  1      icy-violet-hce1qwm5.fra.unikraft.app             just now
-fra          httpserver-python312-lscmn  running  <my-org>/httpserver-python312        512MiB  1      restless-orangutan-1lklj6z5.fra.unikraft.app     just now
+[1mMETRO[22m  [1mNAME[22m                        [1mSTATE[22m    [1mIMAGE[22m                          [1mARGS[22m  [1mMEMORY[22m  [1mVCPUS[22m  [1mFQDN[22m                                          [1mCREATED[22m
+fra    httpserver-python312-7lha2  [38;2;0;188;125mrunning[0m  <my-org>/httpserver-python312        512MiB  1      hidden-silence-l3g520dw.fra.unikraft.app      just now
+fra    httpserver-python312-xfgvc  [38;2;0;188;125mrunning[0m  <my-org>/httpserver-python312        512MiB  1      icy-violet-hce1qwm5.fra.unikraft.app          just now
+fra    httpserver-python312-lscmn  [38;2;0;188;125mrunning[0m  <my-org>/httpserver-python312        512MiB  1      restless-orangutan-1lklj6z5.fra.unikraft.app  just now
 ```
 
 ```ansi title="kraft"
-NAME                        FQDN                                          STATE    STATUS       IMAGE                                         MEMORY   VCPUS  ARGS  BOOT TIME
-httpserver-python312-7lha2  hidden-silence-l3g520dw.fra.unikraft.app      running  since 7mins  dragosgheorghioiu/httpserver-python312@sh...  512 MiB  1            82.28 ms
-httpserver-python312-xfgvc  icy-violet-hce1qwm5.fra.unikraft.app          running  since 7mins  dragosgheorghioiu/httpserver-python312@sh...  512 MiB  1            81.27 ms
-httpserver-python312-lscmn  restless-orangutan-1lklj6z5.fra.unikraft.app  running  since 7mins  dragosgheorghioiu/httpserver-python312@sh...  512 MiB  1            84.28 ms
+[0;1;39mNAME[0m                        [0;1;39mFQDN[0m                                          [0;1;39mSTATE[0m    [0;1;39mSTATUS[0m       [0;1;39mIMAGE[0m                                [0;1;39mMEMORY[0m   [0;1;39mVCPUS[0m  [0;1;39mARGS[0m  [0;1;39mBOOT TIME[0m
+httpserver-python312-7lha2  hidden-silence-l3g520dw.fra.unikraft.app      [0;32mrunning[0m  since 7mins  <my-org>/httpserver-python312@sh...  512 MiB  1            82.28 ms
+httpserver-python312-xfgvc  icy-violet-hce1qwm5.fra.unikraft.app          [0;32mrunning[0m  since 7mins  <my-org>/httpserver-python312@sh...  512 MiB  1            81.27 ms
+httpserver-python312-lscmn  restless-orangutan-1lklj6z5.fra.unikraft.app  [0;32mrunning[0m  since 7mins  <my-org>/httpserver-python312@sh...  512 MiB  1            84.28 ms
 ```
 
 </CodeTabs>
 
-Three instances run: the original plus two replicas.
+Three instances run—the original plus two replicas.
 
 ### Create instances from an existing image
 
@@ -363,15 +375,18 @@ In this final workflow, take the existing image and start new instances from it:
 <CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
-unikraft run --metro=fra -p 443:8080/http+tls -m 512M --image <my-org>/httpserver-python312@sha256:1b815914eb568a06ca4bbfdfb7d6cf484a9e9a0947ba8e0e0f1664d972a25bca
+unikraft run --metro fra \
+  -p 443:8080/http+tls \
+  -m 512M \
+  --image <my-org>/httpserver-python312@sha256:1b815914eb568a06ca4bbfdfb7d6cf484a9e9a0947ba8e0e0f1664d972a25bca
 ```
 
 ```bash title="kraft"
 kraft cloud instance create \
-   --start \
-   --port 443:8080 \
-   -M 512Mi \
-   <my-org>/httpserver-python312@sha256:1b815914eb568a06ca4bbfdfb7d6cf484a9e9a0947ba8e0e0f1664d972a25bca
+  --start \
+  -p 443:8080 \
+  -M 512Mi \
+  <my-org>/httpserver-python312@sha256:1b815914eb568a06ca4bbfdfb7d6cf484a9e9a0947ba8e0e0f1664d972a25bca
 ```
 
 :::note
@@ -385,48 +400,11 @@ If you omit the digest, the CLI automatically pulls the newest version of your i
 
 You now have a new instance created from the existing image.
 
-
-## REST API reference
-
-### List images from local registry
-
-Base address: `https://api.<node-name>.unikraft.cloud/v1`
-
-```
-GET /image-store
-```
-
-Returns all images accessible for your account and known by the platform from the local registry.
-Each image object includes:
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `created_at` | timestamp | Creation time. |
-| `owner` | string | Owner of the image (omitted if not root account). |
-| `url` | string | Full image address (includes digest). |
-| `tags` | array of strings | List of shortened tags. |
-| `initrd_or_rom` | bool | Whether the image includes an initrd or ROM component. |
-| `size_in_bytes` | int64 | Total image size in bytes. |
-| `args` | array of strings | Default arguments (omitted if none). |
-| `env` | map of strings | Default environmental variables (omitted if none). |
-| `users` | array of strings | Users with access to the image (omitted if not root account). |
-
-
-### List images from central registry
-
-Base address `https://controlplane.unikraft.cloud/v1`
-
-```
-GET /images
-```
-
-Returns all images accessible for your account and known by the platform from the central registry.
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `name` | string | Image reference (`{owner}/{registry}/{image}`). Excludes digest and tag. |
-
 ## Learn more
 
 * The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
 * Unikraft Cloud's [REST API reference](/api/platform/v1).
+* [Porting an existing container app to Unikraft Cloud](/tutorials/docker-to-ukc).
+* [Tutorial](/tutorials/rootfs-volumes-roms) explaining the difference of storage media on Unikraft Cloud.
+* [Rootfs image formats](/tutorials/rootfs-formats).
+* [Rootfs image compression](/tutorials/rootfs-compression).

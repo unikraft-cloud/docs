@@ -8,6 +8,7 @@
 /.pnp
 .pnp.*
 .yarn/*
+.pnpm-store/
 !.yarn/patches
 !.yarn/plugins
 !.yarn/releases
@@ -38,8 +39,13 @@ pnpm-debug.log*
 
 # build outputs
 dist/
+*.pyc
 
 # generated files
 apis/platform.yaml
 build.log
 .examples/
+pages/cli/kraft/
+pages/cli/unikraft/
+pages/cli/unikraft.mdx
+pages/kraftfile/

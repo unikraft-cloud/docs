@@ -23,10 +23,10 @@ To run this example, follow these steps:
 
 1. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/httpserver-rust1.75-tokio/` directory:
 
-```bash
-git clone https://github.com/unikraft-cloud/examples
-cd examples/httpserver-rust1.75-tokio/
-```
+   ```bash
+   git clone https://github.com/unikraft-cloud/examples
+   cd examples/httpserver-rust1.75-tokio/
+   ```
 
 Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪):
@@ -66,40 +66,40 @@ The output shows the instance address and other details:
 <CodeTabs syncKey="cli">
 
 ```ansi title="unikraft"
-metro:        fra
-name:         httpserver-rust175-tokio-6gxsp
-uuid:         d5719f64-0653-42d7-b2de-aa6dee0ce467
-state:        [92mstarting[0m
-image:        <my-org>/httpserver-rust175-tokio
-resources:
-  memory:     256MiB
-  vcpus:      1
-service:
-  uuid:       b59ce5aa-7dac-5241-386c-be48db955f3f
-  name:       empty-dawn-3coedrce
-  domains:
-  - fqdn:     empty-dawn-3coedrce.fra.unikraft.app
-networks:
-- uuid:       9136307f-2ee6-2a0b-99af-c5a0fc1727f5
-  private-ip: 10.0.6.3
-  mac:        12:b0:38:a0:73:f3
-timestamps:
-  created:    just now
+[1mmetro[22m:        fra
+[1mname[22m:         httpserver-rust175-tokio-6gxsp
+[1muuid[22m:         d5719f64-0653-42d7-b2de-aa6dee0ce467
+[1mstate[22m:        [38;2;144;161;185mstarting[0m
+[1mimage[22m:        <my-org>/httpserver-rust175-tokio
+[1mresources[22m:
+[3m  memory[23m:     256MiB
+[3m  vcpus[23m:      1
+[1mservice[22m:
+[3m  uuid[23m:       b59ce5aa-7dac-5241-386c-be48db955f3f
+[3m  name[23m:       empty-dawn-3coedrce
+[3m  domains[23m:
+[3m  - fqdn[23m:     empty-dawn-3coedrce.fra.unikraft.app
+[1mnetworks[22m:
+[3m- uuid[23m:       9136307f-2ee6-2a0b-99af-c5a0fc1727f5
+[3m  private-ip[23m: 10.0.6.3
+[3m  mac[23m:        12:b0:38:a0:73:f3
+[1mtimestamps[22m:
+[3m  created[23m:    just now
 ```
 
 ```ansi title="kraft"
-[90m[[0m[92m●[0m[90m][0m Deployed successfully!
- [90m│[0m
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mname[0m: httpserver-rust175-tokio-6gxsp
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90muuid[0m: d5719f64-0653-42d7-b2de-aa6dee0ce467
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mmetro[0m: https://api.fra.unikraft.cloud/v1
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mstate[0m: [92mstarting[0m
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mdomain[0m: https://empty-dawn-3coedrce.fra.unikraft.app
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mimage[0m: oci://unikraft.io/<my-org>/httpserver-rust175-tokio@sha256:0ce75912711aa2329232a2ca6c3ccb7a244b6d546fafc081f815c2fde8224856
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mmemory[0m: 256 MiB
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mservice[0m: empty-dawn-3coedrce
- [90m├[0m[90m─[0m [90mprivate fqdn[0m: httpserver-rust175-tokio-6gxsp.internal
- [90m└[0m[90m─[0m[90m─[0m[90m─[0m [90mprivate ip[0m: 10.0.6.3
+[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
+ [38;5;245m│[0m
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mname[0m: httpserver-rust175-tokio-6gxsp
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245muuid[0m: d5719f64-0653-42d7-b2de-aa6dee0ce467
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mstate[0m: [92mstarting[0m
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mdomain[0m: https://empty-dawn-3coedrce.fra.unikraft.app
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/httpserver-rust175-tokio@sha256:0ce75912711aa2329232a2ca6c3ccb7a244b6d546fafc081f815c2fde8224856
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmemory[0m: 256 MiB
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mservice[0m: empty-dawn-3coedrce
+ [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: httpserver-rust175-tokio-6gxsp.internal
+ [38;5;245m└[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mprivate ip[0m: 10.0.6.3
 ```
 
 </CodeTabs>
@@ -131,16 +131,18 @@ kraft cloud instance list
 
 </CodeTabs>
 
+<div style={{ marginTop: '0.8em' }} />
+
 <CodeTabs syncKey="cli">
 
 ```ansi title="unikraft"
-[1mMETRO[0m  [1mNAME[0m                            [1mSTATE[0m    [1mIMAGE[0m                              [1mARGS[0m  [1mMEMORY[0m  [1mVCPUS[0m  [1mFQDN[0m                                  [1mCREATED[0m
-fra    httpserver-rust175-tokio-6gxsp  [92mrunning[0m  <my-org>/httpserver-rust175-tokio        256MiB  1      empty-dawn-3coedrce.fra.unikraft.app  2 minutes ago
+[1mMETRO[22m  [1mNAME[22m                            [1mSTATE[22m    [1mIMAGE[22m                              [1mARGS[22m  [1mMEMORY[22m  [1mVCPUS[22m  [1mFQDN[22m                                  [1mCREATED[22m
+fra    httpserver-rust175-tokio-6gxsp  [38;2;0;188;125mrunning[0m  <my-org>/httpserver-rust175-tokio        256MiB  1      empty-dawn-3coedrce.fra.unikraft.app  2 minutes ago
 ```
 
 ```ansi title="kraft"
-[1mNAME[0m                            [1mFQDN[0m                                  [1mSTATE[0m    [1mSTATUS[0m        [1mIMAGE[0m                                                           [1mMEMORY[0m   [1mVCPUS[0m  [1mARGS[0m  [1mBOOT TIME[0m
-httpserver-rust175-tokio-6gxsp  empty-dawn-3coedrce.fra.unikraft.app  [92mrunning[0m  1 minute ago  oci://unikraft.io/<my-org>/httpserver-rust175-tokio@sha256:...  256 MiB  1            21.41 ms
+[0;1;39mNAME[0m                            [0;1;39mFQDN[0m                                  [0;1;39mSTATE[0m    [0;1;39mSTATUS[0m        [0;1;39mIMAGE[0m                                                           [0;1;39mMEMORY[0m   [0;1;39mVCPUS[0m  [0;1;39mARGS[0m  [0;1;39mBOOT TIME[0m
+httpserver-rust175-tokio-6gxsp  empty-dawn-3coedrce.fra.unikraft.app  [0;32mrunning[0m  1 minute ago  oci://unikraft.io/<my-org>/httpserver-rust175-tokio@sha256:...  256 MiB  1            21.41 ms
 ```
 
 </CodeTabs>

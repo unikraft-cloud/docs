@@ -25,10 +25,10 @@ To run this example, follow these steps:
 
 2. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/httpserver-flask-redis` directory:
 
-```bash
-git clone https://github.com/unikraft-cloud/examples
-cd examples/httpserver-flask-redis/
-```
+   ```bash
+   git clone https://github.com/unikraft-cloud/examples
+   cd examples/httpserver-flask-redis/
+   ```
 
 Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪):
@@ -71,41 +71,41 @@ The output shows the Redis instance details:
 <CodeTabs syncKey="cli">
 
 ```ansi title="unikraft"
-metro:         fra
-name:          redis-09p2q
-uuid:          0355f93a-7b60-4ade-9359-b01671e812b3
-state:         [92mstarting[0m
-image:         <my-org>/redis
-resources:
-  memory:      256MiB
-  vcpus:       1
-service:
-  uuid:        19c050b2-b5c9-4e8e-9d25-a9053ff09270
-  name:        damp-brook-xmmmwzwo
-  domains:
-  - fqdn:      redis.internal
-networks:
-- uuid:        97df34f7-63bc-4f02-a1b4-5ba07278de00
-  private-ip:  10.0.0.41
-  mac:         12:b0:0a:00:00:29
-timestamps:
-  created:     just now
-scale-to-zero: policy=idle,stateful=true,cooldown-time=1s
+[1mmetro[22m:         fra
+[1mname[22m:          redis-09p2q
+[1muuid[22m:          0355f93a-7b60-4ade-9359-b01671e812b3
+[1mstate[22m:         [38;2;144;161;185mstarting[0m
+[1mimage[22m:         <my-org>/redis
+[1mresources[22m:
+[3m  memory[23m:      256MiB
+[3m  vcpus[23m:       1
+[1mservice[22m:
+[3m  uuid[23m:        19c050b2-b5c9-4e8e-9d25-a9053ff09270
+[3m  name[23m:        damp-brook-xmmmwzwo
+[3m  domains[23m:
+[3m  - fqdn[23m:      redis.internal
+[1mnetworks[22m:
+[3m- uuid[23m:        97df34f7-63bc-4f02-a1b4-5ba07278de00
+[3m  private-ip[23m:  10.0.0.41
+[3m  mac[23m:         12:b0:0a:00:00:29
+[1mtimestamps[22m:
+[3m  created[23m:     just now
+[1mscale-to-zero[22m: policy=idle,stateful=true,cooldown-time=1s
 ```
 
 ```ansi title="kraft"
-[90m[[0m[92m●[0m[90m][0m Deployed successfully!
- [90m│[0m
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mname[0m: redis-o9abw
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90muuid[0m: 9dd4c7b5-7cc4-4b99-ac70-b10af54ef075
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mmetro[0m: https://api.fra.unikraft.cloud/v1
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mstate[0m: [92mstarting[0m
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mdomain[0m: redis.internal
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mimage[0m: oci://unikraft.io/<my-org>/redis@sha256:3e35bc6c8048269741a0c0b4b165a10112736c48dbf869c76bb263a237502462
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mmemory[0m: 256 MiB
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mservice[0m: sparkling-fire-rnd4o9kb
- [90m├[0m[90m─[0m [90mprivate fqdn[0m: redis-o9abw.internal
- [90m└[0m[90m─[0m[90m─[0m[90m─[0m [90mprivate ip[0m: 10.0.0.41
+[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
+ [38;5;245m│[0m
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mname[0m: redis-o9abw
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245muuid[0m: 9dd4c7b5-7cc4-4b99-ac70-b10af54ef075
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mstate[0m: [92mstarting[0m
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mdomain[0m: redis.internal
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/redis@sha256:3e35bc6c8048269741a0c0b4b165a10112736c48dbf869c76bb263a237502462
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmemory[0m: 256 MiB
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mservice[0m: sparkling-fire-rnd4o9kb
+ [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: redis-o9abw.internal
+ [38;5;245m└[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mprivate ip[0m: 10.0.0.41
 ```
 
 </CodeTabs>
@@ -133,45 +133,45 @@ The output shows the Flask instance details:
 <CodeTabs syncKey="cli">
 
 ```ansi title="unikraft"
-metro:          fra
-name:           flask-q62qa
-uuid:           d081ec92-629b-45b3-8caf-059e0a87dffd
-state:          [92mstarting[0m
-image:          <my-org>/flask
-runtime:
-  env:
+[1mmetro[22m:          fra
+[1mname[22m:           flask-q62qa
+[1muuid[22m:           d081ec92-629b-45b3-8caf-059e0a87dffd
+[1mstate[22m:          [38;2;144;161;185mstarting[0m
+[1mimage[22m:          <my-org>/flask
+[1mruntime[22m:
+[3m  env[23m:
     REDIS_HOST: redis.internal
     REDIS_PORT: 6379
-resources:
-  memory:       512MiB
-  vcpus:        1
-service:
-  uuid:         ac1cd90e-a1fe-478c-8f58-8598fa80c494
-  name:         hidden-silence-htyml3s2
-  domains:
-  - fqdn:       hidden-silence-htyml3s2.fra.unikraft.app
-networks:
-- uuid:         d2f3d024-3082-4e98-be22-f36df84263a1
-  private-ip:   10.0.0.53
-  mac:          12:b0:0a:00:00:35
-timestamps:
-  created:      just now
-scale-to-zero:  policy=on,cooldown-time=1s
+[1mresources[22m:
+[3m  memory[23m:       512MiB
+[3m  vcpus[23m:        1
+[1mservice[22m:
+[3m  uuid[23m:         ac1cd90e-a1fe-478c-8f58-8598fa80c494
+[3m  name[23m:         hidden-silence-htyml3s2
+[3m  domains[23m:
+[3m  - fqdn[23m:       hidden-silence-htyml3s2.fra.unikraft.app
+[1mnetworks[22m:
+[3m- uuid[23m:         d2f3d024-3082-4e98-be22-f36df84263a1
+[3m  private-ip[23m:   10.0.0.53
+[3m  mac[23m:          12:b0:0a:00:00:35
+[1mtimestamps[22m:
+[3m  created[23m:      just now
+[1mscale-to-zero[22m:  policy=on,cooldown-time=1s
 ```
 
 ```ansi title="kraft"
-[90m[[0m[92m●[0m[90m][0m Deployed successfully!
- [90m│[0m
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mname[0m: flask-a06h2
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90muuid[0m: 431f67ed-1f18-4dc1-86db-68dac4edff51
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mmetro[0m: https://api.fra.unikraft.cloud/v1
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mstate[0m: [92mstarting[0m
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mdomain[0m: https://withered-cherry-xfcrfp93.fra.unikraft.app
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mimage[0m: oci://unikraft.io/<my-org>/flask@sha256:3d29ca3a8a3d434f41acf7c8093435836dcbacca9190c51ec39dbb4ddf1ee45a
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mmemory[0m: 512 MiB
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mservice[0m: withered-cherry-xfcrfp93
- [90m├[0m[90m─[0m [90mprivate fqdn[0m: flask-a06h2.internal
- [90m└[0m[90m─[0m[90m─[0m[90m─[0m [90mprivate ip[0m: 10.0.0.53
+[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
+ [38;5;245m│[0m
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mname[0m: flask-a06h2
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245muuid[0m: 431f67ed-1f18-4dc1-86db-68dac4edff51
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mstate[0m: [92mstarting[0m
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mdomain[0m: https://withered-cherry-xfcrfp93.fra.unikraft.app
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/flask@sha256:3d29ca3a8a3d434f41acf7c8093435836dcbacca9190c51ec39dbb4ddf1ee45a
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmemory[0m: 512 MiB
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mservice[0m: withered-cherry-xfcrfp93
+ [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: flask-a06h2.internal
+ [38;5;245m└[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mprivate ip[0m: 10.0.0.53
 ```
 
 </CodeTabs>

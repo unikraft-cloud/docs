@@ -3,6 +3,13 @@ title: Autoscale
 navigation_icon: square-stack
 ---
 
+{/* vale off */}
+:::caution[**Limited Access**]
+At the moment, autoscale **is not** enabled by default (you might get an *"Autoscale not enabled for your account"* error).
+If you would like to enable it, please reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
+:::
+{/* vale on */}
+
 Autoscaling is [load balancing](/features/load-balancing) where the *number of instances* used to handle your traffic automatically adapts to match the current traffic load.
 On Unikraft Cloud, scale-out (the process of adding instances to cope with increased load) happens in milliseconds.
 You can transparently and effortlessly handle load increase including traffic peaks.
@@ -12,7 +19,7 @@ You can set autoscale on and let Unikraft Cloud handle your traffic increases an
 
 ## The basics
 
-As with [load balancing](/features/load-balancing), autoscaling in Unikraft Cloud takes care of a *service*.
+As with [load balancing](/features/load-balancing), autoscaling in Unikraft Cloud takes care of a [service](/platform/services).
 Services allow you to load balance traffic for an Internet-facing service like a web server by creating many instances within the same service.
 
 While you can add or remove instances to a service to scale your service, doing this manually makes it hard to react to changes in traffic load.
@@ -21,18 +28,18 @@ This is where autoscale comes into play.
 
 With autoscale enabled, Unikraft Cloud takes care of the heavy lifting for you by continuously monitoring the load of your service and automatically creating or deleting instances as needed.
 
-{/* vale off */}
-:::caution[Limited Access]
-At the moment, autoscale **is not** enabled by default (you might get an "Autoscale not enabled for your account" error).
-If you would like to enable it, please reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to `support@unikraft.com`.
-:::
-{/* vale on */}
-
 :::note
 Autoscale, as well as load balancing in general, currently supports only Internet-facing services.
 :::
 
 ## Setting up autoscale
+
+{/* vale off */}
+:::caution
+Dedicated `unikraft` CLI subcommands for autoscale are coming soon.
+In the meantime, drive autoscale through the [API](/api/platform/v1/autoscale), which you can invoke with `curl` or the [`unikraft api`](/cli/unikraft/api) command.
+:::
+{/* vale on */}
 
 First, create an instance, in this example using NGINX:
 
@@ -41,198 +48,255 @@ First, create an instance, in this example using NGINX:
 ```bash title="unikraft"
 git clone https://github.com/unikraft-cloud/examples
 cd examples/nginx/
-unikraft run --metro=fra -p 443:8080/http+tls -m 256MiB --image=nginx:latest
-```
-
-```bash title="kraft"
-git clone https://github.com/unikraft-cloud/examples
-cd examples/nginx/
-kraft cloud deploy -p 443:8080 -M 256 .
+unikraft build . --output <my-org>/nginx:latest
+unikraft run --metro fra \
+  -m 256M \
+  -p 443:8080/http+tls \
+  --image <my-org>/nginx:latest
 ```
 
 </CodeTabs>
 
-```ansi title=""
-[90m[[0m[92m●[0m[90m][0m Deployed successfully!
- [90m│[0m
- [90m├[0m[90m──────────[0m [90mname[0m: nginx-4d7u3
- [90m├[0m[90m──────────[0m [90muuid[0m: 8fda2a70-6a32-4b5e-8900-4395b33d02d7
- [90m├[0m[90m─────────[0m [90mstate[0m: [92mrunning[0m
- [90m├[0m[90m───────────[0m [90murl[0m: https://small-leaf-rafirkw7.fra.unikraft.app
- [90m├[0m[90m─────────[0m [90mimage[0m: nginx@sha256:389bfa6be6455c92b61cfe429b50491373731dbdd8bd8dc79c08f985d6114758
- [90m├[0m[90m─────[0m [90mboot time[0m: 20.36 ms
- [90m├[0m[90m────────[0m [90mmemory[0m: 256 MiB
- [90m├[0m[90m───────[0m [90mservice[0m: small-leaf-rafirkw7
- [90m├[0m[90m──[0m [90mprivate fqdn[0m: nginx-4d7u3.internal
- [90m├[0m[90m────[0m [90mprivate ip[0m: 172.16.6.5
- [90m└[0m[90m──────────[0m [90margs[0m: /usr/bin/nginx -c /etc/nginx/nginx.conf
+The output shows the instance address and other details:
+
+<CodeTabs syncKey="cli">
+
+```ansi title="unikraft"
+[1mmetro[22m:        fra
+[1mname[22m:         nginx-67zbu
+[1muuid[22m:         8a8bc1b9-0af6-420e-a426-190dc2da9eaa
+[1mstate[22m:        [38;2;144;161;185mstarting[0m
+[1mimage[22m:        <my-org>/nginx
+[1mresources[22m:
+[3m  memory[23m:     256MiB
+[3m  vcpus[23m:      1
+[1mservice[22m:
+[3m  uuid[23m:       a942b9b5-ad17-3ffe-dcd2-ef4331f9087a
+[3m  name[23m:       nameless-fog-0tvh1uov
+[3m  domains[23m:
+[3m  - fqdn[23m:     nameless-fog-0tvh1uov.fra.unikraft.app
+[1mnetworks[22m:
+[3m- uuid[23m:       62d9bbf0-aec8-61f6-7bdb-86edf63dd068
+[3m  private-ip[23m: 10.0.3.3
+[3m  mac[23m:        12:b0:c6:23:ed:15
+[1mtimestamps[22m:
+[3m  created[23m:    just now
 ```
 
-This single deploy or run flow does 3 things:
+</CodeTabs>
 
-1. Creates an instance of NGINX which will serve as the **autoscale master** instance.
-1. Creates a service via the `-p` flag (named `small-leaf-rafirkw7`).
-1. Attaches the instance to the service (the `-p` flag also does this automatically).
+:::note
+Autoscale requires an [instance template](/platform/instances#instance-templates) to create new instances during scale-out.
+If you enable autoscale through the API, provide the template under the top-level `template` field.
+:::
 
-All that's left to do now to set up autoscale is to set an autoscale configuration *policy* and to set the instance as master.
-Unikraft Cloud then takes care of cloning this master instance whenever load increases.
-To achieve this, use the legacy CLI scale command:
+The next step is to convert the instance you deployed into a template that autoscale clones during scale-out:
 
-<CodeTabs>
+```bash title="unikraft"
+unikraft instance template create nginx-67zbu
+```
 
-```bash title="kraft"
-kraft cloud scale init small-leaf-rafirkw7 \
-  --master nginx-4d7u3 \
-  --min-size 1 \
-  --max-size 8 \
-  --warmup-time 1s \
-  --cooldown-time 1s
+The instance's `state` changes to `template`, and its name (`nginx-67zbu`) is the `<template-name>` you reference below.
 
-kraft cloud scale add small-leaf-rafirkw7 \
-  --name scale-out-policy \
-  --metric cpu \
-  --adjustment percent \
-  --step 600:800/50 \
-  --step 800:/100
+Converting the instance into a template consumes it, so the service that the deploy step created for it (`nameless-fog-0tvh1uov`) no longer exists.
+Create a new persistent [service](/platform/services) for autoscale to manage:
 
-kraft cloud scale add small-leaf-rafirkw7 \
-  --name scale-in-policy \
-  --metric cpu \
-  --adjustment percent \
-  --step :50/-50
+```bash title="unikraft"
+unikraft service create --metro fra \
+  --name nginx-autoscale-service \
+  --domains nginx-autoscale \
+  --services 443:8080/http+tls
+```
+
+The command prints the new service's details, including its `uuid` (for example, `996d006f-a491-44ae-a1dc-7a6186971351`).
+Use that `uuid`—shown as `<service-uuid>` below—in the autoscale calls.
+
+All that's left to do now to set up autoscale is to configure the autoscale settings (including the **template** to clone) and to define a scaling *policy*.
+Unikraft Cloud then takes care of cloning this template whenever load increases.
+
+:::note
+You can create the template with [on-demand template creation](/features/on-demand-templates) instead of managing the template yourself.
+The instance-create call then prepares and reuses the underlying template automatically.
+:::
+
+Achieve this with the following commands:
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft api /v1/services/<service-uuid>/autoscale -X POST --metro fra \
+  -d '{
+    "min_size": 1,
+    "max_size": 8,
+    "warmup_time_ms": 1000,
+    "cooldown_time_ms": 1000,
+    "template": {
+      "name": "<template-name>"
+    }
+  }'
+
+unikraft api /v1/services/<service-uuid>/autoscale/policies -X POST --metro fra \
+  -d '{
+    "name": "scale-out-policy",
+    "type": "step",
+    "metric": "cpu",
+    "adjustment_type": "percent",
+    "steps": [
+      { "lower_bound": 600, "upper_bound": 800, "adjustment": 50 },
+      { "lower_bound": 800, "adjustment": 100 }
+    ]
+  }'
+
+unikraft api /v1/services/<service-uuid>/autoscale/policies -X POST --metro fra \
+  -d '{
+    "name": "scale-in-policy",
+    "type": "step",
+    "metric": "cpu",
+    "adjustment_type": "percent",
+    "steps": [
+      { "upper_bound": 500, "adjustment": -50 }
+    ]
+  }'
 ```
 
 </CodeTabs>
 
 Note the following:
 
-* The first command sets the master to the created instance, and configures it to scale up to a maximum of 8 instances and a minimum of 1; the command also sets the warm up and cool down time to 1 second each, so it doesn't constantly fluctuate up and down.
+* The first command sets the template to clone, and configures it to scale up to a maximum of 8 instances and a minimum of 1; the command also sets the warm up and cool down time to 1 second each, so it doesn't constantly fluctuate up and down.
 * The second command sets the *scale-out* policy based on CPU utilization (in millicores): between 60% and 80% utilization, the system increases instances by 50%.
   From 80% onward, the number of instances doubles.
 * The third command sets the *scale-in* policy: below 50% utilization, the system reduces the number of instances by half (note the `-` sign for scale-in).
 
 :::note
-
-The intervals that autoscale uses for making scale-out and scale-in decisions use the `--warmup-time` and `--cooldown-time` parameters of the scale init command, in units of milliseconds.
+The platform waits between decisions so the service doesn't constantly scale in and out.
+The warm-up time is how long it waits after scaling out before it can scale again, and the cool-down time is how long it waits after scaling in.
+Set them with the `warmup_time_ms` and `cooldown_time_ms` fields.
 Refer to the API autoscale [reference](/api/platform/v1/autoscale) for more details.
-
-:::
-
-:::note
-
 Keep in mind that a few restrictions apply to how you define scale-in/scale-out steps.
-You can find the documentation [here](/api/platform/v1/autoscale) at the bottom of the section.
-
 :::
 
-
-## Testing it
-
-To check it's working, you can use the legacy CLI scale get command to list the autoscale properties of the service:
-
-<CodeTabs>
-
-```bash title="kraft"
-kraft cloud scale get small-leaf-rafirkw7
-```
-
-</CodeTabs>
-
-You should see output like:
-
-```ansi title=""
-          uuid: 5ca059ec-a24a-41f2-8413-f09bc58730ca
-          name: small-leaf-rafirkw7
-       enabled: true
-      min size: 0
-      max size: 8
-   warmup (ms): 1000
- cooldown (ms): 1000
-        master: f840ac12-f485-4f02-9f33-6a0a7de46f1f
-      policies: scale-out-policy;scale-in-policy
-```
-
-To list an individual policy, use the legacy CLI scale get command as follows:
-
-<CodeTabs>
-
-```bash title="kraft"
-kraft cloud scale get --policy scale-out-policy small-leaf-rafirkw7
-```
-
-</CodeTabs>
-
-You should see output like:
-
-```ansi title=""
-adjustment_type: percent
-enabled: true
-metric: cpu
-name: scale-out-policy
-status: success
-steps:
-- adjustment: 50
-  lower_bound: 600
-  upper_bound: 800
-- adjustment: 100
-  lower_bound: 800
-type: step
-```
-
-You can further check that the master instance is on `standby` (scaled to zero), assuming your service hasn't received any traffic yet.
-You can get the UUID of your master instance from the legacy CLI scale get command above.
+To check it's working, list the autoscale properties of the service:
 
 <CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
-unikraft instances get f840ac12-f485-4f02-9f33-6a0a7de46f1f -o list
-```
-
-```bash title="kraft"
-kraft cloud instance get f840ac12-f485-4f02-9f33-6a0a7de46f1f -o list
+unikraft api /v1/services/<service-uuid>/autoscale -X GET --metro fra
 ```
 
 </CodeTabs>
 
 You should see output like:
 
-```ansi title=""
-          uuid: f840ac12-f485-4f02-9f33-6a0a7de46f1f
-          name: nginx-9mbf2
-          fqdn: restless-resonance-0oo7m7s8.fra.unikraft.app
-    private ip: 172.16.6.4
-         state: standby
-    created at: 30 minutes ago
-         image: nginx@sha256:d4325c1f1a472c511723148adc380d491029f4c98a2367fbeff628c6456d4180
-        memory: 256 MiB
-          args: /usr/bin/nginx -c /etc/nginx/nginx.conf
-           env:
-       volumes:
-      service : 5ca059ec-a24a-41f2-8413-f09bc58730ca
-     boot time: 19465us
+<CodeTabs syncKey="cli">
+
+```json title="unikraft"
+{
+  "status": "success",
+  "data": {
+    "service_groups": [
+      {
+        "status": "success",
+        "uuid": "5ca059ec-a24a-41f2-8413-f09bc58730ca",
+        "name": "nameless-fog-0tvh1uov",
+        "enabled": true,
+        "min_size": 1,
+        "max_size": 8,
+        "warmup_time_ms": 1000,
+        "cooldown_time_ms": 1000,
+        "template": {
+          "name": "nginx-67zbu",
+          "uuid": "8a8bc1b9-0af6-420e-a426-190dc2da9eaa"
+        },
+        "policies": [
+          {
+            "name": "scale-out-policy",
+            "type": "step",
+            "enabled": true,
+            "metric": "cpu",
+            "adjustment_type": "percent",
+            "steps": [
+              {
+                "adjustment": 50,
+                "lower_bound": 600,
+                "upper_bound": 800
+              },
+              {
+                "adjustment": 100,
+                "lower_bound": 800
+              }
+            ]
+          },
+          {
+            "name": "scale-in-policy",
+            "type": "step",
+            "enabled": true,
+            "metric": "cpu",
+            "adjustment_type": "percent",
+            "steps": [
+              {
+                "adjustment": -50,
+                "upper_bound": 500
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
 ```
 
-Note the value of the `state` field.
-Now to make sure the service is up, `curl` the service address:
+</CodeTabs>
 
-```bash title=""
-curl https://small-leaf-rafirkw7.fra.unikraft.app
-```
-
-You should get an immediate response, even though the instance was on `standby`.
-You can use a watch command to see if you catch the instance changing state from `standby` to `running`:
+To list an individual policy:
 
 <CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
-unikraft instances list --watch
-```
-
-```bash title="kraft"
-watch --color -n 0.5 kraft cloud instance list
+unikraft api /v1/services/<service-uuid>/autoscale/policies/scale-out-policy -X GET --metro fra
 ```
 
 </CodeTabs>
+
+You should see output like:
+
+<CodeTabs syncKey="cli">
+
+```json title="unikraft"
+{
+  "status": "success",
+  "data": {
+    "policies": [
+      {
+        "status": "success",
+        "policy": {
+          "name": "scale-out-policy",
+          "type": "step",
+          "enabled": true,
+          "metric": "cpu",
+          "adjustment_type": "percent",
+          "steps": [
+            {
+              "adjustment": 50,
+              "lower_bound": 600,
+              "upper_bound": 800
+            },
+            {
+              "adjustment": 100,
+              "lower_bound": 800
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
+```
+
+</CodeTabs>
+
+{/* TODO: add example */}
 
 ## Policy types
 
@@ -244,19 +308,25 @@ A service can have more than one policy active at the same time.
 The `step` policy scales instances based on metric thresholds.
 You define up to **4 steps**, each specifying a lower bound, upper bound, and the scaling change to apply when the metric falls in that range.
 
-You should order steps by lower bound with no gaps between them and no overlaps.
+You should order steps by lower bound with no gaps between them and no overlaps:
 
-```bash title=""
-kraft cloud scale add <service-name> \
-  --name my-step-policy \
-  --type step \
-  --metric cpu \
-  --adjustment-type change \
-  --step 600:800/2 \
-  --step 800:/4
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft api /v1/services/<service-uuid>/autoscale/policies -X POST --metro fra \
+  -d '{
+    "name": "my-step-policy",
+    "type": "step",
+    "metric": "cpu",
+    "adjustment_type": "change",
+    "steps": [
+      { "lower_bound": 600, "upper_bound": 800, "adjustment": 2 },
+      { "lower_bound": 800, "adjustment": 4 }
+    ]
+  }'
 ```
 
-#### Metrics
+</CodeTabs>
 
 The following metrics can drive a step policy:
 
@@ -265,8 +335,6 @@ The following metrics can drive a step policy:
 | `cpu` | CPU utilization in millicores |
 | `inflight_reqs` | Number of requests the platform is processing across all instances |
 | `reqs_per_sec` | Request throughput in requests per second |
-
-#### Scale change types
 
 Step policies support three scaling change types:
 
@@ -282,59 +350,122 @@ Step policies support three scaling change types:
 The `on-demand` policy creates a new instance immediately when an incoming request finds no available instances.
 This prevents request queuing but introduces cold start delays.
 
-```json title="POST /services"
-{
-  ...
-  "policies": [
-    {
-      "name": "scale-out",
-      "type": "on_demand"
-    }
-  ]
-  ...
-}
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft api /v1/services/<service-uuid>/autoscale -X POST --metro fra \
+  -d '{
+    "policies": [
+      {
+        "name": "scale-out",
+        "type": "on_demand"
+      }
+    ],
+    ...
+  }'
 ```
+
+```bash title="API"
+curl -X POST \
+  -H "Authorization: Bearer ${UKC_TOKEN}" \
+  -H "Content-Type: application/json" \
+  "https://api.fra.unikraft.cloud/v1/services/<service-uuid>/autoscale" \
+  -d '{
+    "policies": [
+      {
+        "name": "scale-out",
+        "type": "on_demand"
+      }
+    ],
+    ...
+  }'
+```
+
+</CodeTabs>
 
 ### Create policy
 
 The `create` policy provisions a new VM when an instance exceeds the `num_requests` threshold.
 Setting `replace` to true deletes the original VM after the new one starts.
 
-```json title="POST /services"
-{
-  ...
-  "policies": [
-    {
-      "name": "create",
-      "type": "create",
-      "replace": true,
-      "num_requests": 100
-    }
-  ]
-  ...
-}
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft api /v1/services/<service-uuid>/autoscale -X POST --metro fra \
+  -d '{
+    "policies": [
+      {
+        "name": "create",
+        "type": "create",
+        "replace": true,
+        "num_requests": 100
+      }
+    ],
+    ...
+  }'
 ```
+
+```bash title="API"
+curl -X POST \
+  -H "Authorization: Bearer ${UKC_TOKEN}" \
+  -H "Content-Type: application/json" \
+  "https://api.fra.unikraft.cloud/v1/services/<service-uuid>/autoscale" \
+  -d '{
+    "policies": [
+      {
+        "name": "create",
+        "type": "create",
+        "replace": true,
+        "num_requests": 100
+      }
+    ],
+    ...
+  }'
+```
+
+</CodeTabs>
 
 
 ### Idle policy
 
 The `idle` policy scales in (removes instances) when the service has been idle—receiving no requests—for a configurable period.
 
-```json title="POST /services"
-{
-  ...
-  "policies": [
-    {
-      "name": "scale-in",
-      "type": "idle",
-      "idle_time_ms": 1000
-    }
-  ]
-  ...
-}
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft api /v1/services/<service-uuid>/autoscale -X POST --metro fra \
+  -d '{
+    "policies": [
+      {
+        "name": "scale-in",
+        "type": "idle",
+        "idle_time_ms": 1000
+      }
+    ],
+    ...
+  }'
 ```
+
+```bash title="API"
+curl -X POST \
+  -H "Authorization: Bearer ${UKC_TOKEN}" \
+  -H "Content-Type: application/json" \
+  "https://api.fra.unikraft.cloud/v1/services/<service-uuid>/autoscale" \
+  -d '{
+    "policies": [
+      {
+        "name": "scale-in",
+        "type": "idle",
+        "idle_time_ms": 1000
+      }
+    ],
+    ...
+  }'
+```
+
+</CodeTabs>
 
 ## Learn more
 
-* The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
+* The [CLI reference](/docs/cli/unikraft).
 * Unikraft Cloud's [REST API reference](/api/platform/v1), and in particular the section on [autoscale](/api/platform/v1/autoscale).

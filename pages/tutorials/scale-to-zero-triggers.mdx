@@ -21,68 +21,48 @@ You can also configure scale-to-zero to consider idle active connections when de
 
 When you enable this trigger, Unikraft Cloud will track incoming connections to your instance.
 If there is no traffic for the configured duration, the instance scales down to zero.
-You can use the legacy CLI tool or the [API](/api/platform/v1/instances#create-instance) to enable this trigger:
+You can use the CLI to enable this trigger:
 
-<Tabs defaultValue="kraft">
-    <TabsList>
-    <TabsTrigger value="kraft">Kraftkit</TabsTrigger>
-    <TabsTrigger value="api">API</TabsTrigger>
-    </TabsList>
-    <TabsContent value="kraft">
-```bash
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft run \
+  --scale-to-zero policy=on,cooldown-time=5000 \
+  ...
+```
+
+```bash title="kraft"
 kraft cloud instance create \
-    --scale-to-zero on \
-    --scale-to-zero-cooldown 5s \
-    ...
+  --scale-to-zero on \
+  --scale-to-zero-cooldown 5s \
+  ...
 ```
-</TabsContent>
-<TabsContent value="api">
-```json
-{
-    ...
-    "scale_to_zero": {
-        "policy": "on",
-        "cooldown_time_ms": "5000
-    }
-}
-```
-</TabsContent>
-</Tabs>
+
+</CodeTabs>
 
 ### Idle connections
 
 When enabling this trigger, the platform will consider all active connections to your instance, so all traffic going to them.
 The instance will scale down if you make no new network connections and all existing connections have been idle for the configured duration.
 
-You can enable this trigger using the legacy CLI tool or the [API](/api/platform/v1/instances#create-instance) as follows:
+You can enable this trigger using the CLI as follows:
 
-<Tabs defaultValue="kraft">
-    <TabsList>
-    <TabsTrigger value="kraft">Kraftkit</TabsTrigger>
-    <TabsTrigger value="api">API</TabsTrigger>
-    </TabsList>
-    <TabsContent value="kraft">
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft run \
+  --scale-to-zero policy=idle,cooldown-time=5000 \
+  ...
+```
+
 ```bash
 kraft cloud instance create \
-    --scale-to-zero idle \
-    --scale-to-zero-cooldown 5s \
-    --scale-to-zero-stateful \
-    ...
+  --scale-to-zero idle \
+  --scale-to-zero-cooldown 5s \
+  ...
 ```
-</TabsContent>
-<TabsContent value="api">
-```json
-{
-    ...
-    "scale_to_zero": {
-        "policy": "idle",
-        "cooldown_time_ms": "5000",
-        "stateful": true
-    }
-}
-```
-</TabsContent>
-</Tabs>
+
+</CodeTabs>
 
 :::tip
 If your app uses [keep-alive](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Keep-Alive) messages over this active connection, your instance won't scale down.
@@ -112,14 +92,25 @@ export UKC_METRO=fra
 
 Then invoke the following `curl` command to scale down an instance named `my-instance`:
 
-```bash
-curl -X POST https://api.$UKC_METRO.unikraft.cloud/v1/instances/suspend \
-  -H "Authorization: Bearer $UKC_TOKEN" \
+```bash title="POST /instances/suspend"
+curl -X POST https://api.fra.unikraft.cloud/v1/instances/suspend \
+  -H "Authorization: Bearer ${UKC_TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "my-instance"
+    "name": "my-instance",
+    "drain_timeout_ms": 10000
   }'
 ```
+
+You can do the same using the `unikraft` CLI:
+
+```bash title="unikraft"
+unikraft instance suspend my-instance --drain-timeout 10s
+```
+
+The drain timeout allows you to specify a grace period for existing connections to finish before the instance goes to standby.
+If set to `0`, no grace period exists and the instance goes to standby immediately, dropping all existing connections.
+If set to `-1` or unset, the platform will wait indefinitely for existing connections to finish before suspending the instance.
 
 ### Device file
 

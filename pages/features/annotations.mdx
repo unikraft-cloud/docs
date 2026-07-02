@@ -1,0 +1,217 @@
+---
+title: Annotations
+navigation_icon: sticky-note
+---
+
+{/* vale off */}
+:::caution[**Limited Access**]
+Instance annotations are available as part of enterprise plans.
+To enable them for your account, reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
+:::
+{/* vale on */}
+
+**Annotations** attach arbitrary key-value metadata to an instance.
+They use the same key syntax as [Kubernetes annotations](https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/), so you can reuse your existing keys and tooling.
+
+Unlike [tags](/platform/tagging), which act as controller-level labels that only the platform sees, annotations also reach the guest.
+You can use them for two things:
+
+1. **Custom metadata**—the instance's startdata includes its annotations, so the guest can read them at runtime.
+2. **Structured log output**—you select which annotations the platform injects into the VM's console log output.
+
+{/* vale off */}
+:::caution
+Dedicated `unikraft` CLI subcommands for annotations are coming soon.
+In the meantime, drive annotations through the [API](/api/platform/v1/instances), which you can invoke with `curl` or the [`unikraft api`](/cli/unikraft/api) command.
+:::
+{/* vale on */}
+
+## Annotation keys
+
+An annotation is a set of key-value pairs, and values can be any string.
+Keys follow the [Kubernetes annotation key syntax](https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/#syntax-and-character-set):
+
+- A key can be a plain name (`my-key`) or carry an optional DNS prefix separated by a slash (`example.com/annotation2`).
+- Each key needs a name segment of at most 63 characters, containing alphanumerics, `-`, `_`, and `.`, and beginning and ending with an alphanumeric character.
+- The optional prefix is a DNS subdomain (a series of DNS labels joined by `.`, at most 253 characters) followed by a `/`. It can't be a wildcard domain.
+
+An instance holds at most 256 annotations.
+
+For example:
+
+```json
+{
+  "test.unikraft.com/my-annotation": "value3",
+  "my-key": "value1",
+  "example.com/annotation2": "value2"
+}
+```
+
+## Creating an instance with annotations
+
+Add an `annotations` object to the instance body when you create it.
+Each entry is a key-value pair:
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft api /v1/instances -X POST --metro fra \
+  -d '{
+    "name": "annotations-demo",
+    "image": "<my-org>/annotations-demo:latest",
+    "annotations": {
+      "test.unikraft.com/my-annotation": "value3",
+      "my-key": "value1",
+      "example.com/annotation2": "value2"
+    }
+  }'
+```
+
+</CodeTabs>
+
+Annotation keys are Kubernetes-compatible, so they can be plain keys (`my-key`) or prefixed with a domain (`example.com/annotation2`).
+
+## Reading annotations from the guest
+
+The platform includes the instance's annotations in its **startdata**, which the guest reads from `/sys/class/uio/uio0/device/startdata`:
+
+```bash
+cat /sys/class/uio/uio0/device/startdata
+```
+
+```json
+{
+  "ip": "10.0.0.5/30",
+  "uuid": "d0e22bb8-b4c1-44ea-bb58-197fedbeb2ab",
+  "annotations": {
+    "test.unikraft.com/my-annotation": "value3",
+    "my-key": "value1",
+    "example.com/annotation2": "value2"
+  },
+  "mac": "12:b0:0a:00:00:05",
+  "gw": "10.0.0.6",
+  "hostname": "annotations-demo"
+}
+```
+
+Your app parses this JSON and reads the `annotations` object like any other startdata field.
+
+## Patching annotations
+
+Update the annotations on an existing instance with a [`PATCH /instances`](/api/platform/v1/instances) request.
+The body is an array of patch operations, each naming the target instance, the `annotations` property, and one of three operations: `set`, `add`, or `del`.
+
+:::note
+Annotation changes apply only while the instance is in the `stopped` state.
+If you patch a running instance, the platform accepts the request and queues the change, then applies it the next time the instance stops.
+:::
+
+### Replace all annotations (`set`)
+
+`set` replaces all existing annotations with the object you provide:
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft api /v1/instances -X PATCH --metro fra \
+  -d '[{
+    "name": "annotations-demo",
+    "prop": "annotations",
+    "op": "set",
+    "value": {
+      "env": "production",
+      "team": "platform"
+    }
+  }]'
+```
+
+</CodeTabs>
+
+### Add or update annotations (`add`)
+
+`add` merges the given annotations into the existing set.
+It overwrites keys that already exist and leaves the other keys untouched:
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft api /v1/instances -X PATCH --metro fra \
+  -d '[{
+    "name": "annotations-demo",
+    "prop": "annotations",
+    "op": "add",
+    "value": {
+      "added-key": "added-value"
+    }
+  }]'
+```
+
+</CodeTabs>
+
+### Delete annotations (`del`)
+
+`del` removes specific keys.
+The value is an array of key names (or a single key as a string):
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft api /v1/instances -X PATCH --metro fra \
+  -d '[{
+    "name": "annotations-demo",
+    "prop": "annotations",
+    "op": "del",
+    "value": ["my-key", "example.com/annotation2"]
+  }]'
+```
+
+</CodeTabs>
+
+## Annotations in log output
+
+Beyond the guest, the platform can inject selected annotations into a VM's **console log output**.
+This helps with structured logging to an external collector.
+
+This forwarding happens at the node level rather than through the instances API, so coordinate with Unikraft to enable it for your deployment.
+The platform exposes two options:
+
+```bash
+--vmm-console-ports "app:socket/json:/tmp/vector.sock,app2:socket/json:/tmp/vector.sock"
+--vmm-console-annotations "app:my-key+test.unikraft.com/my-annotation,app2:*"
+```
+
+- `--vmm-console-ports` defines named console ports as `<name>:<type>[/<format>][:<path>]`. Here `app` and `app2` are `socket` ports using the `json` format, each writing to a Vector socket.
+- `--vmm-console-annotations` selects which annotations appear in each port's output, as `<port>:<key1>+<key2>,...` or `<port>:*`:
+  - `app:my-key+test.unikraft.com/my-annotation`—forward only the listed annotation keys (joined with `+`) to port `app`.
+  - `app2:*`—the `*` wildcard forwards all annotations to port `app2`.
+
+When the guest writes to the app console (for example, `echo "blub" > /dev/vport2p1`), the collector receives the message together with the selected annotations:
+
+```json
+{
+  "annotations": {
+    "my-key": "value1",
+    "test.unikraft.com/my-annotation": "value3"
+  },
+  "host": "(unnamed)",
+  "message": "blub",
+  "name": "app",
+  "source_type": "socket",
+  "timestamp": "2026-05-08T08:35:26.489812959Z",
+  "uuid": "9d262ffd-878f-47f3-98c3-bb017c11d690"
+}
+```
+
+## Limitations
+
+- An instance holds at most 256 annotations.
+- Annotation keys must follow the [Kubernetes key syntax](#annotation-keys), and values are strings.
+- A [patched](#patching-annotations) annotation change applies once the instance reaches the `stopped` state.
+- Dedicated `unikraft` CLI subcommands aren't available yet, so drive annotations through the [API](/api/platform/v1/instances).
+- The platform sets up [log-output](#annotations-in-log-output) forwarding at the node level, not through the instances API.
+
+## Learn more
+
+* [Tags](/platform/tagging): controller-level labels for organizing platform resources.
+* [Instances](/platform/instances): create and manage instances.
+* Unikraft Cloud's [REST API reference](/api/platform/v1), in particular the section on [instances](/api/platform/v1/instances).

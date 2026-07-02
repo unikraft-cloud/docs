@@ -11,43 +11,26 @@ You can reduce this initialization time by taking a snapshot of the app memory a
 
 ## Setting it up
 
-The quickest way to set this up is via the legacy CLI `--scale-to-zero-stateful` flag:
-
-<CodeTabs>
-
-```bash title="kraft"
-kraft cloud deploy --metro fra --scale-to-zero-stateful .
-```
-
-</CodeTabs>
-
-As an alternative, you can add a `label` to your example's `Kraftfile` as follows:
-
-```yaml title=""
-labels:
-  cloud.unikraft.v1.instances/scale_to_zero.stateful: "true"
-```
-
-You can see an example of such a `Kraftfile` and label in the [Spring Boot example](/guides/springboot).
-
-Once deployed, you can check whether this mechanism works for your app via the CLI:
+The quickest way to set this up is when creating an instance, via the CLI:
 
 <CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
-unikraft instances get <instance-name>
+unikraft run --metro fra \
+  -p 443:8080/http+tls \
+  --scale-to-zero policy=on,stateful=true \
+  ...
 ```
 
 ```bash title="kraft"
-kraft cloud instance get <instance-name>
+kraft cloud deploy \
+  -p 443:8080/http+tls \
+  --scale-to-zero on \
+  --scale-to-zero-stateful \
+  ...
 ```
 
 </CodeTabs>
-
-```ansi
-stateful: [92menabled[0m
-```
-
 
 ## How it works
 
@@ -55,7 +38,7 @@ When you enable stateful mode and first deploy your app, Unikraft Cloud brings i
 This may be fast or take seconds or minutes, depending on your app's init time.
 Unikraft Cloud waits until the app's exposed port becomes available, and then starts the scale-to-zero process.
 This assumes no traffic is coming to that port.
-At this point, Unikraft Cloud saves the state of your app and sets the app to standby (consuming no resources).
+At this point, Unikraft Cloud saves the state of your app and sets the app to `standby` (consuming no resources).
 
 Next, when traffic arrives, Unikraft Cloud brings up the app including its saved state.
 This ensures statefulness across scale-to-zero and scale-to-one cycles.
@@ -65,4 +48,6 @@ It also eliminates long initialization times from heavyweight apps.
 ## Learn more
 
 * The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
-* Unikraft Cloud's [REST API reference](/api/platform/v1), and in particular the [scale-to-zero schema](/api/platform/v1/~schemas#instance-scale-to-zero).
+* Unikraft Cloud's [REST API reference](/api/platform/v1).
+* [Instances](/platform/instances) documentation.
+* [Service groups](/platform/services) documentation.

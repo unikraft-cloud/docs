@@ -25,10 +25,10 @@ To run this example, follow these steps:
 
 2. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/httpserver-prisma-expressjs4.19-node18/` directory:
 
-```bash
-git clone https://github.com/unikraft-cloud/examples
-cd examples/httpserver-prisma-expressjs4.19-node18/
-```
+   ```bash
+   git clone https://github.com/unikraft-cloud/examples
+   cd examples/httpserver-prisma-expressjs4.19-node18/
+   ```
 
 Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪):
@@ -68,40 +68,40 @@ The output shows the instance address and other details:
 <CodeTabs syncKey="cli">
 
 ```ansi title="unikraft"
-metro:        fra
-name:         httpserver-prisma-expressjs419-node18-hdof1
-uuid:         066f55cb-bcbd-45e5-9f6b-b3866c3a3a4c
-state:        [92mstarting[0m
-image:        <my-org>/httpserver-prisma-expressjs419-node18
-resources:
-  memory:     512MiB
-  vcpus:      1
-service:
-  uuid:       b7da8a3b-ca4d-979a-3ae9-9634bca98008
-  name:       funky-sun-4bf8v7g9
-  domains:
-  - fqdn:     funky-sun-4bf8v7g9.fra.unikraft.app
-networks:
-- uuid:       63d977e8-548c-f0af-cc97-39856660f612
-  private-ip: 10.0.28.2
-  mac:        12:b0:43:fb:5c:30
-timestamps:
-  created:    just now
+[1mmetro[22m:        fra
+[1mname[22m:         httpserver-prisma-expressjs419-node18-hdof1
+[1muuid[22m:         066f55cb-bcbd-45e5-9f6b-b3866c3a3a4c
+[1mstate[22m:        [38;2;144;161;185mstarting[0m
+[1mimage[22m:        <my-org>/httpserver-prisma-expressjs419-node18
+[1mresources[22m:
+[3m  memory[23m:     512MiB
+[3m  vcpus[23m:      1
+[1mservice[22m:
+[3m  uuid[23m:       b7da8a3b-ca4d-979a-3ae9-9634bca98008
+[3m  name[23m:       funky-sun-4bf8v7g9
+[3m  domains[23m:
+[3m  - fqdn[23m:     funky-sun-4bf8v7g9.fra.unikraft.app
+[1mnetworks[22m:
+[3m- uuid[23m:       63d977e8-548c-f0af-cc97-39856660f612
+[3m  private-ip[23m: 10.0.28.2
+[3m  mac[23m:        12:b0:43:fb:5c:30
+[1mtimestamps[22m:
+[3m  created[23m:    just now
 ```
 
 ```ansi title="kraft"
-[90m[[0m[92m●[0m[90m][0m Deployed successfully!
- [90m│[0m
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mname[0m: httpserver-prisma-expressjs419-node18-hdof1
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90muuid[0m: 066f55cb-bcbd-45e5-9f6b-b3866c3a3a4c
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mmetro[0m: https://api.fra.unikraft.cloud/v1
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mstate[0m: [92mstarting[0m
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mdomain[0m: https://funky-sun-4bf8v7g9.fra.unikraft.app
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mimage[0m: oci://unikraft.io/<my-org>/httpserver-prisma-expressjs419-node18@sha256:770d4af1d490daea11171c680eaf99e2a6017a262ba9fbf1ba8d708f5fc32bfe
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mmemory[0m: 512 MiB
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mservice[0m: funky-sun-4bf8v7g9
- [90m├[0m[90m─[0m [90mprivate fqdn[0m: httpserver-prisma-expressjs419-node18-hdof1.internal
- [90m└[0m[90m─[0m[90m─[0m[90m─[0m [90mprivate ip[0m: 10.0.28.2
+[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
+ [38;5;245m│[0m
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mname[0m: httpserver-prisma-expressjs419-node18-hdof1
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245muuid[0m: 066f55cb-bcbd-45e5-9f6b-b3866c3a3a4c
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mstate[0m: [92mstarting[0m
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mdomain[0m: https://funky-sun-4bf8v7g9.fra.unikraft.app
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/httpserver-prisma-expressjs419-node18@sha256:770d4af1d490daea11171c680eaf99e2a6017a262ba9fbf1ba8d708f5fc32bfe
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmemory[0m: 512 MiB
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mservice[0m: funky-sun-4bf8v7g9
+ [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: httpserver-prisma-expressjs419-node18-hdof1.internal
+ [38;5;245m└[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mprivate ip[0m: 10.0.28.2
 ```
 
 </CodeTabs>
@@ -135,16 +135,18 @@ kraft cloud instance list
 
 </CodeTabs>
 
+<div style={{ marginTop: '0.8em' }} />
+
 <CodeTabs syncKey="cli">
 
 ```ansi title="unikraft"
-[1mMETRO[0m  [1mNAME[0m                                         [1mSTATE[0m    [1mIMAGE[0m                                           [1mARGS[0m  [1mMEMORY[0m  [1mVCPUS[0m  [1mFQDN[0m                                 [1mCREATED[0m
-fra    httpserver-prisma-expressjs419-node18-hdof1  [92mrunning[0m  <my-org>/httpserver-prisma-expressjs419-node18        512MiB  1      funky-sun-4bf8v7g9.fra.unikraft.app  2 minutes ago
+[1mMETRO[22m  [1mNAME[22m                                         [1mSTATE[22m    [1mIMAGE[22m                                           [1mARGS[22m  [1mMEMORY[22m  [1mVCPUS[22m  [1mFQDN[22m                                 [1mCREATED[22m
+fra    httpserver-prisma-expressjs419-node18-hdof1  [38;2;0;188;125mrunning[0m  <my-org>/httpserver-prisma-expressjs419-node18        512MiB  1      funky-sun-4bf8v7g9.fra.unikraft.app  2 minutes ago
 ```
 
 ```ansi title="kraft"
-[1mNAME[0m                                         [1mFQDN[0m                                 [1mSTATE[0m    [1mSTATUS[0m        [1mIMAGE[0m                                                                        [1mMEMORY[0m   [1mVCPUS[0m  [1mARGS[0m  [1mBOOT TIME[0m
-httpserver-prisma-expressjs419-node18-hdof1  funky-sun-4bf8v7g9.fra.unikraft.app  [92mrunning[0m  1 minute ago  oci://unikraft.io/<my-org>/httpserver-prisma-expressjs419-node18@sha256:...  512 MiB  1            37.94 ms
+[0;1;39mNAME[0m                                         [0;1;39mFQDN[0m                                 [0;1;39mSTATE[0m    [0;1;39mSTATUS[0m        [0;1;39mIMAGE[0m                                                                        [0;1;39mMEMORY[0m   [0;1;39mVCPUS[0m  [0;1;39mARGS[0m  [0;1;39mBOOT TIME[0m
+httpserver-prisma-expressjs419-node18-hdof1  funky-sun-4bf8v7g9.fra.unikraft.app  [0;32mrunning[0m  1 minute ago  oci://unikraft.io/<my-org>/httpserver-prisma-expressjs419-node18@sha256:...  512 MiB  1            37.94 ms
 ```
 
 </CodeTabs>

@@ -17,9 +17,9 @@ You can remove instances from a service at any time, and, when you do, Unikraft 
 The limits apply **per instance**.
 For HTTP services (that is, using the `http` [handler](/platform/services#handlers)), the system checks each individual in-flight request against the limit, but not the underlying TCP connection.
 For TCP services, the system counts the individual open connections.
-In the following, the term request refers to both requests and connections.
+In the following, the term request *refers* to both requests and connections.
 
-The load balancer uses the soft limit to decide when to wake up another [standby](/platform/instances#instance-states) instance.
+The load balancer uses the soft limit to decide when to wake up another [`standby`](/platform/instances#instance-states) instance.
 For example, if you set the soft limit to 5 and the service consists of 2 standby instances, one of the instances can receive up to 5 concurrent requests.
 The 6th parallel request wakes up the second instance.
 If there are no more standby instances to wake up, the number of requests assigned to each instance will exceed the soft limit.
@@ -41,116 +41,204 @@ For example, use NGINX as the app:
 git clone https://github.com/unikraft-cloud/examples
 cd examples/nginx/
 unikraft build . --output <my-org>/nginx:latest
-unikraft run --metro=fra -p 443:8080/http+tls -m 256MiB --image=<my-org>/nginx:latest
+unikraft run --metro fra \
+  -m 256M \
+  -p 443:8080/http+tls \
+  --image <my-org>/nginx:latest
 ```
 
 ```bash title="kraft"
 git clone https://github.com/unikraft-cloud/examples
 cd examples/nginx/
-kraft cloud deploy -p 443:8080 -M 256 .
+kraft cloud deploy \
+  -M 256Mi \
+  -p 443:8080 \
+  .
 ```
 
 </CodeTabs>
 
 This single command will (a) create a service via the `-p` flag and (b) start an NGINX instance:
 
-```ansi title=""
-[90m[[0m[92m●[0m[90m][0m Deployed successfully!
- [90m│[0m
- [90m├[0m[90m──────────[0m [90mname[0m: nginx-8ujeu
- [90m├[0m[90m──────────[0m [90muuid[0m: d6238ac6-27d2-47b3-8a45-c6cac99fb4ef
- [90m├[0m[90m─────────[0m [90mstate[0m: [92mrunning[0m
- [90m├[0m[90m───────────[0m [90murl[0m: https://wandering-shape-n6mhimgn.fra.unikraft.app
- [90m├[0m[90m─────────[0m [90mimage[0m: nginx@sha256:269192f523dca7498423bc54676ab08e415e9c7442d1bd3d65f07ab5e50a43d
- [90m├[0m[90m─────[0m [90mboot time[0m: 20.18 ms
- [90m├[0m[90m────────[0m [90mmemory[0m: 256 MiB
- [90m├[0m[90m───────[0m [90mservice[0m: wandering-shape-n6mhimgn
- [90m├[0m[90m──[0m [90mprivate fqdn[0m: nginx-8ujeu.internal
- [90m├[0m[90m────[0m [90mprivate ip[0m: 172.16.6.7
- [90m└[0m[90m──────────[0m [90margs[0m: /usr/bin/nginx -c /etc/nginx/nginx.conf
+<CodeTabs syncKey="cli">
+
+```ansi title="unikraft"
+[1mmetro[22m:        fra
+[1mname[22m:         nginx-67zbu
+[1muuid[22m:         8a8bc1b9-0af6-420e-a426-190dc2da9eaa
+[1mstate[22m:        [38;2;144;161;185mstarting[0m
+[1mimage[22m:        <my-org>/nginx
+[1mresources[22m:
+[3m  memory[23m:     256MiB
+[3m  vcpus[23m:      1
+[1mservice[22m:
+[3m  uuid[23m:       a942b9b5-ad17-3ffe-dcd2-ef4331f9087a
+[3m  name[23m:       nameless-fog-0tvh1uov
+[3m  domains[23m:
+[3m  - fqdn[23m:     nameless-fog-0tvh1uov.fra.unikraft.app
+[1mnetworks[22m:
+[3m- uuid[23m:       62d9bbf0-aec8-61f6-7bdb-86edf63dd068
+[3m  private-ip[23m: 10.0.3.3
+[3m  mac[23m:        12:b0:c6:23:ed:15
+[1mtimestamps[22m:
+[3m  created[23m:    just now
 ```
 
-With this in place, it's now time to start a second instance and attach it to the created service (in this case, named `wandering-shape-n6mhimgn`):
+```ansi title="kraft"
+[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
+ [38;5;245m│[0m
+ [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245mname[0m: nginx-67zbu
+ [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245muuid[0m: 8a8bc1b9-0af6-420e-a426-190dc2da9eaa
+ [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
+ [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mstate[0m: [92mstarting[0m
+ [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mdomain[0m: https://nameless-fog-0tvh1uov.fra.unikraft.app
+ [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/nginx@sha256:f51ecc121c9ca34abb88a2bc6a69765501304f7893f7e85af15fbec3dc86e2bd
+ [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mmemory[0m: 256 MiB
+ [38;5;245m├[0m[38;5;245m──────[0m [38;5;245mservice[0m: nameless-fog-0tvh1uov
+ [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: nginx-67zbu.internal
+ [38;5;245m└[0m[38;5;245m───[0m [38;5;245mprivate ip[0m: 10.0.3.3
+```
+
+</CodeTabs>
+
+
+With this in place, it's now time to start a second instance and attach it to the created service (in this case, named `nameless-fog-0tvh1uov`):
 
 <CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
-cd examples/nginx/
-unikraft run --metro=fra --service wandering-shape-n6mhimgn -m 256MiB --image=<my-org>/nginx:latest
+unikraft run --metro fra \
+  -m 256M \
+  --service nameless-fog-0tvh1uov \
+  --image <my-org>/nginx:latest
 ```
 
 ```bash title="kraft"
-cd examples/nginx/
-kraft cloud deploy --service wandering-shape-n6mhimgn -M 256 .
+kraft cloud instance create \
+  --start \
+  -M 256Mi \
+  --service nameless-fog-0tvh1uov \
+  <my-org>/nginx:latest
 ```
 
 </CodeTabs>
 
 :::tip
-If a prompt appears saying "deployment already exists: what would you like to do with the 1 existing instances," choose `keep`.
+If a prompt appears saying *"deployment already exists: what would you like to do with the 1 existing instances"*, choose `keep`.
 :::
 
-The command's output should look like this:
+You should see another instance starting up, with the same service and domain as the first instance:
 
-```ansi title=""
-[90m[[0m[92m●[0m[90m][0m Deployed successfully!
- [90m│[0m
- [90m├[0m[90m──────────[0m [90mname[0m: nginx-djta3
- [90m├[0m[90m──────────[0m [90muuid[0m: 06c972a6-a117-4b07-8eba-9389b4cccb42
- [90m├[0m[90m─────────[0m [90mstate[0m: [92mrunning[0m
- [90m├[0m[90m───────────[0m [90murl[0m: https://wandering-shape-n6mhimgn.fra.unikraft.app
- [90m├[0m[90m─────────[0m [90mimage[0m: nginx@sha256:c00c11a5cbd6a3020dd4d9703fbeb2a2f2aab37f18f7a0ba9c66db5a71897c3a
- [90m├[0m[90m─────[0m [90mboot time[0m: 20.46 ms
- [90m├[0m[90m────────[0m [90mmemory[0m: 256 MiB
- [90m├[0m[90m______─[0m [90mservice[0m: wandering-shape-n6mhimgn
- [90m├[0m[90m──[0m [90mprivate fqdn[0m: nginx-djta3.internal
- [90m├[0m[90m────[0m [90mprivate ip[0m: 172.16.6.3
- [90m└[0m[90m──────────[0m [90margs[0m: /usr/bin/nginx -c /etc/nginx/nginx.conf
+<CodeTabs syncKey="cli">
+
+```ansi title="unikraft"
+[1mmetro[22m:        fra
+[1mname[22m:         nginx-0s295
+[1muuid[22m:         9b1c8e5c-7a0d-4f1e-9c3a-2b8d9f0e5a1f
+[1mstate[22m:        [38;2;144;161;185mstarting[0m
+[1mimage[22m:        <my-org>/nginx
+[1mresources[22m:
+[3m  memory[23m:     256MiB
+[3m  vcpus[23m:      1
+[1mservice[22m:
+[3m  uuid[23m:       a942b9b5-ad17-3ffe-dcd2-ef4331f9087a
+[3m  name[23m:       nameless-fog-0tvh1uov
+[3m  domains[23m:
+[3m  - fqdn[23m:     nameless-fog-0tvh1uov.fra.unikraft.app
+[1mnetworks[22m:
+[3m- uuid[23m:       adf1f17d-bad1-49b2-a126-ed730e06379a
+[3m  private-ip[23m: 10.0.1.4
+[3m  mac[23m:        12:b0:0a:00:01:05
+[1mtimestamps[22m:
+[3m  created[23m:    just now
 ```
 
-Both the `url` and `service` fields in the 2 instances are the same.
+```ansi title="kraft"
+[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
+ [38;5;245m│[0m
+ [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245mname[0m: nginx-0s295
+ [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245muuid[0m: 9b1c8e5c-7a0d-4f1e-9c3a-2b8d9f0e5a1f
+ [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
+ [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mstate[0m: [92mstarting[0m
+ [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mdomain[0m: https://nameless-fog-0tvh1uov.fra.unikraft.app
+ [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/nginx@sha256:f51ecc121c9ca34abb88a2bc6a69765501304f7893f7e85af15fbec3dc86e2bd
+ [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mmemory[0m: 256 MiB
+ [38;5;245m├[0m[38;5;245m──────[0m [38;5;245mservice[0m: nameless-fog-0tvh1uov
+ [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: nginx-0s295.internal
+ [38;5;245m└[0m[38;5;245m───[0m [38;5;245mprivate ip[0m: 10.0.1.4
+```
+
+</CodeTabs>
+
 To check that it worked, run the following command:
 
 <CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
-unikraft services list
+unikraft services get nameless-fog-0tvh1uov
 ```
 
 ```bash title="kraft"
-kraft cloud service list -o list
+kraft cloud service get nameless-fog-0tvh1uov
 ```
 
 </CodeTabs>
 
 You should see output such as:
 
-```ansi title=""
-       uuid: 954b4a52-fc51-4eac-b5c9-1fc2a368a237
-       name: wandering-shape-n6mhimgn
-       fqdn: wandering-shape-n6mhimgn.fra.unikraft.app
-   services: 443:8080/tls+http 80:443/http+redirect
-  instances: 06c972a6-a117-4b07-8eba-9389b4cccb42 d6238ac6-27d2-47b3-8a45-c6cac99fb4ef
- created at: 14 minutes ago
- persistent: true
+<CodeTabs syncKey="cli">
+
+```ansi title="unikraft"
+[1mmetro[22m:         fra
+[1mname[22m:          nameless-fog-0tvh1uov
+[1muuid[22m:          a942b9b5-ad17-3ffe-dcd2-ef4331f9087a
+[1mpersistent[22m:    true
+[1mlimits[22m:
+[3m  soft[23m:        1
+[3m  hard[23m:        65535
+[1mtimestamps[22m:
+[3m  created[23m:     just now
+[1mdomains[22m:
+[3m- fqdn[23m:        nameless-fog-0tvh1uov.fra.unikraft.app
+[1minstances[22m:
+[3m- name[23m:        nginx-0s295
+[3m  uuid[23m:        9b1c8e5c-7a0d-4f1e-9c3a-2b8d9f0e5a1f
+[3m- name[23m:        nginx-67zbu
+[3m  uuid[23m:        8a8bc1b9-0af6-420e-a426-190dc2da9eaa
+[1mservices[22m:
+[3m- source[23m:      443
+[3m  destination[23m: 8080
+[3m  handlers[23m:    ["tls", "http"]
 ```
 
-Note the two instances (their UUIDs) under the `instances` field.
+```ansi title="kraft"
+       uuid: a942b9b5-ad17-3ffe-dcd2-ef4331f9087a
+       name: nameless-fog-0tvh1uov
+       fqdn: nameless-fog-0tvh1uov.fra.unikraft.app
+   services: 443:8080/tls+http
+  instances: nginx-0s295 nginx-67zbu
+ created at: 2026-06-05T12:41:16Z
+ persistent: true
+ soft limit: 1
+ hard limit: 65535
+```
+
+</CodeTabs>
+
+Note the two instances under the `instances` field.
 You're now load balancing across 2 NGINX instances!
 
 :::tip
-Currently it's impossible to set the service's name via the deploy or run flow.
-If you'd like to set the service's name, first use the CLI to create the service.
-You can use the `--service` flag to attach the instance to the service, as outlined in this [guide](/platform/services).
-:::
+To ensure that stopping an instance doesn't drop existing connections, use Unikraft Cloud's draining feature by stopping an instance with a drain timeout:
 
-:::tip
-To ensure that stopping an instance doesn't drop existing connections, use Unikraft Cloud's draining feature by stopping an instance with a drain timeout.
+<CodeTabs syncKey="cli">
 
-<CodeTabs>
+```bash title="unikraft"
+unikraft instance stop --drain-timeout 5s my-instance
+```
 
 ```bash title="kraft"
-kraft cloud instance stop -w <TIMEOUT_MS>
+kraft cloud instance stop --wait 5s my-instance
 ```
 
 </CodeTabs>
@@ -181,4 +269,6 @@ This is because `i-3` now becomes the only instance with only 1 connection (assu
 ## Learn more
 
 * The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
-* Unikraft Cloud's [REST API reference](/api/platform/v1), and in particular the section on services.
+* Unikraft Cloud's [REST API reference](/api/platform/v1), and in particular the section on [services](/api/platform/v1/servicegroups).
+* [Instances](/platform/instances) documentation.
+* [Service groups](/platform/services) documentation.

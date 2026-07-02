@@ -20,36 +20,50 @@ Kraftlet will manage the Pod lifecycle to make sure the apps are up and running.
 
 ## Getting started
 
-You can install Kraftlet into a Kubernetes cluster using its Helm chart:
+Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
+Grab the metro name and your API token from the dashboard and set them as environment variables:
+
 ```bash title=""
-$ helm install kraftlet \
+# Set Unikraft Cloud access token
+export UKC_TOKEN=token
+# Set metro to Frankfurt, DE
+export UKC_METRO=fra
+```
+
+You can install Kraftlet into a Kubernetes cluster using its Helm chart:
+
+```bash
+helm install kraftlet \
   --namespace kraftlet \
   --create-namespace \
-  --set ukc.metro=$UKC_METRO \
-  --set ukc.token=$UKC_TOKEN \
+  --set ukc.metro=${UKC_METRO} \
+  --set ukc.token=${UKC_TOKEN} \
   oci://ghcr.io/unikraft-cloud/helm-charts/kraftlet
 ```
-The `UKC_METRO` and `UKC_TOKEN` variables are only for these values and the legacy CLI.
-The `unikraft` CLI uses profiles instead.
 
 You can check if Kraftlet is running by checking its pods:
-```bash title=""
-$ kubectl get pods -n kraftlet
+
+```bash
+kubectl get pods -n kraftlet
 ```
+
 Which should return a single pod running:
-```
-NAME                        READY   STATUS    RESTARTS   AGE
+
+```ansi title=""
+[1mNAME[0m                        [1mREADY[0m   [1mSTATUS[0m    [1mRESTARTS[0m   [1mAGE[0m
 kraftlet-74666cf7f5-nbkw7   1/1     Running   0          38s
 ```
 
 You can also check if the kraftlet successfully registered as a node:
-```bash title=""
-$ kubectl get nodes
+
+```bash
+kubectl get nodes
 ```
 
 Which should, among other nodes, return Kraftlet.
-```
-NAME        STATUS   ROLES    AGE     VERSION
+
+```ansi title=""
+[1mNAME[0m        [1mSTATUS[0m   [1mROLES[0m    [1mAGE[0m     [1mVERSION[0m
 Kraftlet    Ready    agent    58s     No version provided
 ```
 
@@ -64,11 +78,11 @@ Make sure Kraftlet is up and running before trying out examples below.
 
 ### Simple app
 
-The configuration below defines an app with three replicas running the nginx image and a single Kubernetes service that exposes port `443`.
+The configuration below defines an app with three replicas running the NGINX image and a single Kubernetes service that exposes port `443`.
 For each service backed by a Pod scheduled to the Kraftlet node, Kraftlet will create a corresponding service.
-In this case, Kraftlet will create three nginx instances and a single service called after the Kubernetes service that exposes port 443.
+In this case, Kraftlet will create three NGINX instances and a single service called after the Kubernetes service that exposes port 443.
 
-```yaml
+```yaml title="simple.yaml"
 # simple.yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -112,44 +126,57 @@ spec:
 
 You can apply the configuration with:
 
-```shell
-$ kubectl apply -f simple.yaml
+```bash
+kubectl apply -f simple.yaml
 ```
 
 Once applied, you can check the status of your newly created pods in the Kubernetes cluster:
 
+```bash
+kubectl get pods
 ```
-$ kubectl get pods
-NAME                      READY   STATUS    RESTARTS   AGE
+
+```ansi title=""
+[1mNAME[0m                      [1mREADY[0m   [1mSTATUS[0m    [1mRESTARTS[0m   [1mAGE[0m
 my-app-78c766fb67-k2dgk   1/1     Running   0          104s
 my-app-78c766fb67-mfp77   1/1     Running   0          104s
 my-app-78c766fb67-tkkxq   1/1     Running   0          104s
 ```
-Your app is now managed from the Kubernetes cluster, but is actually running on the Unikraft Cloud.
+Your app is now managed from the Kubernetes cluster, but is actually running on Unikraft Cloud.
 
 To check the instances, run:
 
 <CodeTabs syncKey="cli">
 
-```shell title="unikraft"
-$ unikraft instances list
+```bash title="unikraft"
+unikraft instances list
 ```
 
-```shell title="kraft"
-$ kraft cloud instance list
+```bash title="kraft"
+kraft cloud instance list
 ```
 
 </CodeTabs>
 
 Which will return a list of instances created from pods above:
 
-```
-NAME                           FQDN                                  STATE    STATUS        IMAGE                                 MEMORY   VCPUS  ARGS                                  BOOT TIME
-my-app-78c766fb67-k2dgk-nginx  my-service-orjlyrac.fra.unikraft.app  running  since 24secs  nginx@sha256:49d8fb7a9934a87e93f9...  128 MiB  1      /usr/bin/nginx -c /etc/nginx/ngin...  14.06 ms
-my-app-78c766fb67-tkkxq-nginx  my-service-orjlyrac.fra.unikraft.app  running  since 24secs  nginx@sha256:49d8fb7a9934a87e93f9...  128 MiB  1      /usr/bin/nginx -c /etc/nginx/ngin...  14.43 ms
-my-app-78c766fb67-mfp77-nginx  my-service-orjlyrac.fra.unikraft.app  running  since 25secs  nginx@sha256:49d8fb7a9934a87e93f9...  128 MiB  1      /usr/bin/nginx -c /etc/nginx/ngin...  15.12 ms
+<CodeTabs syncKey="cli">
 
+```ansi title="unikraft"
+[1mMETRO[22m  [1mNAME[22m                           [1mSTATE[22m    [1mIMAGE[22m           [1mARGS[22m  [1mMEMORY[22m  [1mVCPUS[22m  [1mFQDN[22m                                  [1mCREATED[22m
+fra    my-app-78c766fb67-k2dgk-nginx  [38;2;0;188;125mrunning[0m  <my-org>/nginx        128MiB  1      my-service-orjlyrac.fra.unikraft.app  2 minutes ago
+fra    my-app-78c766fb67-tkkxq-nginx  [38;2;0;188;125mrunning[0m  <my-org>/nginx        128MiB  1      my-service-orjlyrac.fra.unikraft.app  2 minutes ago
+fra    my-app-78c766fb67-mfp77-nginx  [38;2;0;188;125mrunning[0m  <my-org>/nginx        128MiB  1      my-service-orjlyrac.fra.unikraft.app  2 minutes ago
 ```
+
+```ansi title="kraft"
+[0;1;39mNAME[0m                           [0;1;39mFQDN[0m                                  [0;1;39mSTATE[0m    [0;1;39mSTATUS[0m        [0;1;39mIMAGE[0m                                                            [0;1;39mMEMORY[0m   [0;1;39mVCPUS[0m  [0;1;39mARGS[0m  [0;1;39mBOOT TIME[0m
+my-app-78c766fb67-k2dgk-nginx  my-service-orjlyrac.fra.unikraft.app  [0;32mrunning[0m  since 24secs  oci://unikraft.io/<my-org>/nginx@sha256:49d8fb7a9934a87e93f9...  128 MiB  1            14.06 ms
+my-app-78c766fb67-tkkxq-nginx  my-service-orjlyrac.fra.unikraft.app  [0;32mrunning[0m  since 24secs  oci://unikraft.io/<my-org>/nginx@sha256:49d8fb7a9934a87e93f9...  128 MiB  1            14.43 ms
+my-app-78c766fb67-mfp77-nginx  my-service-orjlyrac.fra.unikraft.app  [0;32mrunning[0m  since 25secs  oci://unikraft.io/<my-org>/nginx@sha256:49d8fb7a9934a87e93f9...  128 MiB  1            15.12 ms
+```
+
+</CodeTabs>
 
 As you can see, all instances have the same FQDN.
 This is because Kraftlet created a corresponding Unikraft Cloud service for the Kubernetes service defined in YAML above.
@@ -157,13 +184,27 @@ You can check the created service with the following command:
 
 <CodeTabs syncKey="cli">
 
-```shell title="unikraft"
-$ unikraft services list
+```bash title="unikraft"
+unikraft services list
 ```
 
-```shell title="kraft"
-$ kraft cloud service list
-NAME        FQDN                                  SERVICES           INSTANCES                                                            CREATED AT     PERSISTENT
+```bash title="kraft"
+kraft cloud service list
+```
+
+</CodeTabs>
+
+<div style={{ marginTop: '0.8em' }} />
+
+<CodeTabs syncKey="cli">
+
+```ansi title="unikraft"
+[1mNAME[22m        [1mNAME[22m                 [1mAUTOSCALE[22m  [1mCREATED[22m        [1mFQDN[22m                                  [1mSOURCE[22m  [1mDESTINATION[22m  [1mHANDLERS[22m
+my-service  my-service-orjlyrac  false      6 minutes ago  my-service-orjlyrac.fra.unikraft.app  443     8080         ["tls", "http"]
+```
+
+```ansi title="kraft"
+[0;1;39mNAME[0m        [0;1;39mFQDN[0m                                  [0;1;39mSERVICES[0m           [0;1;39mINSTANCES[0m                                                            [0;1;39mCREATED AT[0m     [0;1;39mPERSISTENT[0m
 my-service  my-service-orjlyrac.fra.unikraft.app  443:8080/tls+http  my-app-78c766fb67-k2dgk-nginx my-app-78c766fb67-tkkxq-nginx my-a...  6 minutes ago  true
 ```
 
@@ -179,7 +220,7 @@ To support provisioning Unikraft Cloud volumes through Kubernetes, Kraftlet list
 Creating a new PVC object with the specified storage class triggers Kraftlet to create a Unikraft Cloud volume and create a PV object to mark the PVC as `Bound`.
 Below is an example PVC with the Unikraft Cloud storage class you can apply to your cluster.
 
-```yaml
+```yaml title="pvc.yaml"
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -195,9 +236,12 @@ spec:
 
 Once applied, you can check the created PVC status:
 
+```bash
+kubectl get pvc
 ```
-$ kubectl get pvc
-NAME       STATUS   VOLUME                                    CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+
+```ansi title=""
+[1mNAME[0m       [1mSTATUS[0m   [1mVOLUME[0m                                    [1mCAPACITY[0m   [1mACCESS MODES[0m   [1mSTORAGECLASS[0m   [1mVOLUMEATTRIBUTESCLASS[0m   [1mAGE[0m
 my-claim   Bound    pv-7ab06383-ac03-4a81-968a-1b0cff03c23a   10Mi       RWO            ukc-volume     <unset>                 4s
 ```
 
@@ -205,22 +249,37 @@ Also, you can check the volumes on the Unikraft Cloud:
 
 <CodeTabs syncKey="cli">
 
-```shell title="unikraft"
-$ unikraft volumes list
+```bash title="unikraft"
+unikraft volumes list
 ```
 
-```shell title="kraft"
-$ kraft cloud volume list
-NAME      CREATED AT     SIZE    ATTACHED TO  MOUNTED BY  STATE      PERSISTENT
+```bash title="kraft"
+kraft cloud volume list
+```
+
+</CodeTabs>
+
+<div style={{ marginTop: '0.8em' }} />
+
+<CodeTabs syncKey="cli">
+
+```ansi title="unikraft"
+[1mMETRO[22m  [1mNAME[22m      [1mSTATE[22m      [1mSIZE[22m   [1mCREATED[22m
+fra    my-claim  [38;2;0;188;125mavailable[0m  10MiB  5 minutes ago
+```
+
+```ansi title="kraft"
+[0;1;39mNAME[0m      [0;1;39mCREATED AT[0m     [0;1;39mSIZE[0m    [0;1;39mATTACHED TO[0m  [0;1;39mMOUNTED BY[0m  [0;1;39mSTATE[0m      [0;1;39mPERSISTENT[0m
 my-claim  5 minutes ago  10 MiB                           available  true
 ```
 
 </CodeTabs>
 
+
 At the moment, the volume isn't attached or mounted by an instance.
 To create an instance that would use the volume, you can create a Kubernetes Pod that would reference the PVC:
 
-```yaml
+```yaml title="pod.yaml"
 apiVersion: v1
 kind: Pod
 metadata:
@@ -251,14 +310,28 @@ If you check the instances again, you will see a new instance created from the P
 
 <CodeTabs syncKey="cli">
 
-```shell title="unikraft"
-$ unikraft instances list
+```bash title="unikraft"
+unikraft instances list
 ```
 
-```shell title="kraft"
-$ kraft cloud instance list
-NAME             FQDN                                       STATE    STATUS      IMAGE                                      MEMORY   VCPUS  ARGS                                     BOOT TIME
-nginx-pod-nginx  fragrant-breeze-llesxdta.fra.unikraft.app  running  since 1min  nginx@sha256:49d8fb7a9934a87e93f9eb326...  128 MiB  1      /usr/bin/nginx -c /etc/nginx/nginx.conf  15.14 ms
+```bash title="kraft"
+kraft cloud instance list
+```
+
+</CodeTabs>
+
+<div style={{ marginTop: '0.8em' }} />
+
+<CodeTabs syncKey="cli">
+
+```ansi title="unikraft"
+[1mMETRO[22m  [1mNAME[22m             [1mSTATE[22m    [1mIMAGE[22m           [1mARGS[22m  [1mMEMORY[22m   [1mVCPUS[22m  [1mFQDN[22m                                       [1mCREATED[22m
+fra    nginx-pod-nginx  [38;2;0;188;125mrunning[0m  <my-org>/nginx        128 MiB  1      fragrant-breeze-llesxdta.fra.unikraft.app  1 minute ago
+```
+
+```ansi title="kraft"
+[0;1;39mNAME[0m             [0;1;39mFQDN[0m                                       [0;1;39mSTATE[0m    [0;1;39mSTATUS[0m      [0;1;39mIMAGE[0m                                                                 [0;1;39mMEMORY[0m   [0;1;39mVCPUS[0m  [0;1;39mARGS[0m  [0;1;39mBOOT TIME[0m
+nginx-pod-nginx  fragrant-breeze-llesxdta.fra.unikraft.app  [0;32mrunning[0m  since 1min  oci://unikraft.io/<my-org>/nginx@sha256:49d8fb7a9934a87e93f9eb326...  128 MiB  1            15.14 ms
 ```
 
 </CodeTabs>
@@ -267,13 +340,27 @@ And if you check the volume now, you will see it's attached and mounted by the c
 
 <CodeTabs syncKey="cli">
 
-```shell title="unikraft"
-$ unikraft volumes list
+```bash title="unikraft"
+unikraft volumes list
 ```
 
-```shell title="kraft"
-$ kraft cloud volume list
-NAME      CREATED AT     SIZE    ATTACHED TO      MOUNTED BY       STATE    PERSISTENT
+```bash title="kraft"
+kraft cloud volume list
+```
+
+</CodeTabs>
+
+<div style={{ marginTop: '0.8em' }} />
+
+<CodeTabs syncKey="cli">
+
+```ansi title="unikraft"
+[1mMETRO[22m  [1mNAME[22m      [1mSTATE[22m    [1mSIZE[22m   [1mCREATED[22m
+fra    my-claim  [38;2;0;188;125mmounted[0m  10MiB  8 minutes ago
+```
+
+```ansi title="kraft"
+[0;1;39mNAME[0m      [0;1;39mCREATED AT[0m     [0;1;39mSIZE[0m    [0;1;39mATTACHED TO[0m      [0;1;39mMOUNTED BY[0m       [0;1;39mSTATE[0m    [0;1;39mPERSISTENT[0m
 my-claim  8 minutes ago  10 MiB  nginx-pod-nginx  nginx-pod-nginx  mounted  true
 ```
 

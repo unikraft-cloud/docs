@@ -23,10 +23,10 @@ To run this example, follow these steps:
 
 2. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/httpserver-python3.12-flask3.0-sqlite/` directory:
 
-```bash
-git clone https://github.com/unikraft-cloud/examples
-cd examples/httpserver-python3.12-flask3.0-sqlite/
-```
+   ```bash
+   git clone https://github.com/unikraft-cloud/examples
+   cd examples/httpserver-python3.12-flask3.0-sqlite/
+   ```
 
 Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪):
@@ -66,40 +66,40 @@ The output shows the instance address and other details:
 <CodeTabs syncKey="cli">
 
 ```ansi title="unikraft"
-metro:        fra
-name:         httpserver-python312-flask30-sqlite-qodkd
-uuid:         e00e7aca-962d-409c-87c2-c245ca08b54b
-state:        [92mstarting[0m
-image:        <my-org>/httpserver-python312-flask30-sqlite
-resources:
-  memory:     768MiB
-  vcpus:      1
-service:
-  uuid:       1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d
-  name:       lingering-orangutan-840mmdvd
-  domains:
-  - fqdn:     lingering-orangutan-840mmdvd.fra.unikraft.app
-networks:
-- uuid:       2b3c4d5e-6f7a-8b9c-0d1e-2f3a4b5c6d7e
-  private-ip: 10.0.3.3
-  mac:        12:b0:8a:4f:2c:91
-timestamps:
-  created:    just now
+[1mmetro[22m:        fra
+[1mname[22m:         httpserver-python312-flask30-sqlite-qodkd
+[1muuid[22m:         e00e7aca-962d-409c-87c2-c245ca08b54b
+[1mstate[22m:        [38;2;144;161;185mstarting[0m
+[1mimage[22m:        <my-org>/httpserver-python312-flask30-sqlite
+[1mresources[22m:
+[3m  memory[23m:     768MiB
+[3m  vcpus[23m:      1
+[1mservice[22m:
+[3m  uuid[23m:       1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d
+[3m  name[23m:       lingering-orangutan-840mmdvd
+[3m  domains[23m:
+[3m  - fqdn[23m:     lingering-orangutan-840mmdvd.fra.unikraft.app
+[1mnetworks[22m:
+[3m- uuid[23m:       2b3c4d5e-6f7a-8b9c-0d1e-2f3a4b5c6d7e
+[3m  private-ip[23m: 10.0.3.3
+[3m  mac[23m:        12:b0:8a:4f:2c:91
+[1mtimestamps[22m:
+[3m  created[23m:    just now
 ```
 
 ```ansi title="kraft"
-[90m[[0m[92m●[0m[90m][0m Deployed successfully!
- [90m│[0m
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mname[0m: httpserver-python312-flask30-sqlite-qodkd
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90muuid[0m: e00e7aca-962d-409c-87c2-c245ca08b54b
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mmetro[0m: https://api.fra.unikraft.cloud/v1
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mstate[0m: [92mstarting[0m
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mdomain[0m: https://lingering-orangutan-840mmdvd.fra.unikraft.app
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mimage[0m: oci://unikraft.io/<my-org>/httpserver-python312-flask30-sqlite@sha256:bdb0bf35a9675b9b3836cbb626606da0606334d91768c7ba31195c3062d6f517
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mmemory[0m: 768 MiB
- [90m├[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m[90m─[0m [90mservice[0m: lingering-orangutan-840mmdvd
- [90m├[0m[90m─[0m [90mprivate fqdn[0m: httpserver-python312-flask30-sqlite-qodkd.internal
- [90m└[0m[90m─[0m[90m─[0m[90m─[0m [90mprivate ip[0m: 10.0.3.3
+[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
+ [38;5;245m│[0m
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mname[0m: httpserver-python312-flask30-sqlite-qodkd
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245muuid[0m: e00e7aca-962d-409c-87c2-c245ca08b54b
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mstate[0m: [92mstarting[0m
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mdomain[0m: https://lingering-orangutan-840mmdvd.fra.unikraft.app
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/httpserver-python312-flask30-sqlite@sha256:bdb0bf35a9675b9b3836cbb626606da0606334d91768c7ba31195c3062d6f517
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmemory[0m: 768 MiB
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mservice[0m: lingering-orangutan-840mmdvd
+ [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: httpserver-python312-flask30-sqlite-qodkd.internal
+ [38;5;245m└[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mprivate ip[0m: 10.0.3.3
 ```
 
 </CodeTabs>
@@ -148,16 +148,18 @@ kraft cloud instance list
 
 </CodeTabs>
 
+<div style={{ marginTop: '0.8em' }} />
+
 <CodeTabs syncKey="cli">
 
 ```ansi title="unikraft"
-[1mMETRO[0m  [1mNAME[0m                                       [1mSTATE[0m    [1mIMAGE[0m                                         [1mARGS[0m  [1mMEMORY[0m  [1mVCPUS[0m  [1mFQDN[0m                                  [1mCREATED[0m
-fra    httpserver-python312-flask30-sqlite-qodkd  [92mrunning[0m  <my-org>/httpserver-python312-flask30-sqlite        768MiB  1      lingering-orangutan-840mmdvd.fra....  2 minutes ago
+[1mMETRO[22m  [1mNAME[22m                                       [1mSTATE[22m    [1mIMAGE[22m                                         [1mARGS[22m  [1mMEMORY[22m  [1mVCPUS[22m  [1mFQDN[22m                                  [1mCREATED[22m
+fra    httpserver-python312-flask30-sqlite-qodkd  [38;2;0;188;125mrunning[0m  <my-org>/httpserver-python312-flask30-sqlite        768MiB  1      lingering-orangutan-840mmdvd.fra....  2 minutes ago
 ```
 
 ```ansi title="kraft"
-[1mNAME[0m                                       [1mFQDN[0m                                  [1mSTATE[0m    [1mSTATUS[0m        [1mIMAGE[0m                                                                     [1mMEMORY[0m   [1mVCPUS[0m  [1mARGS[0m  [1mBOOT TIME[0m
-httpserver-python312-flask30-sqlite-qodkd  lingering-orangutan-840mmdvd.fra....  [92mrunning[0m  1 minute ago  oci://unikraft.io/<my-org>/httpserver-python312-flask30-sqlite@sha256...  768 MiB  1            166.25 ms
+[0;1;39mNAME[0m                                       [0;1;39mFQDN[0m                                  [0;1;39mSTATE[0m    [0;1;39mSTATUS[0m        [0;1;39mIMAGE[0m                                                                     [0;1;39mMEMORY[0m   [0;1;39mVCPUS[0m  [0;1;39mARGS[0m  [0;1;39mBOOT TIME[0m
+httpserver-python312-flask30-sqlite-qodkd  lingering-orangutan-840mmdvd.fra....  [0;32mrunning[0m  1 minute ago  oci://unikraft.io/<my-org>/httpserver-python312-flask30-sqlite@sha256...  768 MiB  1            166.25 ms
 ```
 
 </CodeTabs>

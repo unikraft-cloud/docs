@@ -6,16 +6,140 @@ description: |
 ---
 
 Unikraft Cloud enforces per-account resource quotas to govern how many instances, service groups, volumes, and compute resources you can provision.
-Use the quotas endpoint to inspect your current usage and limits.
 
-## Endpoints
+<CodeTabs syncKey="cli">
 
-```
-GET /users/quotas
-GET /users/{uuid}/quotas
+```bash title="unikraft"
+unikraft quotas
 ```
 
-`GET /users/quotas` (no UUID) returns the quota for the authenticated user.
+```bash title="kraft"
+kraft cloud quotas
+```
+
+```bash title="API"
+curl -X GET \
+  -H "Authorization: Bearer ${UKC_TOKEN}" \
+  -H "Content-Type: application/json" \
+  "https://api.fra.unikraft.cloud/v1/users/quotas"
+```
+
+</CodeTabs>
+
+<div style={{ marginTop: '0.8em' }} />
+
+<CodeTabs syncKey="cli">
+
+```ansi title="unikraft"
+  [48;5;99m [1m[38;5;231mfra[0m[48;5;99m [49m
+
+[1muser uuid[0m[49m:          <my-uuid>
+[1muser name[0m[49m:          <my-username>
+
+[0;1;39mimage storage[0m:      [0;33m████████████████████████[0m[38;5;243m████████████[0m  702 MiB/1.0 GiB
+
+[1mactive instances[0m[49m:   [38;5;105m██[39m[38;5;243m██████████████████████████████████[0m  5/64
+[1mtotal instances[0m[49m:    [38;5;105m██[39m[38;5;243m██████████████████████████████████[0m  5/64
+[1mactive vcpus[0m[49m:       [38;5;105m██[39m[38;5;243m██████████████████████████████████[0m  5/64
+[1mvcpu limit[0m[49m:         1-1
+
+[1mactive used memory[0m[49m: [38;5;105m██[39m[38;5;243m██████████████████████████████████[0m  2.5GiB/32GiB
+[1mmemory size limits[0m[49m: 16MiB-8GiB
+
+[1mexposed services[0m[49m:   [38;5;105m█[39m[38;5;243m███████████████████████████████████[0m  10/253
+[1mservices[0m[49m:           [38;5;243m████████████████████████████████████[0m  5/253
+
+[1mvolumes[0m[49m:            [38;5;105menabled[39m
+[1mactive volumes[0m[49m:     [38;5;243m████████████████████████████████████[0m  0/253
+[1mused volume space[0m[49m:  [38;5;243m████████████████████████████████████[0m  0B/20GiB
+[1mvolume size limits[0m[49m: 8MiB-20GiB
+
+[1mautoscale[0m[49m:          [38;5;105menabled[39m
+[1mautoscale limit[0m[49m:    0-16
+[1mscale-to-zero[0m[49m:      [38;5;105menabled[39m
+
+[2m  Tab/←→: switch metro  q: quit[0m[49m
+```
+
+```ansi title="kraft"
+          [0;1;39muser uuid[0m: <my-uuid>
+          [0;1;39muser name[0m: <my-username>
+                   
+      [0;1;39mimage storage[0m: [0;33m████████████████████████[0m[38;5;243m████████████[0m 702 MiB/1.0 GiB
+                   
+   [0;1;39mactive instances[0m: [0;32m██[0m[38;5;243m██████████████████████████████████[0m 5/64
+    [0;1;39mtotal instances[0m: [0;32m██[0m[38;5;243m██████████████████████████████████[0m 5/64
+       [0;1;39mactive vcpus[0m: [0;32m██[0m[38;5;243m██████████████████████████████████[0m 5/64
+         [0;1;39mvcpu limit[0m: 1-1
+                   
+ [0;1;39mactive used memory[0m: [0;32m██[0m[38;5;243m██████████████████████████████████[0m 2.5 GiB/32 GiB
+ [0;1;39mmemory size limits[0m: 16 MiB-8.0 GiB
+                   
+   [0;1;39mexposed services[0m: [0;32m█[0m[38;5;243m███████████████████████████████████[0m 10/253
+           [0;1;39mservices[0m: [38;5;243m████████████████████████████████████[0m 5/253
+                   
+            [0;1;39mvolumes[0m: [0;32menabled[0m
+     [0;1;39mactive volumes[0m: [38;5;243m████████████████████████████████████[0m 0/253
+  [0;1;39mused volume space[0m: [38;5;243m████████████████████████████████████[0m 0 B/20 GiB
+ [0;1;39mvolume size limits[0m: 8.0 MiB-20 GiB
+                   
+          [0;1;39mautoscale[0m: [0;32menabled[0m
+    [0;1;39mautoscale limit[0m: 0-16
+      [0;1;39mscale-to-zero[0m: [0;32menabled[0m
+```
+
+```json title="API"
+{
+  "status": "success",
+  "data": {
+    "quotas": [
+      {
+        "status": "success",
+        "uuid": "<my-uuid>",
+        "used": {
+          "instances": 5,
+          "live_instances": 5,
+          "live_vcpus": 5,
+          "live_memory_mb": 2560,
+          "service_groups": 5,
+          "services": 10,
+          "volumes": 0,
+          "total_volume_mb": 0
+        },
+        "hard": {
+          "instances": 64,
+          "live_instances": 64,
+          "live_vcpus": 64,
+          "live_memory_mb": 32768,
+          "service_groups": 253,
+          "services": 253,
+          "volumes": 253,
+          "total_volume_mb": 20480
+        },
+        "limits": {
+          "min_memory_mb": 16,
+          "max_memory_mb": 8192,
+          "min_vcpus": 1,
+          "max_vcpus": 1,
+          "min_volume_mb": 8,
+          "max_volume_mb": 20480,
+          "min_autoscale_size": 0,
+          "max_autoscale_size": 16
+        }
+      }
+    ]
+  },
+  "op_time_us": 46
+}
+```
+
+</CodeTabs>
+
+:::note
+The `hard.live_instances` field is a compatibility alias for `hard.live_vcpus`.
+It's kept for backward compatibility and the platform may drop it in a future API version.
+Prefer `hard.live_vcpus`.
+:::
 
 ## Response structure
 
@@ -62,66 +186,6 @@ These define the minimum and maximum values you can specify when creating indivi
 | `min_autoscale_size` | int | Minimum autoscale group size. |
 | `max_autoscale_size` | int | Maximum autoscale group size. |
 
-## Example
-
-Set `UKC_TOKEN` and `UKC_METRO` for the API call:
-
-```bash title=""
-curl -X GET \
-    -H "Authorization: Bearer $UKC_TOKEN" \
-    -H "Content-Type: application/json" \
-    "https://api.$UKC_METRO.unikraft.cloud/v1/users/quotas"
-```
-
-```json title=""
-{
-  "quotas": [
-    {
-      "status": "ok",
-      "uuid": "a1b2c3d4-...",
-      "used": {
-        "instances": 3,
-        "live_instances": 2,
-        "live_vcpus": 2,
-        "live_memory_mb": 512,
-        "service_groups": 2,
-        "services": 4,
-        "volumes": 1,
-        "total_volume_mb": 512
-      },
-      "hard": {
-        "instances": 50,
-        "live_vcpus": 16,
-        "live_memory_mb": 4096,
-        "service_groups": 20,
-        "services": 40,
-        "volumes": 20,
-        "total_volume_mb": 20480
-      },
-      "limits": {
-        "min_memory_mb": 16,
-        "max_memory_mb": 4096,
-        "min_vcpus": 1,
-        "max_vcpus": 8,
-        "min_volume_mb": 128,
-        "max_volume_mb": 10240,
-        "min_autoscale_size": 0,
-        "max_autoscale_size": 10
-      }
-    }
-  ]
-}
-```
-
-:::note
-The `hard.live_instances` field is a compatibility alias for `hard.live_vcpus`.
-It's kept for backward compatibility and the platform may drop it in a future API version.
-Prefer `hard.live_vcpus`.
-:::
-
 ## Learn more
 
-* Unikraft Cloud's [REST API reference](/api/platform/v1)
-* [Instances](/platform/instances)
-* [Volumes](/platform/volumes)
-* [Services](/platform/services)
+* Unikraft Cloud's [REST API reference](/api/platform/v1), in particular the [quotas endpoint](/api/platform/v1/users#get-current-user-quotas).

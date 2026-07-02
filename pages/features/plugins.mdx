@@ -1,0 +1,170 @@
+---
+title: Plugins
+navigation_icon: puzzle
+---
+
+{/* vale off */}
+:::caution[**Limited Access**]
+Plugin API is a new feature which is available to enterprise customers, and is coming soon to the hosted platform.
+If you would like to try it out now, please reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
+:::
+
+:::caution
+Dedicated `unikraft` CLI subcommands for plugin API are coming soon.
+In the meantime, configure plugin API through the [API](/api/platform/v1/instances#create-instance), which you can invoke with `curl` or the [`unikraft api`](/cli/unikraft/api) command.
+:::
+{/* vale on */}
+
+Plugins let you attach small helper programs to an instance and reach each one over a direct, authenticated HTTP endpoint.
+A plugin runs inside the instance next to your main app, loads from its own image, and answers requests that the Unikraft Cloud API forwards to it.
+
+Unikraft Cloud built plugins to provide a native sandbox experience.
+In the sandbox case, a plugin runs a small HTTP server that accepts commands to run inside the instance, exposes filesystem services, and more.
+The same mechanism fits any helper you want to reach over a per-instance, authenticated endpoint.
+
+## How it works
+
+Each plugin loads from its own [ROM image](/features/roms).
+When the instance boots, the platform mounts every plugin at `/uk/plugins/<plugin_name>` and starts its `init` program.
+The platform hands each plugin a socket to accept connections on, so every plugin has its own private channel.
+
+You reach a plugin through the instance's API endpoint:
+
+```
+https://api.<metro>.unikraft.cloud/v1/instances/<uuid>/plugins/<plugin_name>/<path>
+```
+
+The platform forwards everything after `<plugin_name>/` to the plugin as the request path.
+A request to `.../plugins/my-plugin/files/list` reaches the plugin with the path `/files/list`.
+
+This design has a few notable properties:
+
+- **Authenticated like any API call.** The platform checks the request against your account and confirms that you own the target instance before it forwards anything. This sets plugins apart from running an HTTP server as a regular [service](/platform/services).
+- **A direct line to one instance.** You talk to a single instance, so no [load balancing](/features/load-balancing) or [autoscale](/features/autoscale) sits in the path, and the instance needs no [service group](/platform/services).
+- **Works with scale-to-zero.** When [scale-to-zero](/features/scale-to-zero) has put the instance to sleep, the platform wakes it to serve the request and keeps it up for the duration, the same way a normal request does.
+
+## The plugin image
+
+A plugin ships as a standard ROM image with an executable named `init` in its root.
+The platform loads the image, mounts it at `/uk/plugins/<plugin_name>`, and runs `init` when the plugin starts.
+
+`init` receives two things from the platform:
+
+- **Configuration on standard input.** Whatever you pass in the plugin's `config` field arrives on `init`'s `STDIN` as JSON. A plain value such as `"config": "my-string"` counts as valid JSON, the same as `"config": 232` or `"config": { ... }`.
+- **A socket file descriptor.** The platform passes `init` an `--api_fd <n>` argument that holds the file descriptor the plugin accepts connections on. The plugin serves API traffic on that socket.
+
+### Assigning ports
+
+The controller assigns each plugin's socket a port from a configurable range.
+It walks the range from the start and gives each plugin the next free port, skipping any port that the guest already uses.
+Operators set the range with the node-level `--vmm-plugin-port-start` (default `20000`) and `--vmm-plugin-port-end` (default `29999`) flags.
+
+## Adding plugins when you create an instance
+
+List your plugins in the `plugins` field of a [`POST /instances`](/api/platform/v1/instances#create-instance) request:
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft api /v1/instances \
+  -d '{
+    "name": "my-instance",
+    "plugins": [
+      {
+        "name": "my-plugin",
+        "rom": "user/myplugin:latest",
+        "config": {
+          "workdir": "/tmp"
+        }
+      }
+    ]
+  }'
+```
+
+</CodeTabs>
+
+Each entry in the `plugins` array accepts these fields:
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | Yes | The plugin name. It becomes the `<plugin_name>` segment in the plugin endpoint. See [Plugin names](#plugin-names) for the allowed format. |
+| `rom` | Yes | The plugin's ROM image, given as an image reference string such as `user/myplugin:latest`, or as an image object with a `url` and optional `headers` and `pull_policy`, the same as elsewhere in the API. |
+| `config` | No | Arbitrary JSON that the platform passes to the plugin's `init` on `STDIN`. Any JSON value works, including a string, a number, or an object. |
+
+You can attach up to 8 plugins to an instance.
+
+## Plugin names
+
+A plugin name has a maximum length of 63 characters and contains only these characters:
+
+- Lowercase and uppercase letters (`a`–`z`, `A`–`Z`)
+- Digits (`0`–`9`)
+- Hyphen (`-`) and underscore (`_`)
+
+## Adding plugins to an existing instance
+
+The [`PATCH /instances`](/api/platform/v1/instances) endpoint supports plugins.
+Set `prop` to `plugins`, and pass the plugins in `value`:
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft api /v1/instances -X PATCH \
+  -d '[{
+    "name": "my-instance",
+    "prop": "plugins",
+    "op": "add",
+    "value": [
+      {
+        "name": "my-plugin",
+        "rom": "user/myplugin:latest"
+      }
+    ]
+  }]'
+```
+
+</CodeTabs>
+
+The `op` field takes `set` to replace the instance's plugin list or `add` to append to it.
+The platform applies the change while the instance sits in the `stopped` state.
+When the instance runs at the time of the request, the platform queues the change and applies it the next time the instance stops.
+
+:::note
+Adding plugins works today. Unloading a plugin from an instance is coming in a future release.
+:::
+
+## Reloading across the instance lifecycle
+
+The platform treats plugins like [ROMs](/features/roms) across state changes.
+It reloads them whenever the instance goes through a scale-to-zero, suspend, or restart cycle, so a plugin returns with the instance each time it comes back up.
+
+## Inherited when you clone an instance
+
+Plugins belong to the instance definition, so an instance that comes from another one keeps the same plugins.
+This applies when you use [branching](/features/branching), restore a [checkpoint](/features/checkpoints), [fork](/features/forking) an instance, or start from an [on-demand template](/features/on-demand-templates).
+
+## Use cases
+
+The first use case for plugins is a native sandbox: a plugin runs a small HTTP server that accepts commands to run inside the instance and exposes filesystem services, all reachable over the authenticated plugin endpoint.
+
+Plugins fit other patterns too. A few ideas:
+
+- **Admin and debug endpoints** that stay separate from your app's public [services](/platform/services) and stay reachable only through the authenticated API.
+- **Health and inspection probes** that read state from inside the instance on demand.
+- **Sidecar utilities** such as a metrics collector, a log tailer, or a configuration reloader.
+- **Per-instance tooling** that you attach to one instance without a change to its base image.
+
+## Limitations
+
+- Plugins require a license that includes the feature (see the note at the top of this page).
+- You can attach at most 8 plugins to an instance.
+- Adding plugins works today, and unloading a plugin from an instance is coming in a future release.
+- A plugin name has a maximum length of 63 characters and uses only letters, digits, `-`, and `_`.
+
+## Learn more
+
+* [ROMs](/features/roms): the image format that plugins build on.
+* [Instances](/platform/instances): create and manage the instances that host plugins.
+* [Scale-to-zero](/features/scale-to-zero): how an idle instance wakes to serve a plugin request.
+* [Services](/platform/services): the regular way to expose an HTTP server, for contrast with the authenticated plugin endpoint.
+* Unikraft Cloud's [REST API reference](/api/platform/v1), in particular the [create instance endpoint](/api/platform/v1/instances#create-instance).

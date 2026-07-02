@@ -79,7 +79,7 @@ See [alternative installation instructions](https://github.com/unikraft/cli/?tab
 unikraft login
 
 # Deploy an instance
-unikraft run --metro=fra -p 443:8080/http+tls --image=nginx:latest
+unikraft run --metro fra -p 443:8080/http+tls --image nginx:latest
 
 # List instances
 unikraft instances list
@@ -87,5 +87,15 @@ unikraft instances list
 
 [View unikraft CLI documentation](/docs/cli/unikraft)
 
-Looking for the legacy `kraft cloud` CLI? 
+Looking for the legacy `kraft cloud` CLI?
 See the [Kraft cloud CLI (legacy)](/docs/cli/legacy-overview) page for installation instructions.
+
+{/* vale off */}
+
+:::warning
+The kraft cloud CLI is deprecated. The `unikraft` CLI is the preferred CLI tool going forward - it supports all the functionality of `kraft cloud` and more.
+
+You can view the [migration guide](https://unikraft.com/docs/tutorials/kraftkit-to-unikraft) to get the latest and greatest features.
+:::
+
+{/* vale on */}

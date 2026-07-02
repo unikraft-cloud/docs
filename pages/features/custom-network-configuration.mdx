@@ -1,0 +1,181 @@
+---
+title: Custom Network Configuration
+navigation_icon: network
+---
+
+{/* vale off */}
+:::caution[**Limited Access**]
+Custom network configuration is a new feature which is available to enterprise customers, and is coming soon to the hosted platform.
+If you would like to try it out now, please reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
+:::
+{/* vale on */}
+
+By default, Unikraft Cloud gives every instance a single network interface, allocated from the platform's address and TAP device pool.
+Custom network configuration lets you take control of this setup: attach up to four interfaces, supply your own IP addresses and TAP devices, and override the gateway and nameserver.
+
+This is the building block for private networking between your instances.
+
+{/* vale off */}
+:::caution
+Dedicated `unikraft` CLI subcommands for custom network configuration are coming soon.
+In the meantime, configure custom network configuration through the [API](/api/platform/v1/instances#create-instance), which you can invoke with `curl` or the [`unikraft api`](/cli/unikraft/api) command.
+:::
+{/* vale on */}
+
+## How it works
+
+You describe an instance's networking when you [create it](/api/platform/v1/instances#create-instance), through three optional fields:
+
+- `network_interfaces`: a list of one to four interfaces to attach.
+- `gateway`: the default gateway to configure inside the guest.
+- `nameserver`: the DNS resolver to configure inside the guest.
+
+The first interface in the list is the **primary interface**.
+It has a special role:
+
+- The `private_ip` field reported for the instance always comes from the primary interface.
+- The proxy forwards incoming traffic to the IP of the primary interface.
+- The controller ignores any port announcements from the guest that aren't for the primary interface's IP.
+
+Leaving out `network_interfaces` is the same as requesting a single pool-allocated interface, so `"network_interfaces": [{}]` and omitting the field entirely behave identically.
+
+## Creating an instance with custom interfaces
+
+Add a `network_interfaces` array to your [`POST /instances`](/api/platform/v1/instances#create-instance) request:
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft api /v1/instances \
+  -d '{
+    "name": "my-instance",
+    "image": "nginx:latest",
+    "network_interfaces": [
+      {
+        "name": "my-instance-private"
+      },
+      {
+        "name": "my-instance-public",
+        "ip": "192.168.0.1/30",
+        "tap_name": "vpc0",
+        "autoconfig": true
+      }
+    ],
+    "gateway": "192.168.0.100",
+    "nameserver": "1.2.3.4"
+  }'
+```
+
+</CodeTabs>
+
+Each entry in `network_interfaces` accepts the following fields:
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | No | The interface name. If omitted, Unikraft Cloud generates one as `<instance-name>-ethX`, falling back to `eth-<suffix>` when the instance name is too long. |
+| `ip` | No | The interface IP address in CIDR notation. Provide it together with `tap_name` to bring your own interface. |
+| `tap_name` | No | The TAP device to attach the interface to (15 characters or less). Provide it together with `ip`. |
+| `autoconfig` | No | Whether the guest configures the interface itself. Defaults to `true`. |
+| `relay` | No | An object that routes all traffic through another interface. See [Relay](#relay). |
+
+You either specify both `ip` and `tap_name`, or neither.
+When you omit them, Unikraft Cloud picks an interface from the platform's TAP device pool.
+The `ip` and `tap_name` you supply must not come from that pool.
+
+The top-level `gateway` and `nameserver` fields override the values configured inside the guest.
+If you omit them, Unikraft Cloud derives them from the last address in the IP network of the first pool-allocated interface, or, if there is none, the primary interface.
+
+Like other object names, an interface `name` is **global to your account**, not local to the instance.
+This lets you reference one instance's interface from another.
+
+### Autoconfiguration
+
+`autoconfig` is independent of which TAP device an interface uses and defaults to `true`.
+When enabled, the guest configures the interface for you.
+Disable it to leave the interface untouched, so your app or image can set up networking on its own.
+
+### Relay
+
+The relay feature lets you redirect all network traffic from and to a network interface to another network interface.
+In practice, this means you can set up a gateway or proxy VM and configure its network interface as the relay for another VM's network interface.
+
+This is useful in sandbox environments - as a gateway or proxy can inspect, filter, and inject data into the sandbox's traffic.
+In this setup, the sandbox doesn't need unfiltered network access or access to secrets.
+
+To use a relay, reference another interface by name inside a `relay` object:
+
+<CodeTabs syncKey="cli">
+
+```bash title="Gateway instance"
+unikraft api /v1/instances \
+  -d '{
+    "name": "my-gateway",
+    "network_interfaces": [
+      {
+        "name": "my-gateway-iface"
+      }
+    ]
+  }'
+```
+
+```bash title="Sandbox instance (relay client)"
+unikraft api /v1/instances \
+  -d '{
+    "name": "my-sandbox",
+    "network_interfaces": [
+      {
+        "relay": {
+          "name": "my-gateway-iface",
+          "relay_dns": true
+        }
+      }
+    ]
+  }'
+```
+
+</CodeTabs>
+
+The `relay` object accepts the following fields:
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | Yes | The name of the interface to relay traffic through. This interface must belong to another instance in your account. |
+| `relay_dns` | No | Whether the relay forwards DNS requests. Set to `false` to let the default DNS server handle them instead. Defaults to `true`. |
+
+
+#### Relay notes
+
+ - All network traffic passes over the relay. Many VMs can share a single relay.
+
+ - This feature supports managed interfaces with custom TAP devices.
+
+ - You don't need to enable VM-to-VM communication to use this feature (which you don't want in a sandbox environment).
+
+ - DNS requests can be either passed to the relay or the default DNS server. This is to simplify setups where security isn't the focus as you don't need to run a DNS server in the relay VM.
+
+ - The guest acting as a relay VM should have net.ipv4.ip_forward=1 and rp_filter=0 set.
+
+## Error handling
+
+| Error message | Cause |
+|---------------|-------|
+| `Insufficient license. Please make sure your license is valid and includes custom network configurations` | Your account's license doesn't include custom network configuration. |
+| `Network interface must specify an IP address when a TAP device is provided and vice versa` | You set only one of `ip` and `tap_name`. Provide both or neither. |
+| `Network interface IP address cannot be from the platform's address pool` | The `ip` overlaps the platform's managed address pool. Use an address outside it. |
+| `Network interface TAP device cannot be from the platform's device pool` | The `tap_name` refers to a platform-managed TAP device. Use one of your own. |
+| `Unknown member 'network_interfaces'` | Your account lacks the `net_manager` permission required for this feature. |
+
+## Limitations
+
+- An instance can have at most **four** network interfaces.
+- The feature requires the `net_manager` permission and a license that includes it (see the note at the top of this page).
+- Creating a [template](/platform/instances#instance-templates) from an instance **drops** its network configuration, since binding a template to a specific TAP device or IP defeats the purpose of cloning many instances from it.
+- You currently **can't** [branch](/features/branching) or [checkpoint](/features/checkpoints) an instance with more than one interface.
+- The create call sets the configuration once; **no** PATCH support exists yet.
+
+## Learn more
+
+* [Instances](/platform/instances): how instances work, including their lifecycle and configuration.
+* [Branching](/features/branching) and [Checkpoints](/features/checkpoints): create independent copies and reusable restore points of running instances.
+* [Instance templates](/platform/instances#instance-templates): reusable images that you clone into new instances.
+* Unikraft Cloud's [REST API reference](/api/platform/v1), in particular the section on [instances](/api/platform/v1/instances).

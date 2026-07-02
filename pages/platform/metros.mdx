@@ -13,9 +13,7 @@ By default, at present, Unikraft Cloud supports the following metros:
 | `sin`      | 🇸🇬 | Singapore               |
 | `was`      | 🇺🇸 | Washington DC, USA      |
 
-:::tip
-
-You can list the metros available to your account via the CLI.
+You can list the metros available to your account via the CLI:
 
 <CodeTabs syncKey="cli">
 
@@ -29,10 +27,10 @@ kraft cloud metro ls
 
 </CodeTabs>
 
-:::
+Old metros such as `fra0` are nearing end of life, and aren't available for new deployments.
 
 Unikraft Cloud continues to add new locations worldwide so you can provision services close to your users.
-If there's a metro location you'd need, please contact Unikraft Cloud on Discord or write to support@unikraft.cloud.
+If there's a metro location you'd need, please contact Unikraft Cloud on [Discord](https://kraft.cloud/discord) or write to [support@unikraft.cloud](mailto:support@unikraft.cloud).
 The list of potential metros is:
 
 | IATA code  | | Region                     |
@@ -71,11 +69,9 @@ The list of potential metros is:
 
 For more information on how Unikraft Cloud connects metros together, and for more information about how to reduce in/egress costs with existing deployments at other IaaS providers, please [get in touch](mailto:support@unikraft.cloud).
 
-
 ## Self-hosted/on-premise metros
 
 If you require running solutions in-house or on-premise, either for SOC/ISO/HIPPA compliance or for other security, performance or cost-saving reasons, please [get in contact](mailto:support@kunikraft.cloud) for more details.
-
 
 ## Usage
 
@@ -85,24 +81,38 @@ Use the IATA code descriptor to target the specific metro.
 For example with `fra`:
 
 <CodeTabs syncKey="cli">
-    ```bash title="unikraft"
-    unikraft run --metro=fra -p 443:8080/http+tls --image=nginx:latest
-    ```
 
-    ```bash title="kraft"
-    # Via CLI flag
-    kraft cloud --metro fra run -p 443:8080 nginx:latest
+```bash title="unikraft"
+unikraft run --metro fra \
+  -p 443:8080/http+tls \
+  --image <my-org>/nginx:latest
+```
 
-    # or via environmental variable
-    export UKC_METRO=fra
-    kraft cloud run -p 443:8080 nginx:latest
-    ```
-    The `UKC_METRO` environment variable is only supported by the legacy CLI.
+```bash title="kraft"
+# via CLI flag
+kraft cloud vm create --metro fra \
+  -p 443:8080 \
+  <my-org>/nginx:latest
+
+# or via environmental variable
+export UKC_METRO=fra
+kraft cloud vm create \
+  -p 443:8080 \
+  <my-org>/nginx:latest
+```
+
 </CodeTabs>
 
-For on-premise or enterprise users, set the FQDN of the API endpoint as the
-metro argument, e.g.:
+For on-premise or enterprise users, you need to set the API endpoint of the metro you wish to use.
+With `kraft`, this means setting the `UKC_METRO` environment variable:
 
-```bash title=""
+```bash title="kraft"
 export UKC_METRO=https://api.example.cloud/v1
+```
+
+With `unikraft`, you need to define a custom [profile](/tutorials/kraftkit-to-unikraft#profile-management) and give an identifier to the metro you wish to use:
+
+```bash title="unikraft"
+unikraft profile use <custom-profile>
+unikraft run --metro <custom-metro> ...
 ```

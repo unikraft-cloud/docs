@@ -25,6 +25,7 @@ FUSE
 ALIAS
 ANAME
 ASCII
+BYOC
 CNAME
 COPY
 DCO
@@ -49,6 +50,7 @@ TOML
 USA
 UTC
 WASI
+WSL
 YAML
 Unikraft Cloud
 POSIX
@@ -58,6 +60,9 @@ EROFS
 CPIO
 CDP
 FTP
+CIDR
+PATCH
+TAP
 
 # ==============================================================================
 # NAMES OF THINGS
@@ -267,6 +272,7 @@ FTP
 (?i)TypeDoc
 (?i)typeof
 (?i)TypeScript
+(?i)UDP
 (?i)ui
 (?i)uncached
 (?i)undefined

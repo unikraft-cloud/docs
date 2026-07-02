@@ -6,14 +6,20 @@ navigation_icon: clock
 Scheduled operations let you automatically start, stop, delete, or exec a command in instances on a calendar-based schedule.
 Each scheduled operation specifies a name, a calendar expression, and an action (`start`, `stop`, `delete`, or `exec`).
 
-Each instance stores its own schedules, and cloning preserves them.
+:::info
+When you clone an instance from a [template](/platform/instances#instance-templates), the clone inherits its scheduled operations.
+:::
+
+:::caution
+You can currently only manage schedules via the [API](/api/platform/v1/instances#create-instance) or [`unikraft api`](/cli/unikraft/api).
+:::
 
 ## Calendar expression format
 
-Unikraft Cloud uses systemd calendar events (see [systemd.time(7)](https://www.man7.org/linux/man-pages/man7/systemd.time.7.html)).
+Unikraft Cloud uses systemd calendar events (see [`systemd.time(7)`](https://www.man7.org/linux/man-pages/man7/systemd.time.7.html)).
 Calendar expressions have the following fields:
 
-```
+```text title=""
 [weekday] [[year-]month-day] [hour:minute[:second]]
 ```
 
@@ -29,87 +35,190 @@ The expression syntax supports ranges, steps, and comma-separated lists:
 
 ## Setting a schedule at instance creation
 
-Pass `schedules` in the create request.
+Pass `schedules` in the [create request](/api/platform/v1/instances#create-instance).
 For example, to start an instance every day at 09:00 UTC and stop it at 18:00 UTC:
 
-```json title="POST /instances"
-{
-  "image": "...",
-  "schedules": [
-    {
-      "name": "morning-start",
-      "when": "*-*-* 09:00:00",
-      "action": "start"
-    },
-    {
-      "name": "evening-stop",
-      "when": "*-*-* 18:00:00",
-      "action": "stop"
-    }
-  ]
-}
+<CodeTabs syncKey="cli">
+```bash title="unikraft"
+unikraft api /v1/instances -X POST --metro fra \
+  -d '{
+    "image": "...",
+    "schedules": [
+      {
+        "name": "morning-start",
+        "when": "*-*-* 09:00:00",
+        "action": "start"
+      },
+      {
+        "name": "evening-stop",
+        "when": "*-*-* 18:00:00",
+        "action": "stop"
+      }
+    ]
+  }'
 ```
+```bash title="API"
+curl -X POST \
+  -H "Authorization: Bearer ${UKC_TOKEN}" \
+  -H "Content-Type: application/json" \
+  "https://api.fra.unikraft.cloud/v1/instances" \
+  -d '{
+    "image": "...",
+    "schedules": [
+      {
+        "name": "morning-start",
+        "when": "*-*-* 09:00:00",
+        "action": "start"
+      },
+      {
+        "name": "evening-stop",
+        "when": "*-*-* 18:00:00",
+        "action": "stop"
+      }
+    ]
+  }'
+```
+</CodeTabs>
 
 To run a command inside the instance every night at midnight, use the `exec` action with an `args` array:
 
-```json title="POST /instances"
-{
-  "image": "...",
-  "schedules": [
-    {
-      "name": "nightly-cleanup",
-      "when": "*-*-* 00:00:00",
-      "action": "exec",
-      "args": ["/bin/sh", "-c", "rm -rf /tmp/*"]
-    }
-  ]
-}
+<CodeTabs syncKey="cli">
+```bash title="unikraft"
+unikraft api /v1/instances -X POST --metro fra \
+  -d '{
+    "image": "...",
+    "schedules": [
+      {
+        "name": "nightly-cleanup",
+        "when": "*-*-* 00:00:00",
+        "action": "exec",
+        "args": ["/bin/sh", "-c", "rm -rf /tmp/*"]
+      }
+    ]
+  }'
 ```
+```bash title="API"
+curl -X POST \
+  -H "Authorization: Bearer ${UKC_TOKEN}" \
+  -H "Content-Type: application/json" \
+  "https://api.fra.unikraft.cloud/v1/instances" \
+  -d '{
+    "image": "...",
+    "schedules": [
+      {
+        "name": "nightly-cleanup",
+        "when": "*-*-* 00:00:00",
+        "action": "exec",
+        "args": ["/bin/sh", "-c", "rm -rf /tmp/*"]
+      }
+    ]
+  }'
+```
+</CodeTabs>
 
 ## Updating schedules of an existing instance
 
-Add, set, or remove scheduled operations via `PATCH`:
+Add, set, or remove scheduled operations via [PATCH](/api/platform/v1/instances#update-instance-by-uuid):
 
-```json title="PATCH /instances/{uuid}"
-{
-  "prop": "schedules",
-  "op": "add",
-  "value": [
-    {
-      "name": "weekend-stop",
-      "when": "Sat,Sun *-*-* 20:00:00",
-      "action": "stop"
-    }
-  ]
-}
+<CodeTabs syncKey="cli">
+```bash title="unikraft"
+unikraft api /v1/instances/<instance-uuid> -X PATCH --metro fra \
+  -d '{
+    "prop": "schedules",
+    "op": "add",
+    "value": [
+      {
+        "name": "weekend-stop",
+        "when": "Sat,Sun *-*-* 20:00:00",
+        "action": "stop"
+      }
+    ]
+  }'
 ```
+```bash title="API"
+curl -X PATCH \
+  -H "Authorization: Bearer ${UKC_TOKEN}" \
+  -H "Content-Type: application/json" \
+  "https://api.fra.unikraft.cloud/v1/instances/<instance-uuid>" \
+  -d '{
+    "prop": "schedules",
+    "op": "add",
+    "value": [
+      {
+        "name": "weekend-stop",
+        "when": "Sat,Sun *-*-* 20:00:00",
+        "action": "stop"
+      }
+    ]
+  }'
+```
+</CodeTabs>
 
 Add an `exec` schedule the same way, but include `args` with the command to run:
 
-```json title="PATCH /instances/{uuid}"
-{
-  "prop": "schedules",
-  "op": "add",
-  "value": [
-    {
-      "name": "hourly-healthcheck",
-      "when": "*-*-* *:00:00",
-      "action": "exec",
-      "args": ["/usr/bin/healthcheck"]
-    }
-  ]
-}
+<CodeTabs syncKey="cli">
+```bash title="unikraft"
+unikraft api /v1/instances/<instance-uuid> -X PATCH --metro fra \
+  -d '{
+    "prop": "schedules",
+    "op": "add",
+    "value": [
+      {
+        "name": "hourly-healthcheck",
+        "when": "*-*-* *:00:00",
+        "action": "exec",
+        "args": ["/usr/bin/healthcheck"]
+      }
+    ]
+  }'
 ```
+```bash title="API"
+curl -X PATCH \
+  -H "Authorization: Bearer ${UKC_TOKEN}" \
+  -H "Content-Type: application/json" \
+  "https://api.fra.unikraft.cloud/v1/instances/<instance-uuid>" \
+  -d '{
+    "prop": "schedules",
+    "op": "add",
+    "value": [
+      {
+        "name": "hourly-healthcheck",
+        "when": "*-*-* *:00:00",
+        "action": "exec",
+        "args": ["/usr/bin/healthcheck"]
+      }
+    ]
+  }'
+```
+</CodeTabs>
 
-```json title="PATCH /instances/{uuid}"
-{
-  "prop": "schedules",
-  "op": "del",
-  "value": [
-    "morning-start"
-  ]
-}
+<div style={{ marginTop: '0.8em' }} />
+
+<CodeTabs syncKey="cli">
+```bash title="unikraft"
+unikraft api /v1/instances/<instance-uuid> -X PATCH --metro fra \
+  -d '{
+    "prop": "schedules",
+    "op": "del",
+    "value": [
+      "morning-start"
+    ]
+  }'
 ```
+```bash title="API"
+curl -X PATCH \
+  -H "Authorization: Bearer ${UKC_TOKEN}" \
+  -H "Content-Type: application/json" \
+  "https://api.fra.unikraft.cloud/v1/instances/<instance-uuid>" \
+  -d '{
+    "prop": "schedules",
+    "op": "del",
+    "value": [
+      "morning-start"
+    ]
+  }'
+```
+</CodeTabs>
 
 ## Actions
 
@@ -120,12 +229,10 @@ Add an `exec` schedule the same way, but include `args` with the command to run:
 | `delete` | Delete the instance at the scheduled time |
 | `exec` | Execute a command inside the instance at the scheduled time. Requires the `args` field. |
 
-### The `args` field
-
 The `args` field is an array of strings specifying the command to run when using the `exec` action.
 The first element is the executable and the remaining elements are its arguments.
 
-```json
+```json title=""
 {
   "name": "daily-report",
   "when": "*-*-* 06:00:00",
@@ -135,12 +242,6 @@ The first element is the executable and the remaining elements are its arguments
 ```
 
 No need to specify it for all other actions.
-
-## Notes
-
-- Each schedule has a name that must be unique within an instance.
-- An instance can have more than one scheduled operation.
-- When you clone an instance from a template, the clone inherits its scheduled operations.
 
 ## Learn more
 

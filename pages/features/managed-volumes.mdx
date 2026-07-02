@@ -1,0 +1,121 @@
+---
+title: Managed Volumes
+navigation_icon: hard-drive
+---
+
+{/* vale off */}
+:::caution[**Limited Access**]
+Managed volumes (permanent storage) are available as part of enterprise plans.
+To enable them for your account, reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
+:::
+{/* vale on */}
+
+Managed volumes give your instances **permanent storage** backed by a directory on the host machine.
+Unlike regular [volumes](/platform/volumes), which have a fixed size, a managed volume exposes an existing host directory to the guest over [virtiofs](https://virtio-fs.gitlab.io/).
+It has no fixed size limit (only the host's disk bounds it), and the data outlives any individual instance.
+
+This makes managed volumes a good fit for large or shared datasets that you keep on the host and surface inside one or more instances.
+
+## How it works
+
+A managed volume maps a host directory (`host_path`) to a mountpoint (`at`) inside the guest.
+The platform mounts the directory over virtiofs when the instance starts, so the guest reads and writes the host directory directly.
+Changes the guest makes appear on the host immediately, and changes on the host appear inside the guest.
+
+Because the data lives on the host rather than in a dedicated block device, a managed volume has no fixed size.
+The platform treats its quota policy as `dynamic`, and counts it toward the number of volumes in your quota but not toward your total volume size quota.
+
+:::warning
+Total volume size quotas aren't yet enforced by the platform for managed volumes, so use them with caution to avoid filling up your host's disk.
+:::
+
+{/* vale off */}
+:::tip
+On BYOC or on-prem Unikraft Cloud installations, managed volumes can also use custom filesystems.
+Custom filesystem drivers can define lifecycle hooks for `format`, `fscheck`, `mount`, `unmount`, and `delete`, and can accept backend-specific arguments when you create the volume.
+
+This makes it possible to present shared object storage as a regular filesystem inside instances, for example by using a POSIX layer like JuiceFS on top of S3.
+:::
+{/* vale on */}
+
+## Creating an instance with a managed volume
+
+To attach a managed volume, add an entry with a `host_path` to the `volumes` array when you create an instance.
+Currently, you drive managed volumes through the [API](/api/platform/v1/instances#create-instance), which you can call with [`unikraft api`](/cli/unikraft/api) or `curl`.
+
+<CodeTabs syncKey="cli">
+```bash title="unikraft"
+unikraft api /v1/instances -X POST --metro fra \
+  -d '{
+    "image": "...",
+    "memory_mb": 1024,
+    "autostart": true,
+    "volumes": [
+      {
+        "at": "/data",
+        "host_path": "/srv/shared-data",
+        "uid": 1001,
+        "gid": 1001
+      }
+    ]
+  }'
+```
+```bash title="API"
+curl -X POST \
+  -H "Authorization: Bearer ${UKC_TOKEN}" \
+  -H "Content-Type: application/json" \
+  "https://api.fra.unikraft.cloud/v1/instances" \
+  -d '{
+    "image": "...",
+    "memory_mb": 1024,
+    "autostart": true,
+    "volumes": [
+      {
+        "at": "/data",
+        "host_path": "/srv/shared-data",
+        "uid": 1001,
+        "gid": 1001
+      }
+    ]
+  }'
+```
+</CodeTabs>
+
+The fields that describe a managed volume are:
+
+| Field | Description |
+|-------|-------------|
+| `at` | The mountpoint inside the guest. |
+| `host_path` | The directory on the host to mount into the guest. |
+| `uid` | The host user ID that the guest's `root` user maps to. |
+| `gid` | The host group ID that the guest's `root` user maps to. |
+
+After the instance starts, the contents of `host_path` show up at `at` inside the guest.
+
+## Ownership and permissions
+
+A managed volume maps the guest's `root:root` ownership onto the host `uid:gid` you supply.
+Every access the guest makes to `host_path` follows the permissions of that `uid:gid` on the host.
+For example, with `uid` and `gid` set to `1001`, the guest acts as host user and group `1001` whenever it touches the directory.
+
+To give the guest read-only access, make `host_path` read-only for that `uid:gid` on the host.
+
+{/* vale off */}
+:::caution
+Setting both `uid` and `gid` to `0` gives the guest **root** access to `host_path` on the host.
+Choose these values carefully in production, and prefer a restricted host user where possible.
+:::
+{/* vale on */}
+
+## Limitations
+
+- Managed volumes don't accept the `size_mb` and `quota_policy` fields.
+  The size has no fixed limit (only host disk space bounds it), and the platform applies a `dynamic` quota policy.
+- The `uid:gid` must be able to access every parent directory of `host_path`, since the guest traverses them to reach it.
+- Mounting the same host directory as more than one volume can cause undesirable side effects. Mount each host directory once.
+- Managed volumes count toward the number of volumes in your [quota](/platform/quotas), but their size doesn't count toward your volume size quota.
+
+## Learn more
+
+* [Volumes](/platform/volumes): fixed-size, block-device volumes managed entirely by the platform.
+* Unikraft Cloud's [REST API reference](/api/platform/v1), in particular the section on [instances](/api/platform/v1/instances).

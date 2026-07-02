@@ -5,14 +5,20 @@ description: |
   Retrieve runtime statistics for your Unikraft Cloud instances.
 ---
 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "zudoku/ui/Tabs"
+
 Unikraft Cloud exposes runtime metrics for each instance: CPU time, memory usage, network I/O, connection counts, and scale-to-zero wakeup latencies.
+
+:::caution
+You can currently only view metrics via the [API](/api/platform/v1/instances#get-instances-metrics) or [`unikraft api`](/cli/unikraft/api).
+:::
 
 ## Endpoints
 
-```
+```text
 GET  /instances/{uuid}/metrics
 GET  /instances/metrics?uuid=<uuid>[,<uuid>…]
-POST /instances/metrics (UUIDs or names in request body)
+POST /instances/metrics  # (UUIDs or names in request body)
 ```
 
 With no identifiers, the platform returns metrics for all instances in your account.
@@ -92,73 +98,237 @@ For instances with [scale-to-zero](/features/scale-to-zero) enabled, the `wakeup
 | `wakeup_latency` | array | Histogram buckets. Each bucket has `bucket_ms` (upper bound in ms, or `null` for the overflow bucket) and `count` (number of wakeups in that bucket). |
 | `wakeup_latency_sum` | uint64 | Sum of all recorded wakeup latencies in milliseconds. |
 
-## Prometheus metrics
-
-When not requesting JSON, the endpoint returns standard Prometheus text format.
-The available metric names are:
-
-```
-instance_state
-instance_start_count
-instance_restart_count
-instance_started_at
-instance_stopped_at
-instance_uptime_s
-instance_boot_time_s
-instance_net_time_s
-instance_rss_bytes
-instance_cpu_time_s
-instance_rx_bytes
-instance_tx_bytes
-instance_rx_packets
-instance_tx_packets
-instance_nconns
-instance_nreqs
-instance_nqueued
-instance_ntotal
-instance_wakeup_latency_seconds  (histogram)
-```
-
-The platform labels all metrics with `uuid` and `name`.
-
 ## Example
 
-Set `UKC_TOKEN` and `UKC_METRO` for the API call:
+<Tabs defaultValue="json">
+  <TabsList>
+    <TabsTrigger value="json">JSON output</TabsTrigger>
+    <TabsTrigger value="prometheus">Prometheus output</TabsTrigger>
+  </TabsList>
+  <TabsContent value="json">
 
-```bash title=""
-curl -X GET \
-    -H "Authorization: Bearer $UKC_TOKEN" \
-    -H "Content-Type: application/json" \
-    "https://api.$UKC_METRO.unikraft.cloud/v1/instances/metrics?uuid=66d05e09-1436-4d1f-bbe6-6dc03ae48d7a"
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft api /v1/instances/metrics?uuid=f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea -X GET --metro fra
 ```
 
-```json title=""
+```bash title="API"
+curl -X GET \
+  -H "Authorization: Bearer ${UKC_TOKEN}" \
+  "https://api.fra.unikraft.cloud/v1/instances/metrics?uuid=f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea"
+```
+
+</CodeTabs>
+
+```json title="JSON"
 {
-  "instances": [
-    {
-      "uuid": "66d05e09-1436-4d1f-bbe6-6dc03ae48d7a",
-      "name": "nginx-1a747",
-      "state": "running",
-      "start_count": 3,
-      "uptime_ms": 42310,
-      "boot_time_us": 19810,
-      "rss_bytes": 12582912,
-      "cpu_time_ms": 14,
-      "rx_bytes": 4096,
-      "rx_packets": 8,
-      "tx_bytes": 8192,
-      "tx_packets": 12,
-      "nconns": 1,
-      "nreqs": 0,
-      "nqueued": 0,
-      "ntotal": 7
-    }
-  ]
+  "status": "success",
+  "data": {
+    "instances": [
+      {
+        "status": "success",
+        "uuid": "f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea",
+        "name": "httpserver-go1.21-wf9iz",
+        "state": "standby",
+        "start_count": 2,
+        "started_at": "2026-06-05T11:44:32Z",
+        "stopped_at": "2026-06-05T11:44:36Z",
+        "uptime_ms": 8161,
+        "boot_time_us": 97308,
+        "net_time_us": 102963,
+        "rss_bytes": 0,
+        "cpu_time_ms": 150,
+        "rx_bytes": 2012,
+        "rx_packets": 23,
+        "tx_bytes": 1196,
+        "tx_packets": 11,
+        "nconns": 0,
+        "nreqs": 0,
+        "nqueued": 0,
+        "ntotal": 2,
+        "wakeup_latency": [
+          {
+            "bucket_ms": 1,
+            "count": 0
+          },
+          {
+            "bucket_ms": 2,
+            "count": 0
+          },
+          {
+            "bucket_ms": 4,
+            "count": 0
+          },
+          {
+            "bucket_ms": 8,
+            "count": 0
+          },
+          {
+            "bucket_ms": 16,
+            "count": 0
+          },
+          {
+            "bucket_ms": 32,
+            "count": 0
+          },
+          {
+            "bucket_ms": 64,
+            "count": 0
+          },
+          {
+            "bucket_ms": 128,
+            "count": 1
+          },
+          {
+            "bucket_ms": 256,
+            "count": 0
+          },
+          {
+            "bucket_ms": 512,
+            "count": 0
+          },
+          {
+            "bucket_ms": 1024,
+            "count": 0
+          },
+          {
+            "bucket_ms": 2048,
+            "count": 0
+          },
+          {
+            "bucket_ms": 4096,
+            "count": 0
+          },
+          {
+            "bucket_ms": null,
+            "count": 0
+          }
+        ],
+        "wakeup_latency_sum": 104
+      }
+    ]
+  }
 }
 ```
 
+  </TabsContent>
+  <TabsContent value="prometheus">
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft api /v1/instances/metrics?uuid=f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea -X GET --metro fra \
+  -H "Accept: text/plain"
+```
+
+```bash title="API"
+curl -X GET \
+  -H "Authorization: Bearer ${UKC_TOKEN}" \
+  -H "Accept: text/plain" \
+  "https://api.fra.unikraft.cloud/v1/instances/metrics?uuid=f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea"
+```
+
+</CodeTabs>
+
+```text title="Prometheus"
+# HELP instance_state 0=stopped,1=starting,2=running,3=draining,4=stopping,5=standby,6=template,7=deleted
+# TYPE instance_state gauge
+instance_state{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea"} 5
+
+# HELP instance_start_count Number of times the instance has been started
+# TYPE instance_start_count counter
+instance_start_count{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea"} 2
+
+# HELP instance_restart_count Number of times the instance has been restarted
+# TYPE instance_restart_count counter
+instance_restart_count{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea"} 0
+
+# HELP instance_started_at Time when the instance started
+# TYPE instance_started_at gauge
+instance_started_at{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea"} 1780659872
+
+# HELP instance_stopped_at Time when the instance stopped
+# TYPE instance_stopped_at gauge
+instance_stopped_at{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea"} 1780659876
+
+# HELP instance_uptime_s Uptime in seconds
+# TYPE instance_uptime_s gauge
+instance_uptime_s{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea"} 8.161000
+
+# HELP instance_boot_time_s Boot time in seconds
+# TYPE instance_boot_time_s gauge
+instance_boot_time_s{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea"} 0.097308
+
+# HELP instance_net_time_s Net time in seconds
+# TYPE instance_net_time_s gauge
+instance_net_time_s{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea"} 0.102963
+
+# HELP instance_rss_bytes Resident set size in bytes
+# TYPE instance_rss_bytes gauge
+instance_rss_bytes{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea"} 0
+
+# HELP instance_cpu_time_s Consumed CPU time in seconds
+# TYPE instance_cpu_time_s counter
+instance_cpu_time_s{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea"} 0.150000
+
+# HELP instance_rx_bytes Amount of bytes received over network
+# TYPE instance_rx_bytes counter
+instance_rx_bytes{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea"} 2012
+
+# HELP instance_tx_bytes Amount of bytes transmitted over network
+# TYPE instance_tx_bytes counter
+instance_tx_bytes{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea"} 1196
+
+# HELP instance_rx_packets Count of packets received from network
+# TYPE instance_rx_packets counter
+instance_rx_packets{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea"} 23
+
+# HELP instance_tx_packets Count of packets transmitted over network
+# TYPE instance_tx_packets counter
+instance_tx_packets{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea"} 11
+
+# HELP instance_nconns Number of active connections
+# TYPE instance_nconns gauge
+instance_nconns{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea"} 0
+
+# HELP instance_nreqs Number of active requests
+# TYPE instance_nreqs gauge
+instance_nreqs{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea"} 0
+
+# HELP instance_nqueued Number of queued connections/requests
+# TYPE instance_nqueued gauge
+instance_nqueued{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea"} 0
+
+# HELP instance_ntotal Number of processed connections/requests
+# TYPE instance_ntotal counter
+instance_ntotal{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea"} 2
+
+# HELP instance_wakeup_latency_seconds Wakeup latencies in seconds
+# TYPE instance_wakeup_latency_seconds histogram
+instance_wakeup_latency_seconds{le="0.001000"} 0
+instance_wakeup_latency_seconds{le="0.002000"} 0
+instance_wakeup_latency_seconds{le="0.004000"} 0
+instance_wakeup_latency_seconds{le="0.008000"} 0
+instance_wakeup_latency_seconds{le="0.016000"} 0
+instance_wakeup_latency_seconds{le="0.032000"} 0
+instance_wakeup_latency_seconds{le="0.064000"} 0
+instance_wakeup_latency_seconds{le="0.128000"} 1
+instance_wakeup_latency_seconds{le="0.256000"} 1
+instance_wakeup_latency_seconds{le="0.512000"} 1
+instance_wakeup_latency_seconds{le="1.024000"} 1
+instance_wakeup_latency_seconds{le="2.048000"} 1
+instance_wakeup_latency_seconds{le="4.096000"} 1
+instance_wakeup_latency_seconds{le="+Inf"} 1
+instance_wakeup_latency_seconds_sum 104
+instance_wakeup_latency_seconds_count 1
+```
+
+  </TabsContent>
+</Tabs>
+
 ## Learn more
 
-* Unikraft Cloud's [REST API reference](/api/platform/v1)
-* [Instance states](/platform/instances#instance-states)
-* [Scale-to-zero](/features/scale-to-zero)
+* Unikraft Cloud's [REST API reference](/api/platform/v1).
+* [Instance states](/platform/instances#instance-states).
+* [Scale-to-zero](/features/scale-to-zero) feature.

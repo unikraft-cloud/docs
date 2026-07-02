@@ -3,58 +3,292 @@ title: Tagging
 navigation_icon: tag
 ---
 
-Tags are labels that you can attach to instances, volumes, instance templates, and volume templates to organize and filter your resources.
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "zudoku/ui/Tabs"
 
-Don't confuse them with image tags which serve a different purpose (see [images](/api/platform/v1/images)).
+Tags are labels that you can attach to instances, volumes, instance templates, and volume templates to organize and filter your resources.
+Don't confuse them with [image](/platform/images) tags which serve a different purpose.
 
 ## Tag format
 
 Tags can be up to 256 characters long and may contain alphanumeric characters plus `-`, `+`, `_`, `.`, `:`, and `=`.
-Each resource (instance, volume, instance template, volume template) can have up to 16 tags.
-You can currently only manage tags via the API.
-Kraftkit neither displays them nor allows you to edit them.
+Each resource ([instance](/platform/instances), [volume](/platform/volumes), [instance template](/platform/instances#instance-templates), [volume template](/platform/volumes#volume-templates)) can have up to 16 tags.
 
 ## Adding tags
 
 Add tags to a resource at creation time:
 
-```json title="POST /instances"
-{
-  "image": "...",
-  "memory_mb": ...,
-  "tags": [ "production", "customer_A" ]
-}
+<Tabs defaultValue="instance">
+  <TabsList>
+    <TabsTrigger value="instance">Instance</TabsTrigger>
+    <TabsTrigger value="instance-tpl">Instance Template</TabsTrigger>
+    <TabsTrigger value="volume">Volume</TabsTrigger>
+    <TabsTrigger value="volume-tpl">Volume Template</TabsTrigger>
+  </TabsList>
+  <TabsContent value="instance">
+  <CodeTabs syncKey="cli">
+```bash title="unikraft"
+unikraft instance create \
+  --metro fra \
+  --image ... \
+  --memory ... \
+  --tags production,customer_A
 ```
+```bash title="API"
+curl -X POST \
+  -H "Authorization: Bearer ${UKC_TOKEN}" \
+  -H "Content-Type: application/json" \
+  "https://api.fra.unikraft.cloud/v1/instances" \
+  -d '{
+    "image": "...",
+    "memory_mb": ...,
+    "tags": ["production", "customer_A"]
+  }'
+```
+  </CodeTabs>
+  </TabsContent>
+  <TabsContent value="instance-tpl">
+  <CodeTabs syncKey="cli">
+```bash title="unikraft"
+unikraft instance template create \
+  --set image=... \
+  --set resources.memory=... \
+  --set tags=production,customer_A
+```
+```bash title="API"
+curl -X POST \
+  -H "Authorization: Bearer ${UKC_TOKEN}" \
+  -H "Content-Type: application/json" \
+  "https://api.fra.unikraft.cloud/v1/instances/templates" \
+  -d '{
+    "image": "...",
+    "memory_mb": ...,
+    "tags": ["production", "customer_A"]
+  }'
+```
+  </CodeTabs>
+  </TabsContent>
+  <TabsContent value="volume">
+  <CodeTabs syncKey="cli">
+```bash title="unikraft"
+unikraft volume create \
+  --metro fra \
+  --size ... \
+  --tags production,customer_A
+```
+```bash title="API"
+curl -X POST \
+  -H "Authorization: Bearer ${UKC_TOKEN}" \
+  -H "Content-Type: application/json" \
+  "https://api.fra.unikraft.cloud/v1/volumes" \
+  -d '{
+    "size_mb": ...,
+    "tags": ["production", "customer_A"]
+  }'
+```
+  </CodeTabs>
+  </TabsContent>
+  <TabsContent value="volume-tpl">
+  <CodeTabs syncKey="cli">
+```bash title="unikraft"
+unikraft volume template create \
+  --set size=... \
+  --set tags=production,customer_A
+```
+```bash title="API"
+curl -X POST \
+  -H "Authorization: Bearer ${UKC_TOKEN}" \
+  -H "Content-Type: application/json" \
+  "https://api.fra.unikraft.cloud/v1/volumes/templates" \
+  -d '{
+    "size_mb": ...,
+    "tags": ["production", "customer_A"]
+  }'
+```
+  </CodeTabs>
+  </TabsContent>
+</Tabs>
 
 Add tags to an existing resource (`"op": "set"` will replace all existing tags):
 
-```json title="PATCH /instances"
-{
-  "name": "example-instance",
-  "prop": "tags",
-  "op": "set",
-  "value": ["testsystem", "customer_B"]
-}
+<Tabs defaultValue="instance">
+  <TabsList>
+    <TabsTrigger value="instance">Instance</TabsTrigger>
+    <TabsTrigger value="instance-tpl">Instance Template</TabsTrigger>
+    <TabsTrigger value="volume">Volume</TabsTrigger>
+    <TabsTrigger value="volume-tpl">Volume Template</TabsTrigger>
+  </TabsList>
+  <TabsContent value="instance">
+  <CodeTabs syncKey="cli">
+```bash title="unikraft"
+unikraft instance edit <instance-name> \
+  --tags testsystem,customer_B
 ```
-
-:::note
-Use `/volumes` for volumes, `/instances/templates` for instance templates, and `/volumes/templates` for volume templates.
-:::
+```bash title="API"
+curl -X PATCH \
+  -H "Authorization: Bearer ${UKC_TOKEN}" \
+  -H "Content-Type: application/json" \
+  "https://api.fra.unikraft.cloud/v1/instances" \
+  -d '[{
+    "name": "<instance-name>",
+    "prop": "tags",
+    "op": "set",
+    "value": ["testsystem", "customer_B"]
+  }]'
+```
+  </CodeTabs>
+  </TabsContent>
+  <TabsContent value="instance-tpl">
+  <CodeTabs syncKey="cli">
+```bash title="unikraft"
+unikraft instance template edit <instance-template-name> \
+  --tags testsystem,customer_B
+```
+```bash title="API"
+curl -X PATCH \
+  -H "Authorization: Bearer ${UKC_TOKEN}" \
+  -H "Content-Type: application/json" \
+  "https://api.fra.unikraft.cloud/v1/instances/templates" \
+  -d '[{
+    "name": "<instance-template-name>",
+    "prop": "tags",
+    "op": "set",
+    "value": ["testsystem", "customer_B"]
+  }]'
+```
+  </CodeTabs>
+  </TabsContent>
+  <TabsContent value="volume">
+  <CodeTabs syncKey="cli">
+```bash title="unikraft"
+unikraft volume edit <volume-name> \
+  --tags testsystem,customer_B
+```
+```bash title="API"
+curl -X PATCH \
+  -H "Authorization: Bearer ${UKC_TOKEN}" \
+  -H "Content-Type: application/json" \
+  "https://api.fra.unikraft.cloud/v1/volumes" \
+  -d '[{
+    "name": "<volume-name>",
+    "prop": "tags",
+    "op": "set",
+    "value": ["testsystem", "customer_B"]
+  }]'
+```
+  </CodeTabs>
+  </TabsContent>
+  <TabsContent value="volume-tpl">
+  <CodeTabs syncKey="cli">
+```bash title="unikraft"
+unikraft volume template edit <volume-template-name> \
+  --tags testsystem,customer_B
+```
+```bash title="API"
+curl -X PATCH \
+  -H "Authorization: Bearer ${UKC_TOKEN}" \
+  -H "Content-Type: application/json" \
+  "https://api.fra.unikraft.cloud/v1/volumes/templates" \
+  -d '[{
+    "name": "<volume-template-name>",
+    "prop": "tags",
+    "op": "set",
+    "value": ["testsystem", "customer_B"]
+  }]'
+```
+  </CodeTabs>
+  </TabsContent>
+</Tabs>
 
 Add tags to a resource without replacing existing ones (`"op": "add"`):
 
-```json title="PATCH /instances"
-{
-  "name": "example-instance",
-  "prop": "tags",
-  "op": "add",
-  "value": ["legacy"]
-}
+<Tabs defaultValue="instance">
+  <TabsList>
+    <TabsTrigger value="instance">Instance</TabsTrigger>
+    <TabsTrigger value="instance-tpl">Instance Template</TabsTrigger>
+    <TabsTrigger value="volume">Volume</TabsTrigger>
+    <TabsTrigger value="volume-tpl">Volume Template</TabsTrigger>
+  </TabsList>
+  <TabsContent value="instance">
+  <CodeTabs syncKey="cli">
+```bash title="unikraft"
+unikraft instance edit <instance-name> --add tags=legacy
 ```
+```bash title="API"
+curl -X PATCH \
+  -H "Authorization: Bearer ${UKC_TOKEN}" \
+  -H "Content-Type: application/json" \
+  "https://api.fra.unikraft.cloud/v1/instances" \
+  -d '[{
+    "name": "<instance-name>",
+    "prop": "tags",
+    "op": "add",
+    "value": ["legacy"]
+  }]'
+
+```
+  </CodeTabs>
+  </TabsContent>
+  <TabsContent value="instance-tpl">
+  <CodeTabs syncKey="cli">
+```bash title="unikraft"
+unikraft instance template edit <instance-template-name> --add tags=legacy
+```
+```bash title="API"
+curl -X PATCH \
+  -H "Authorization: Bearer ${UKC_TOKEN}" \
+  -H "Content-Type: application/json" \
+  "https://api.fra.unikraft.cloud/v1/instances/templates" \
+  -d '[{
+    "name": "<instance-template-name>",
+    "prop": "tags",
+    "op": "add",
+    "value": ["legacy"]
+  }]'
+```
+  </CodeTabs>
+  </TabsContent>
+  <TabsContent value="volume">
+  <CodeTabs syncKey="cli">
+```bash title="unikraft"
+unikraft volume edit <volume-name> --add tags=legacy
+```
+```bash title="API"
+curl -X PATCH \
+  -H "Authorization: Bearer ${UKC_TOKEN}" \
+  -H "Content-Type: application/json" \
+  "https://api.fra.unikraft.cloud/v1/volumes" \
+  -d '[{
+    "name": "<volume-name>",
+    "prop": "tags",
+    "op": "add",
+    "value": ["legacy"]
+  }]'
+```
+  </CodeTabs>
+  </TabsContent>
+  <TabsContent value="volume-tpl">
+  <CodeTabs syncKey="cli">
+```bash title="unikraft"
+unikraft volume template edit <volume-template-name> --add tags=legacy
+```
+```bash title="API"
+curl -X PATCH \
+  -H "Authorization: Bearer ${UKC_TOKEN}" \
+  -H "Content-Type: application/json" \
+  "https://api.fra.unikraft.cloud/v1/volumes/templates" \
+  -d '[{
+    "name": "<volume-template-name>",
+    "prop": "tags",
+    "op": "add",
+    "value": ["legacy"]
+  }]'
+```
+  </CodeTabs>
+  </TabsContent>
+</Tabs>
 
 :::note
 Tags are automatically deduplicated.
-Repeating the same tag adds it only once.
 Adding a tag already attached to a resource has no effect.
 :::
 
@@ -62,30 +296,151 @@ Adding a tag already attached to a resource has no effect.
 
 Remove specific tags from a resource (`"op": "del"`):
 
-```json title="PATCH /instances"
-{
-  "name": "example-instance",
-  "prop": "tags",
-  "op": "del",
-  "value": ["legacy"]
-}
+<Tabs defaultValue="instance">
+  <TabsList>
+    <TabsTrigger value="instance">Instance</TabsTrigger>
+    <TabsTrigger value="instance-tpl">Instance Template</TabsTrigger>
+    <TabsTrigger value="volume">Volume</TabsTrigger>
+    <TabsTrigger value="volume-tpl">Volume Template</TabsTrigger>
+  </TabsList>
+  <TabsContent value="instance">
+  <CodeTabs syncKey="cli">
+```bash title="unikraft"
+unikraft instance edit <instance-name> --del tags=legacy
 ```
+```bash title="API"
+curl -X PATCH \
+  -H "Authorization: Bearer ${UKC_TOKEN}" \
+  -H "Content-Type: application/json" \
+  "https://api.fra.unikraft.cloud/v1/instances" \
+  -d '[{
+    "name": "<instance-name>",
+    "prop": "tags",
+    "op": "del",
+    "value": ["legacy"]
+  }]'
+```
+  </CodeTabs>
+  </TabsContent>
+  <TabsContent value="instance-tpl">
+  <CodeTabs syncKey="cli">
+```bash title="unikraft"
+unikraft instance template edit <instance-template-name> --del tags=legacy
+```
+```bash title="API"
+curl -X PATCH \
+  -H "Authorization: Bearer ${UKC_TOKEN}" \
+  -H "Content-Type: application/json" \
+  "https://api.fra.unikraft.cloud/v1/instances/templates" \
+  -d '[{
+    "name": "<instance-template-name>",
+    "prop": "tags",
+    "op": "del",
+    "value": ["legacy"]
+  }]'
+```
+  </CodeTabs>
+  </TabsContent>
+  <TabsContent value="volume">
+  <CodeTabs syncKey="cli">
+```bash title="unikraft"
+unikraft volume edit <volume-name> --del tags=legacy
+```
+```bash title="API"
+curl -X PATCH \
+  -H "Authorization: Bearer ${UKC_TOKEN}" \
+  -H "Content-Type: application/json" \
+  "https://api.fra.unikraft.cloud/v1/volumes" \
+  -d '[{
+    "name": "<volume-name>",
+    "prop": "tags",
+    "op": "del",
+    "value": ["legacy"]
+  }]'
+```
+  </CodeTabs>
+  </TabsContent>
+  <TabsContent value="volume-tpl">
+  <CodeTabs syncKey="cli">
+```bash title="unikraft"
+unikraft volume template edit <volume-template-name> --del tags=legacy
+```
+```bash title="API"
+curl -X PATCH \
+  -H "Authorization: Bearer ${UKC_TOKEN}" \
+  -H "Content-Type: application/json" \
+  "https://api.fra.unikraft.cloud/v1/volumes/templates" \
+  -d '[{
+    "name": "<volume-template-name>",
+    "prop": "tags",
+    "op": "del",
+    "value": ["legacy"]
+  }]'
+```
+  </CodeTabs>
+  </TabsContent>
+</Tabs>
 
 ## Filtering by tag
 
-Filter the instance list, volume list, instance template list, or volume template list by one or more tags.
+Filter the [instance list](/api/platform/v1/instances#list-instances), [volume list](/api/platform/v1/volumes#list-volumes), [instance template list](/api/platform/v1/instances#list-template-instances), or [volume template list](/api/platform/v1/volumes#list-template-volumes) by one or more tags.
 Only resources that have _all_ the specified tags appear in the results.
 
+<Tabs defaultValue="instance">
+  <TabsList>
+    <TabsTrigger value="instance">Instance</TabsTrigger>
+    <TabsTrigger value="instance-tpl">Instance Template</TabsTrigger>
+    <TabsTrigger value="volume">Volume</TabsTrigger>
+    <TabsTrigger value="volume-tpl">Volume Template</TabsTrigger>
+  </TabsList>
+  <TabsContent value="instance">
+  <CodeTabs syncKey="cli">
+```bash title="unikraft"
+unikraft instance list --filter 'tags==production,customer_A'
 ```
-GET /instances?tags=production,customer_A
+```bash title="API"
+curl -H "Authorization: Bearer ${UKC_TOKEN}" \
+  "https://api.fra.unikraft.cloud/v1/instances?tags=production,customer_A"
 ```
+  </CodeTabs>
+  </TabsContent>
+  <TabsContent value="instance-tpl">
+  <CodeTabs syncKey="cli">
+```bash title="unikraft"
+unikraft instance template list --filter 'tags==production,customer_A'
+```
+```bash title="API"
+curl -H "Authorization: Bearer ${UKC_TOKEN}" \
+  "https://api.fra.unikraft.cloud/v1/instances/templates?tags=production,customer_A"
+```
+  </CodeTabs>
+  </TabsContent>
+  <TabsContent value="volume">
+  <CodeTabs syncKey="cli">
+```bash title="unikraft"
+unikraft volume list --filter 'tags==production,customer_A'
+```
+```bash title="API"
+curl -H "Authorization: Bearer ${UKC_TOKEN}" \
+  "https://api.fra.unikraft.cloud/v1/volumes?tags=production,customer_A"
+```
+  </CodeTabs>
+  </TabsContent>
+  <TabsContent value="volume-tpl">
+  <CodeTabs syncKey="cli">
+```bash title="unikraft"
+unikraft volume template list --filter 'tags==production,customer_A'
+```
+```bash title="API"
+curl -H "Authorization: Bearer ${UKC_TOKEN}" \
+  "https://api.fra.unikraft.cloud/v1/volumes/templates?tags=production,customer_A"
+```
+  </CodeTabs>
+  </TabsContent>
+</Tabs>
 
 Separate tags by commas (`,`).
 
-## Tags in API responses
-
-Each instance, volume, instance template, or volume template status response includes a `tags` array if at least one tag is present.
-
 ## Learn more
 
-* Unikraft Cloud's [REST API reference](/api/platform/v1), in particular the sections on [instances](/api/platform/v1/instances) and [volumes](/api/platform/v1/volumes)
+* Unikraft Cloud's [REST API reference](/api/platform/v1).

@@ -58,17 +58,22 @@ A great example of sandboxes in action is [OpenClaw](https://openclaw.ai/), an a
 This guide explains how to create and deploy your own OpenClaw gateway on Unikraft Cloud.
 To run this example, follow these steps:
 
-1. Install the CLI and a container runtime engine (for example, [Docker](https://docs.docker.com/engine/install/)).
+1. Install the CLI.
    Use the [unikraft CLI](/docs/cli/unikraft) or the legacy [kraft CLI](https://unikraft.org/docs/cli/install).
    You need a [BuildKit](https://github.com/moby/buildkit) builder. The easiest way to get one is via [Docker](https://docs.docker.com/engine/install/).
-   You could also directly set up and use BuildKit, see the [quick start](https://github.com/moby/buildkit#quick-start).
+   You can also set up and use BuildKit directly; see the [quick start](https://github.com/moby/buildkit#quick-start).
+
+   :::note
+   The unikraft CLI is the current standard, while kraft is the legacy version.
+   Choose one of the CLIs below and only run the commands associated with it for the rest of this guide.
+   :::
 
 1. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/openclaw` directory:
 
-```bash
-git clone https://github.com/unikraft-cloud/examples
-cd examples/openclaw/
-```
+   ```bash
+   git clone https://github.com/unikraft-cloud/examples
+   cd examples/openclaw/
+   ```
 
 Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪):
@@ -96,16 +101,23 @@ When done, you may create the OpenClaw Unikraft Cloud image and deploy an instan
 
 ```bash title="unikraft"
 unikraft build . --output <my-org>/openclaw:latest
-unikraft run --scale-to-zero policy=on,cooldown-time=10000 --metro fra -p 18789:18789/tls -p 2222:2222/tls -m 4G -e PUBKEY="...." --image <my-org>/openclaw:latest
+unikraft run --metro fra \
+  -m 4G \
+  -p 18789:18789/tls \
+  -p 2222:2222/tls \
+  --scale-to-zero policy=on,cooldown-time=10000,stateful=true \
+  -e PUBKEY="...." \
+  --image <my-org>/openclaw:latest
 ```
 
 ```bash title="kraft"
 kraft cloud deploy \
-  --scale-to-zero on \
-  --scale-to-zero-cooldown 10s \
+  -M 4Gi \
   -p 18789:18789/tls \
   -p 2222:2222/tls \
-  -M 4Gi \
+  --scale-to-zero on \
+  --scale-to-zero-cooldown 10s \
+  --scale-to-zero-stateful \
   -e PUBKEY="..." \
   .
 ```
@@ -119,46 +131,47 @@ The output shows the instance address and other details:
 <CodeTabs syncKey="cli">
 
 ```ansi title="unikraft"
-metro:        fra
-name:         openclaw-8tosm
-uuid:         e2a6183a-721b-4145-bfaf-37a5f859bbc1
-state:        [92mstarting[0m
-image:        demo/openclaw
-runtime:
-  env:
+[1mmetro[22m:        fra
+[1mname[22m:         openclaw-8tosm
+[1muuid[22m:         e2a6183a-721b-4145-bfaf-37a5f859bbc1
+[1mstate[22m:        [38;2;144;161;185mstarting[0m
+[1mimage[22m:        <my-org>/openclaw
+[1mruntime[22m:
+[3m  env[23m:
     PUBKEY:   *
-resources:
-  memory:     4GiB
-  vcpus:      1
-service:
-  uuid:       7ab20338-b04d-4869-947b-9433e21677b1
-  name:       divine-flower-bxsaapup
-  domains:
-  - fqdn:     divine-flower-bxsaapup.fra0-demo.unikraft.app
-networks:
-- uuid:       2b0b120b-6ce5-4b19-ac4c-04ee8f11526e
-  private-ip: 10.0.12.97
-  mac:        12:b0:0a:00:0c:61
-timestamps:
-  created:    just now
+[1mresources[22m:
+[3m  memory[23m:     4GiB
+[3m  vcpus[23m:      1
+[1mservice[22m:
+[3m  uuid[23m:       7ab20338-b04d-4869-947b-9433e21677b1
+[3m  name[23m:       divine-flower-bxsaapup
+[3m  domains[23m:
+[3m  - fqdn[23m:     divine-flower-bxsaapup.fra.unikraft.app
+[1mnetworks[22m:
+[3m- uuid[23m:       2b0b120b-6ce5-4b19-ac4c-04ee8f11526e
+[3m  private-ip[23m: 10.0.12.97
+[3m  mac[23m:        12:b0:0a:00:0c:61
+[1mtimestamps[22m:
+[3m  created[23m:    just now
 ```
 
 ```ansi title="kraft"
-[90m[[0m[92m●[0m[90m][0m Deployed successfully!
- [90m│[0m
- [90m├[0m[90m─────────[0m [90mname[0m: openclaw-8tosm
- [90m├[0m[90m─────────[0m [90muuid[0m: e2a6183a-721b-4145-bfaf-37a5f859bbc1
- [90m├[0m[90m────────[0m [90mmetro[0m: https://api.fra.unikraft.cloud/v1
- [90m├[0m[90m────────[0m [90mstate[0m: [92mstarting[0m
- [90m├[0m[90m────────[0m [90mimage[0m: demo/openclaw@sha256:7a3d9f2b5e8c1a4d7f0e3b6c9a2d5f8b1e4a7d0c3f6b9e2a5d8c1f4b7e0a3d6c9
- [90m├[0m[90m───────[0m [90mmemory[0m: 4096 MiB
- [90m├[0m[90m─[0m [90mprivate fqdn[0m: openclaw-8tosm.internal
- [90m└[0m[90m───[0m [90mprivate ip[0m: 10.0.12.97
+[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
+ [38;5;245m│[0m
+ [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245mname[0m: openclaw-8tosm
+ [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245muuid[0m: e2a6183a-721b-4145-bfaf-37a5f859bbc1
+ [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
+ [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mstate[0m: [92mstarting[0m
+ [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mdomain[0m: https://divine-flower-bxsaapup.fra.unikraft.app
+ [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/openclaw@sha256:7a3d9f2b5e8c1a4d7f0e3b6c9a2d5f8b1e4a7d0c3f6b9e2a5d8c1f4b7e0a3d6c9
+ [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mmemory[0m: 4096 MiB
+ [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: openclaw-8tosm.internal
+ [38;5;245m└[0m[38;5;245m───[0m [38;5;245mprivate ip[0m: 10.0.12.97
 ```
 
 </CodeTabs>
 
-In this case, the instance name is `openclaw-8tosm` and the address is `divine-flower-bxsaapup.fra0-demo.unikraft.app`.
+In this case, the instance name is `openclaw-8tosm` and the address is `divine-flower-bxsaapup.fra.unikraft.app`.
 These will be different for each run.
 
 You can now SSH into this instance and run the OpenClaw onboarding process.
@@ -167,7 +180,7 @@ To SSH, you need to set up a tunnel that handles the TLS connection to the Unikr
 This way, you have a non-TLS port that your SSH client can connect to:
 
 ```bash
-socat TCP-LISTEN:2222,reuseaddr,fork OPENSSL:divine-flower-bxsaapup.fra0-demo.unikraft.app:2222,verify=0
+socat TCP-LISTEN:2222,reuseaddr,fork OPENSSL:divine-flower-bxsaapup.fra.unikraft.app:2222,verify=0
 ```
 
 Then connect to the instance via SSH using:
@@ -190,16 +203,18 @@ kraft cloud instance list
 
 </CodeTabs>
 
+<div style={{ marginTop: '0.8em' }} />
+
 <CodeTabs syncKey="cli">
 
 ```ansi title="unikraft"
-[1mMETRO[0m  [1mNAME[0m            [1mSTATE[0m     [1mIMAGE[0m          [1mARGS[0m  [1mMEMORY[0m   [1mVCPUS[0m  [1mCREATED[0m
-fra    openclaw-8tosm  [94mstarting[0m  demo/openclaw        4096MiB   1      just now
+[1mMETRO[22m  [1mNAME[22m            [1mSTATE[22m    [1mIMAGE[22m              [1mARGS[22m  [1mMEMORY[22m  [1mVCPUS[22m  [1mFQDN[22m                                     [1mCREATED[22m
+fra    openclaw-8tosm  [38;2;43;127;255mstandby[0m  <my-org>/openclaw        4.0GiB  1      divine-flower-bxsaapup.fra.unikraft.app  2 minutes ago
 ```
 
 ```ansi title="kraft"
-[1mNAME[0m            [1mIMAGE[0m          [1mARGS[0m  [1mCREATED AT[0m
-openclaw-8tosm  demo/openclaw        20 seconds ago
+[0;1;39mNAME[0m            [0;1;39mFQDN[0m                                     [0;1;39mSTATE[0m    [0;1;39mSTATUS[0m   [0;1;39mIMAGE[0m                                                 [0;1;39mMEMORY[0m   [0;1;39mVCPUS[0m  [0;1;39mARGS[0m  [0;1;39mBOOT TIME[0m
+openclaw-8tosm  divine-flower-bxsaapup.fra.unikraft.app  [0;36mstandby[0m  standby  oci://unikraft.io/<my-org>/openclaw@sha256:7a3d9f...  4.0 GiB  1            8.45 ms
 ```
 
 </CodeTabs>
@@ -241,13 +256,13 @@ cat ~/.openclaw/openclaw.json
 
 Set `gateway.controlUi.allowedOrigins` in `~/.openclaw/openclaw.json`:
 
-```json
+```json title="openclaw.json"
 ...
   "gateway": {
     ...
     "controlUi": {
       "allowedOrigins": [
-        "https://proud-smoke-cjf0wro8.fra0-demo.unikraft.app:18789"
+        "https://proud-smoke-cjf0wro8.fra.unikraft.app:18789"
       ]
     },
     ...
@@ -265,7 +280,7 @@ openclaw gateway run --bind lan
 
 You may now access the web dashboard at the following address:
 
-```ansi
+```text title=""
 https://<address>:18789?token=<token>
 ```
 
