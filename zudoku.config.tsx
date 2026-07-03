@@ -280,6 +280,7 @@ const config: ZudokuConfig = {
             "/cli/unikraft/completion",
             "/cli/unikraft/login",
             "/cli/unikraft/logout",
+            "/cli/unikraft/quotas",
             "/cli/unikraft/run",
             "/cli/unikraft/tui",
             "/cli/unikraft/upgrade",
@@ -315,6 +316,7 @@ const config: ZudokuConfig = {
               collapsed: false,
               items: [
                 "/cli/unikraft/images",
+                "/cli/unikraft/images/build",
                 "/cli/unikraft/images/copy",
                 "/cli/unikraft/images/delete",
                 "/cli/unikraft/images/get",
@@ -400,9 +402,11 @@ const config: ZudokuConfig = {
               collapsed: false,
               items: [
                 "/cli/unikraft/volumes",
+                "/cli/unikraft/volumes/attach",
                 "/cli/unikraft/volumes/clone",
                 "/cli/unikraft/volumes/create",
                 "/cli/unikraft/volumes/delete",
+                "/cli/unikraft/volumes/detach",
                 "/cli/unikraft/volumes/edit",
                 "/cli/unikraft/volumes/get",
                 "/cli/unikraft/volumes/import",
