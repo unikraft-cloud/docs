@@ -5,10 +5,8 @@
 ################################################################################
 FROM golang:1.26 AS build-kraft-docs
 
-ARG CHANNEL=staging
-
 WORKDIR /kraftkit
-ADD https://github.com/unikraft/kraftkit.git#${CHANNEL} /kraftkit
+ADD https://github.com/unikraft/kraftkit.git#staging /kraftkit
 
 RUN make docs
 
@@ -17,10 +15,8 @@ RUN make docs
 ################################################################################
 FROM golang:1.26 AS build-cli-docs
 
-ARG CHANNEL=staging
-
 WORKDIR /cli
-ADD https://github.com/unikraft/cli.git#${CHANNEL} /cli
+ADD https://github.com/unikraft/cli.git#staging /cli
 
 RUN make docs
 
