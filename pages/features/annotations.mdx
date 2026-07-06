@@ -16,8 +16,10 @@ They use the same key syntax as [Kubernetes annotations](https://kubernetes.io/d
 Unlike [tags](/platform/tagging), which act as controller-level labels that only the platform sees, annotations also reach the guest.
 You can use them for two things:
 
+{/* vale off */}
 1. **Custom metadata**—the instance's startdata includes its annotations, so the guest can read them at runtime.
 2. **Structured log output**—you select which annotations the platform injects into the VM's console log output.
+{/* vale on */}
 
 {/* vale off */}
 :::caution

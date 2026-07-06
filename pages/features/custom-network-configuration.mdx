@@ -94,11 +94,11 @@ This lets you reference one instance's interface from another.
 When enabled, the guest configures the interface for you.
 Disable it to leave the interface untouched, so your app or image can set up networking on its own.
 
-### Network Shield and Relay
+### Network shield and relay
 
 The network shield feature provides the ability to transparently insert a “shield” between a microVM and the public Internet.
 The shield provides filtering capabilities but also the possibility to inject credentials/secrets for agentic or other use cases.
-This is useful in sandbox environments - as it means the sandbox will not need unfiltered network access or access to secrets.
+This is useful in sandbox environments, as it means the sandbox won't need unfiltered network access or access to secrets.
 The shield relies on a relay feature that redirects all network traffic to and from a network interface toward another network interface.
 This allows for setting up a gateway/proxy VM and configure its interface as the relay for another VM's interface.
 

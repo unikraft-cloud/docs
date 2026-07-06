@@ -1,0 +1,289 @@
+---
+title: "Release 10: Themisto"
+description: Unikraft Cloud Release 10 (Themisto) release notes.
+---
+**Released:** 2026-06-05
+
+---
+
+{/* vale off */}
+
+Release 10 focuses on instance lifecycle management and observability. New capabilities include runtime user management, instance annotations, hotpluggable volumes for scale-to-zero instances, indefinite instance retention with post-mortem metrics, and the ability to wake VMs from TAP device traffic. On the tooling side, the CLI gains a new `unikraft api` passthrough and EROFS rootfs by default, while Kraftlet picks up full CSI integration and ROM-based ephemeral volumes.
+
+{/* vale on */}
+
+---
+
+## Platform
+
+### Image tag response format change
+
+The `GET /v1/images` and `GET /v1/images/list` endpoints now return only the actual OCI tag.
+For an image such as `oci://unikraft.io/user/image:latest`, the response used to contain `user/image:latest` and now contains `latest`.
+Update any clients that parse the `tag` field.
+
+### Retained instance state renamed
+
+The lifecycle state for logically removed but still-retained instances changed from `dead` to `deleted`.
+Update any monitoring, automation, or filtering logic that matches on the old state name.
+
+### User management at runtime via userdb
+
+A new user database (`userdb`) makes it possible to manage users at runtime rather than only at startup.
+This work also made internal database entry replacements atomic, improving robustness.
+This release removes the "no authorization" mode.
+Deployments must now run with authorization enabled.
+
+### Instance annotations
+
+Instances can now carry user-defined annotations, which you can also include in the instance log output.
+This makes it easier to correlate instance behavior with deployment-specific metadata such as environment, tenant, or release identifiers.
+
+### Hotplug volumes for scale-to-zero and template-derived instances
+
+You can now hotplug new volumes to instances during scale-to-zero cycles and add volumes to instances created from templates.
+This allows storage configuration to evolve over the lifetime of an instance without recreating it.
+
+### Indefinite retention of instances
+
+You can now keep instances indefinitely instead of enforcing a time-based limit.
+This is useful for keeping post-mortem state available for longer investigation windows.
+
+The instance `DELETE` endpoint now accepts a `dont_retain` flag that removes a retained instance immediately instead of keeping it around for the configured retention window.
+This gives operators a direct way to reclaim resources held by retained instances.
+
+### Metrics endpoint available for retained instances
+
+You can now query the `/v1/instances/metrics` endpoint for retained instances.
+Operators can continue to export metrics for instances that the platform still retains after removal, which is useful for debugging and accounting.
+
+### Image pull policy forwarding
+
+The image pull policy configured in the API is now forwarded to the host platform.
+This allows eliminating image pull latency when you use the `if_not_present` policy together with background image updates configured in the host platform.
+
+### Merge image default environment with instance environment
+
+When starting an instance, the environment variables defined as defaults on the image are now merged with any instance-level environment variables.
+The instance-level variables no longer fully replace the defaults.
+This change also fixes a problem where environment variables weren't escaped correctly.
+
+### Image fetch errors propagated to the proxy
+
+Image fetch failures now reach the proxy layer.
+Clients triggering an instance via the proxy receive a more meaningful response when the platform can't pull the underlying image, instead of a generic failure.
+
+### Wake VMs from TAP device traffic
+
+Incoming traffic on a TAP device can now wake instances, broadening the set of wake-up sources beyond the existing trigger mechanisms.
+This allows private VM instances without a service group to have scale-to-zero configured and wake up when needed.
+
+### Configurable database storage location
+
+A new `--db-path` option lets operators choose where the platform stores its databases.
+This makes it easier to place the databases on dedicated storage, separate from logs or other state.
+
+---
+
+## Tooling
+
+### CLI
+
+#### New `unikraft api` subcommand
+
+`unikraft api <endpoint>` issues an authenticated HTTP request to the Unikraft Cloud API, reusing the current profile, default metro, and credentials.
+Use it for endpoints that don't yet have a dedicated subcommand, and for exploration and scripting.
+
+```sh
+# List instances in the default metro
+unikraft api /v1/instances
+
+# Inspect a specific instance
+unikraft api /v1/instances/abc123-...-def456
+
+# Create a 256MB volume in fra
+unikraft api /v1/volumes --metro fra -d '{"name":"data","size_mb":256}'
+
+# POST a request body from a file or stdin
+unikraft api /v1/volumes -d @volume.json
+cat volume.json | unikraft api /v1/volumes -d @-
+
+# Delete an instance
+unikraft api /v1/instances/abc123-...-def456 -X DELETE
+```
+
+#### EROFS rootfs by default
+
+`unikraft build` now produces EROFS root filesystems by default.
+EROFS images are smaller and faster to mount than the CPIO archives used before, which translates to lower cold-start latency and reduced per-image storage cost.
+
+The runtime's advertised feature flags drive the selection: if every target platform reports EROFS support, the builder picks EROFS.
+Otherwise it falls back to CPIO.
+Existing Kraftfiles continue to work without changes.
+
+#### Kraftfile schema updates
+
+Two changes have landed in the v0.7 Kraftfile schema.
+
+`rootfs.format` no longer defaults to `cpio` at parse time.
+Before this change, the parser rewrote a `rootfs` without an explicit `format` to `format: cpio`.
+The parser now leaves the field empty and lets the tooling pick a format based on the target runtime's advertised capabilities.
+Set `format:` explicitly if you need to pin one.
+
+```yaml
+spec: v0.7
+rootfs:
+  source: ./rootfs
+  # format: cpio    # set explicitly to pin; previously implied
+```
+
+New optional `dockerfile:` field on `rootfs.source`.
+A Dockerfile-backed rootfs can now point at a Dockerfile independent of its build context, matching the behaviour of `docker build -f`.
+
+```yaml
+spec: v0.7
+rootfs:
+  source:
+    type: dockerfile
+    path: .
+    dockerfile: ./custom/path/Dockerfile
+```
+
+#### ROM support
+
+ROMs provide read-only image volumes that many instances can share at low overhead.
+The CLI can now build them, attach them at instance creation time, and edit them on existing instances.
+
+```sh
+# Attach a ROM image at /rom on a new instance
+unikraft instance create \
+    --name demo \
+    --metro fra \
+    --image nginx:latest \
+    --rom image=myuser/my-rom:latest,at=/rom,name=docs
+
+# Attach an inline ROM built from a local directory
+unikraft instance create \
+    --name demo \
+    --metro fra \
+    --image nginx:latest \
+    --rom dir=./mydata,at=/rom
+
+# Add a ROM to an existing instance
+unikraft instance edit demo --rom image=myuser/my-rom:latest,at=/rom2
+```
+
+ROMs are also surfaced as fields on `unikraft instance get`/`list` under `roms.*.{name,image,dir,at}`.
+
+#### `deleted` Instance state
+
+The CLI now understands the new `deleted` lifecycle state for instances that the platform has logically removed but still retains.
+You can see them in `unikraft instance list` and filter for them explicitly.
+
+```sh
+unikraft instance list --filter 'state==deleted'
+```
+
+#### Volume access modes
+
+`unikraft volume create` now accepts an `--access-mode` flag that controls how many instances can share a volume.
+
+```sh
+# Read-write, single attachment (default)
+unikraft volume create --name data --size 10GiB --access-mode rwo
+
+# Read-only, may be attached to many instances
+unikraft volume create --name assets --size 1GiB --access-mode rox
+
+# Read-write, may be attached to many instances
+unikraft volume create --name shared --size 1GiB --access-mode rwx
+```
+
+#### `--rm` Flag on `unikraft instance create`
+
+`unikraft instance create --rm` marks the VM for automatic deletion once it exits.
+This matches `docker run --rm` and is the preferred form for one-shot and CI workloads.
+
+```sh
+unikraft instance create \
+    --name oneshot \
+    --metro fra \
+    --image my-job:latest \
+    --rm
+```
+
+#### `idle` Scale-to-zero policy
+
+`--scale-to-zero` now accepts `policy=idle` in addition to `on` and `off`.
+The platform scales idle instances down after `cooldown-time` of no activity, without requiring an explicit stateful/stateless distinction.
+
+```sh
+unikraft instance create \
+    --name web \
+    --metro fra \
+    --image nginx:latest \
+    --scale-to-zero policy=idle,cooldown-time=30000
+```
+
+#### Insecure registries
+
+`unikraft build` and `unikraft images` now accept `--insecure` to opt into HTTP or unverified-TLS connections to specific registries, for use with internal mirrors and self-signed deployments.
+
+```sh
+unikraft build . --output my-org/my-app:latest --insecure registry.internal
+unikraft images pull my-org/my-app:latest --insecure
+```
+
+### KraftKit
+
+#### Kraftfile schema v0.7
+
+KraftKit picks up the v0.7 schema changes: `rootfs.format` is no longer defaulted at parse time, and a new optional `dockerfile:` field can point at a custom Dockerfile path.
+
+#### Fetch images from per-metro image stores
+
+`kraft cloud image list` and image-pull flows now also consult per-metro image stores alongside the global registry.
+When a metro has already cached an image locally, the pull resolves against it directly, shortening cold-start image pulls for clients colocated with the metro.
+
+```sh
+# Lists images visible in the fra metro, including its local store
+kraft cloud image list --metro fra
+```
+
+### Kraftlet
+
+Kraftlet is the Unikraft Cloud integration for Kubernetes, allowing you to run microVMs as Kubernetes pods.
+
+#### CSI integration
+
+Kraftlet now integrates with the Kubernetes CSI to provision and attach volumes from arbitrary storage backends to Unikraft Cloud instances.
+Kraftlet stages volumes by calling the appropriate CSI plugin based on the PVC's storage class, then publishes them to the VM via Unikraft Cloud managed volumes.
+
+The Helm chart now exposes the CSI endpoint and supports setting the required node annotations.
+
+```yaml
+# values.yaml
+csi:
+  endpoint: unix:///var/lib/kubelet/plugins/csi.example.com/csi.sock
+nodeAnnotations:
+  volumes.kubernetes.io/controller-managed-attach-detach: "true"
+```
+
+#### Ephemeral volumes as ROMs
+
+`configMap`, `secret`, and projected volumes are now mounted as inline ROMs instead of going through the previous import flow.
+Pod startup no longer has to wait for an import instance to populate the volume contents, which reduces start time for pods that mount ConfigMaps or Secrets.
+
+#### Resource tagging
+
+Kraftlet tags all Unikraft Cloud resources it creates with their origin, including the Kraftlet node name, originating Kubernetes namespace and resource name, and CSI plugin and storage class where applicable.
+This allows attributing Unikraft Cloud resources back to their Kubernetes owners without maintaining a separate mapping.
+
+#### Custom node annotations
+
+Kraftlet can advertise arbitrary annotations on its Kubernetes node object, configured through the Helm chart.
+This underpins the CSI controller-managed-attach annotation and allows operators to attach cluster-side metadata to the Kraftlet node.
+
+---
+
+[Back to all releases](/releases)

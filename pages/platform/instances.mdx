@@ -295,7 +295,7 @@ A manual start or stop of the instance aborts the restart sequence and resets th
 [^2]: A stop command originating from the user travels through the platform controller.
       This is why bit 2 [P] will also always occur for user-initiated stops.
 [^3]: Internally this bit is set when ukpd, the platform controller, initiates the stop.
-[^4]: The system sets reserved bits to 0. Ignore them.
+[^4]: The system sets reserved bits to 0; ignore them.
 {/* vale on */}
 
 ## Creating instances
@@ -452,7 +452,9 @@ echo 1 > /uk/libukp/template_instance
 This action instructs the controller to freeze running processes and save the instance as a reusable template.
 The write blocks until the platform has snapshotted the instance and created the new instance from the resulting template.
 When the write returns, the guest is already running as the freshly cloned instance, restored from the snapshot rather than continuing as the original.
+{/* vale Microsoft.Dashes = NO */}
 This lets the guest finish any instance-specific setup—such as reading per-instance data from an attached [inline ROM](/features/roms#inline-roms)—immediately after the write completes.
+{/* vale Microsoft.Dashes = YES */}
 If the template already exists, the clone happens right away and the write returns without re-snapshotting.
 You can also create a template from an instance (even when it's running) by calling [`POST /instances/templates`](/api/platform/v1/instances#create-template-instances-from-instances), or using the CLI:
 

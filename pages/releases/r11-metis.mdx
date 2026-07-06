@@ -1,0 +1,313 @@
+---
+title: "Release 11: Metis"
+description: Unikraft Cloud Release 11 (Metis) release notes.
+---
+**Released:** 2026-07-03
+
+---
+
+Release 11 is a major step forward for the platform.
+It brings advanced snapshotting capabilities, including branching and checkpointing, alongside custom filesystems for persistent storage.
+A plugin API extends a microVM with your own code.
+Enterprise customers already have access to a sandbox plugin built on it.
+
+Also new is the network shield.
+It sits between any microVM and the public Internet, filtering traffic and injecting tokens or secrets so they never have to live inside the microVM itself.
+The shield is a minimalist, scale-to-zero microVM, as isolated as everything else you run.
+
+All features in this release are available to enterprise customers now and coming to the hosted platform soon.
+Below, the notes cover platform features and the tooling that supports them.
+
+---
+
+## Platform
+
+### Branching
+
+Branching clones an existing instance (microVM), including its full memory and volume state, by referencing a source instance in the `POST /v1/instances` call:
+
+```json
+{
+  "name": "my-branch",
+  "branch_from": { "name": "my-instance" }
+}
+```
+
+As with creating an instance from a template, you can add ROMs, attach volumes, and configure services on the branch.
+The source VM experiences at most a few milliseconds of downtime when you take a branch, rather than pausing during a copy.
+
+**Breaking changes:** None.
+This is an additive capability.
+
+**Requirements and limitations:** Branching supports block-based volumes (for example, `ext4`).
+Requires a valid license.
+
+**Why it matters:** Branching is the foundation for stateful instance workflows on the platform.
+It enables fast, low-downtime cloning of live workloads for testing, scaling, and recovery.
+It applies to many use cases, including launching sub-agents or branching large production databases to develop on them without risk.
+
+**Learn more:** [Branching](/features/branching)
+
+### Checkpointing
+
+Checkpointing captures the state of a microVM (running or in any other state), including its full memory and volume state, as a named, restorable checkpoint.
+You can take a checkpoint of a running instance without stopping it, keep a history of successive checkpoints, and create new instances from any checkpoint later on.
+
+Create checkpoints via `POST /v1/instances/checkpoints`:
+
+```json
+{
+  "name": "my-checkpoint",
+  "from": { "name": "my-instance" }
+}
+```
+
+A checkpoint enters a `starting` state while the platform creates it, then transitions to a `checkpoint` state.
+If you omit a name, the checkpoint inherits the instance name plus a random suffix.
+The API provides a complete set of management endpoints:
+
+- **Per-instance history:** `GET /v1/instances/history?name=my-instance`
+- **Per-checkpoint lineage:** `GET /v1/instances/checkpoints/history?name=my-checkpoint`
+- **Checkpoint details:** `GET /v1/instances/checkpoints?name=my-checkpoint`
+- **List all checkpoints:** `GET /v1/instances/checkpoints`
+- **Delete:** `DELETE /v1/instances/checkpoints?name=my-checkpoint`
+- **Patch** (delete-lock, tags, autokill): `PATCH /v1/instances/checkpoints`
+
+Checkpoints support an `autokill` property (`{ "time_ms": X }`) that removes a checkpoint automatically if you haven't loaded it within the given time window.
+Deleting an instance that owns checkpoints doesn't remove those checkpoints.
+You load a checkpoint by creating a new instance from it via `POST /v1/instances`, configuring services, extra volumes, and ROMs on the new instance as you would with branching and templates:
+
+```json
+{
+  "name": "my-new-instance",
+  "checkpoint": { "name": "my-checkpoint" }
+}
+```
+
+Coming soon: fully rewindable VMs that you can rewind to an arbitrary checkpoint without spawning a new one.
+
+**Breaking changes:** None.
+This is an additive capability.
+
+**Requirements and limitations:** Requires a valid license.
+Checkpointing only works with block-based volumes (for example, `ext4`).
+You load checkpoints by creating a new instance from them.
+In-place rewind of an instance to a previous checkpoint isn't part of this release.
+
+**Why it matters:** Checkpointing gives you low-latency, point-in-time recovery and reproducible starting states for running workloads.
+This helps with debugging, experimentation, and rollback.
+
+**Learn more:** [Checkpoints](/features/checkpoints)
+
+### Custom filesystems and persistent volumes
+
+Unikraft Cloud supports defining custom filesystems with custom hooks for operations like format, mount, unmount, and delete.
+This enables volumes that you can share across a cluster, and so persistent volumes for use cases such as running ephemeral agents whose state lives in volumes.
+That state then stays available across the nodes or servers in a cluster, for example shared storage backed by S3 with a POSIX interface like JuiceFS provides.
+
+**Breaking changes:** None.
+This is an additive capability.
+
+**Requirements and limitations:** None.
+
+**Why it matters:** Enables cluster-level, shared filesystem capabilities for agentic and other use cases.
+
+**Learn more:** [Volumes](/platform/volumes#filesystems)
+
+### Custom network configuration
+
+You can now create microVMs with many network interfaces and fully custom network configuration via `POST /v1/instances`:
+
+```json
+{
+  "network_interfaces": [
+    { "name": "my-instance-private" },
+    { "name": "my-instance-public", "ip": "192.168.0.1/30", "tap_name": "vpc0", "autoconfig": true }
+  ],
+  "gateway": "192.168.0.100",
+  "nameserver": "1.2.3.4"
+}
+```
+
+The first interface is the **primary interface**: the `private_ip` that the instance returns always comes from it, and the proxy forwards traffic to the primary interface's IP.
+If you omit `ip` and `tap_name`, the platform chooses a TAP device from its pool.
+You must specify both fields or neither.
+Interface names are user-global rather than instance-local, so another instance can reference your interface as its relay.
+If you omit `name`, the platform autogenerates it as `<instance_name>-ethX`, falling back to `eth-<random suffix>`.
+`autoconfig` (default `true`) controls whether the guest kernel configures the interface or leaves it to the app/image, independent of the TAP device used.
+An empty `"network_interfaces": [ {} ]` is valid and allocates one pool interface with an autogenerated name, the same as omitting the field.
+When you don't specify `gateway` or `nameserver`, the platform derives them from the relevant interface's IP network.
+
+**Breaking changes:** None.
+The controller detects whether the guest kernel supports the feature, so existing images and workloads keep working.
+
+**Requirements and limitations:** Up to 4 interfaces per instance.
+Requires the latest `base-compat`, the `net_manager` permission, and a valid license.
+This release doesn't support PATCH for network configuration.
+
+**Why it matters:** Custom network interfaces enable real VPC-style topologies, such as public/private separation and custom gateways and nameservers.
+They also form the foundation that the network shield builds on, which makes them essential for secure sandbox networking.
+
+**Learn more:** [Custom network configuration](/features/custom-network-configuration)
+
+### Network shield and relay
+
+The network shield transparently inserts a shield between a microVM and the public Internet.
+The shield filters traffic and can inject credentials or secrets for agentic and other use cases.
+It relies on a relay feature that redirects all network traffic to and from a network interface toward another interface.
+This lets you set up a gateway or proxy VM and configure its interface as the relay for another VM's interface via `POST /v1/instances`:
+
+```json
+{
+  "name": "my-sandbox",
+  "network_interfaces": [
+    { "relay": { "name": "my-gateway-iface", "relay_dns": true } }
+  ]
+}
+```
+
+Relay is a core part of the sandbox support in Unikraft Cloud.
+A typical topology pairs a sandbox instance with a shield microVM that scans all traffic and injects secrets.
+
+The sandbox never has unfiltered network access and never holds any secrets itself.
+
+All traffic passes over the relay, and many VMs can share one.
+Unikraft Cloud supports managed interfaces with custom TAP devices, and you don't need to enable VM-to-VM communication (which you wouldn't want in a sandbox setup anyway).
+The relay can handle DNS requests, or the platform's default DNS server can answer them via `relay_dns` (default `true`).
+This simplifies setups that don't run a DNS server in the relay VM.
+A guest acting as a relay should set `net.ipv4.ip_forward=1` and `rp_filter=0`.
+
+**Breaking changes:** None.
+This is an additive capability built on the custom network configuration.
+
+**Requirements and limitations:** Requires the latest `ukp-networking` package and a reconfiguration of the firewall and TAP devices.
+As part of the custom network configuration, that feature gates relay.
+
+**Why it matters:** Shield and relay make a genuinely secure sandbox possible.
+They centralize traffic inspection and secret injection in a controlled gateway, which keeps untrusted workloads isolated from secrets and from unfiltered network access.
+Each shield runs as a separate microVM, so every shield instance stays fully isolated from the others.
+You get isolation for your main workload (such as sandboxes, browsers, and databases) and for the shield protecting it.
+
+**Learn more:** [Network shield and relay](/features/custom-network-configuration#network-shield-and-relay)
+
+### Plugin API
+
+The plugin API powers the native sandbox experience.
+A plugin runs a small HTTP server that accepts commands for execution in the VM, offers filesystem services, and more.
+The mechanism is general and supports other plugin types as well.
+Unlike a regular service, plugin HTTP access uses the same authentication as a normal API call, requires no service group, and talks to the instance directly.
+When you enable scale-to-zero, the request wakes the instance, which stays up for the request's duration, exactly like a normal request.
+
+The plugin API loads plugins into an instance and exposes each plugin over an authenticated address of the form `https://api.<REGION>.unikraft.cloud/v1/instances/<UUID>/plugins/<PLUGIN_NAME>/*`.
+The platform forwards everything after the plugin name (`*`) to the plugin as the path.
+You declare plugins at instance creation time via `POST /v1/instances`, where `config` accepts arbitrary JSON:
+
+```json
+{
+  "name": "my-instance",
+  "plugins": [
+    { "name": "my-plugin", "image": "user/myplugin:latest", "config": {} }
+  ]
+}
+```
+
+A plugin is a standard ROM image (see the docs) with an executable named `init` in its root.
+The platform loads and mounts it at `/uk/plugins/<plugin_name>`, starts it, and passes its `config` via STDIN.
+It also passes an `--api_fd X` argument that carries the socket file descriptor for accepting connections.
+The controller assigns the socket port on a best-effort basis within a configurable range (`--vmm-plugin-port-start`, default 20000, and `--vmm-plugin-port-end`, default 29999).
+It skips ports already in use by the guest.
+Plugin names can be up to 63 characters and contain only `a-z`, `A-Z`, `0-9`, `-`, and `_`.
+The PATCH endpoint fully supports plugins.
+They load on the scale-to-zero, suspend, and restart cycle like ROMs, and an instance inherits them when you clone it via branching or checkpointing.
+
+**Breaking changes:** None.
+This is an additive capability.
+
+**Requirements and limitations:** Requires the latest `base-compat` and a valid license.
+You can load up to 8 plugins per instance.
+Plugin unloading arrives in the next release.
+
+**Why it matters:** The plugin API delivers a powerful, native sandbox experience: in-VM command execution and filesystem services over an authenticated channel, without exposing an unauthenticated service.
+It also provides a general extension point for custom in-instance functionality that applies to any use case.
+Dashboard support for the plugin API is coming soon.
+
+**Learn more:** [Plugins](/features/plugins)
+
+---
+
+## Tooling
+
+#### Image pruning
+
+The platform now automatically prunes unused images from disk.
+When no running or stopped instance references an image, the platform garbage-collects it to reclaim space.
+If you need the image again later, the platform pulls it on demand from the registry.
+
+**Breaking changes:** Images that you push directly to the [local registry](/cli/registries) now become eligible for pruning, so don't treat them as long-term storage.
+Push images you want to keep to the global registry instead.
+
+**Requirements and limitations:** Pruning applies only to images that no instance currently uses.
+
+**Why it matters:** Prevents hosts from filling their disks over time in environments with frequent image rebuilds or updates, which reduces operational toil and avoids unexpected failures from exhausted storage.
+
+**Learn more:** [Unikraft Cloud documentation](https://unikraft.com/docs/introduction)
+
+#### Improved health checks
+
+The `/v1/healthz` endpoint now supports more health checks, including admin-defined checks for workflows like marking a node as not ready during upgrades or draining.
+With root access, it can also include more metadata, such as version information and license status, to simplify remote inspection.
+
+**Breaking changes:** None.
+
+**Requirements and limitations:** The endpoint returns some fields only with elevated or root access.
+
+**Why it matters:** Makes it easier to automate operations and diagnose issues across a fleet using a single, scriptable health endpoint.
+
+**Learn more:** [Unikraft Cloud documentation](https://unikraft.com/docs/introduction)
+
+### CLI
+
+#### Follow logs on start and restart
+
+`unikraft` already supported following logs for instances that you create and start via `unikraft run`, but `unikraft start` and `unikraft restart` didn't.
+This release adds `--follow` consistently across these commands.
+
+**Breaking changes:** None.
+
+**Requirements and limitations:** Log streaming depends on the platform's logging support for the instance.
+
+**Why it matters:** Removes a small but common workflow inconsistency and reduces friction when you check a start or restart.
+
+**Learn more:** [Unikraft Cloud documentation](https://unikraft.com/docs/introduction)
+
+### Dashboard
+
+#### Revamped dashboard
+
+A powerful product deserves a beautiful interface, and the dashboard now has a fully revamped one.
+
+You can now check real-time metrics for all your resources and inspect instance logs.
+You can start and stop instances directly from the UI and manage your organization, including user management.
+
+Coming soon, you'll also be able to SSH directly into a particular instance and create or delete instances.
+You'll be able to inspect the lifetime of an instance as you checkpoint or fork it.
+
+**Breaking changes:** None.
+
+**Requirements and limitations:** None.
+
+**Why it matters:** Improves usability today and sets up a stronger UI foundation, so future dashboard features can ship faster and more consistently.
+
+#### Online enterprise documentation
+
+Enterprise documentation has moved from a static, periodically distributed document to a centralized online docs portal for enterprise customers.
+
+**Breaking changes:** None.
+
+**Requirements and limitations:** Only enterprise customers can access it.
+
+**Why it matters:** Keeps documentation current, makes updates available immediately, and provides a single source of truth for enterprise operators.
+
+---
+
+[Back to all releases](/releases)
