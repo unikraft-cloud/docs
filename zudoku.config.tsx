@@ -62,6 +62,18 @@ const config: ZudokuConfig = {
       label: "Documentation",
       icon: "book-open-text",
       items: [
+        // Anonymous-only nudge at the top of the Documentation sidebar
+        // prompting visitors to sign in for the enterprise docs. It hides
+        // once authenticated; enterprise users then reach the real enterprise
+        // docs via the Enterprise navigation added by the www overlay.
+        {
+          type: "link",
+          label: "Sign in for Enterprise Docs",
+          to: "https://console.unikraft.cloud/auth/signin",
+          icon: "lock",
+          display: "anon",
+        },
+        { type: "separator", display: "anon" },
         {
           type: "category",
           label: "Getting Started",
