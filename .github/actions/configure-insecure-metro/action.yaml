@@ -1,0 +1,38 @@
+name: configure-insecure-metro
+
+description: |
+  Sets insecure: true for CI metros.
+
+runs:
+  using: composite
+  steps:
+  - name: Set up Python
+    uses: actions/setup-python@v5
+    with:
+      python-version: '3.12'
+      cache: 'pip'
+      cache-dependency-path: requirements.txt
+
+  - name: Install Python dependencies
+    shell: bash
+    run: |
+      python -m pip install --upgrade pip
+      pip install -r requirements.txt
+
+  - name: Configure metro
+    shell: bash
+    run: |
+      python3 - <<'PY'
+      import yaml, os
+
+      config_path = os.path.expanduser('~/.config/unikraft/config.yaml')
+      with open(config_path) as f:
+          config = yaml.safe_load(f)
+
+      for profile in config.get('profiles', {}).values():
+          for metro in profile.get('metros', []):
+              metro['insecure'] = True
+
+      with open(config_path, 'w') as f:
+          yaml.safe_dump(config, f, default_flow_style=False)
+      PY

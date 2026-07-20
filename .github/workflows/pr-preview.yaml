@@ -18,8 +18,7 @@ concurrency:
 env:
   UKC_TOKEN: ${{ secrets.UKC_TOKEN }}
   UKC_METRO: ${{ vars.UKC_METRO }}
-  KRAFTKIT_LOG_LEVEL: error
-  KRAFTKIT_NO_CHECK_UPDATES: "true"
+  UKC_METRO_NAME: ${{ vars.UKC_METRO_NAME }}
 
 permissions:
   deployments: write
@@ -39,14 +38,19 @@ jobs:
     - name: Validate required secrets
       shell: bash
       run: |
-        if [[ -z "${{ vars.UKC_METRO }}" ]]; then
-          echo "Missing UKC_METRO variable" >&2
+        if [[ -z "${{ vars.UKC_METRO_NAME }}" ]]; then
+          echo "Missing UKC_METRO_NAME variable" >&2
           exit 1
         fi
 
+    - name: Install Unikraft CLI
+      uses: unikraft/setup-action@main
 
-    - name: Setup KraftKit
-      uses: ./.github/actions/setup-kraftkit
+    - name: Authenticate unikraft CLI
+      run: echo $UKC_TOKEN | unikraft login --token -
+
+    - name: Configure metro
+      uses: ./.github/actions/configure-insecure-metro
 
     - name: Setup docs website
       id: www
@@ -55,7 +59,7 @@ jobs:
       with:
         environment: pull-requests
         name: com-docs-pr-${{ github.event.number }}
-        metro: ${{ vars.UKC_METRO }}
+        metro: ${{ vars.UKC_METRO_NAME }}
         log-level: trace
         channel: staging
 
@@ -103,18 +107,24 @@ jobs:
     - name: Validate required secrets
       shell: bash
       run: |
-        if [[ -z "${{ vars.UKC_METRO }}" ]]; then
-          echo "Missing UKC_METRO variable" >&2
+        if [[ -z "${{ vars.UKC_METRO_NAME }}" ]]; then
+          echo "Missing UKC_METRO_NAME variable" >&2
           exit 1
         fi
 
-    - name: Setup KraftKit
-      uses: ./.github/actions/setup-kraftkit
+    - name: Install Unikraft CLI
+      uses: unikraft/setup-action@main
+
+    - name: Authenticate unikraft CLI
+      run: echo $UKC_TOKEN | unikraft login --token -
+
+    - name: Configure metro
+      uses: ./.github/actions/configure-insecure-metro
 
     - name: Cleanup deployment
       id: cleanup-www
       uses: ./.github/actions/cleanup-www
       with:
         name: com-docs-pr-${{ github.event.number }}
-        metro: ${{ vars.UKC_METRO }}
+        metro: ${{ vars.UKC_METRO_NAME }}
         delete-image: true

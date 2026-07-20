@@ -490,7 +490,7 @@ The instance `PATCH` endpoint doesn't currently support volume operations.
 ## Volume templates
 
 A volume template is a volume that you can use as a base to create new volumes with the same data.
-When you create a volume template, the platform creates a copy of the source volume and marks it as a template.
+When you create a volume template, the platform converts the source volume to a template.
 
 :::caution
 Once a volume transitions to template state, it's immutable: you can clone it but not write to it or delete it while active clones exist.

@@ -16,14 +16,11 @@ inputs:
   metro:
     required: false
     description: Unikraft Cloud Metro.
-    default: http://api.dal2.unikraft.cloud/v1
+    default: dal2
   memory:
     required: false
     description: Set the memory size.
-    default: 1Gi
-  args:
-    required: false
-    description: Optional arguments you pass to kraft cloud deploy.
+    default: 1GiB
   port:
     required: false
     description: The port the service listens on.
@@ -70,45 +67,61 @@ runs:
       set -e;
 
       # Create the service if it does not exist.
-      _SVC=$(kraft cloud --metro "${{ inputs.metro }}" service get "${{ inputs.name }}" -o raw | jq -r '.data.service_groups[].error')
-      if [[ "${_SVC}" == "8" ]]; then
+      if [[ $(unikraft services list --filter "name==${{ inputs.name }},metro==${{ inputs.metro }}" -o raw | jq 'length') -ne 1 ]]; then
         if [[ "${{ inputs.domain }}" == "" ]]; then
-          kraft cloud --metro "${{ inputs.metro }}" service create \
-            --subdomain "${{ inputs.name }}" \
+          unikraft services create --metro "${{ inputs.metro }}" \
+            --domains "${{ inputs.name }}" \
             --name "${{ inputs.name }}" \
-            "443:${{ inputs.port }}" \
+            --services "443:${{ inputs.port }}/http+tls" \
           ;
         else
-          kraft cloud --metro "${{ inputs.metro }}" service create \
-            --domain "${{ inputs.domain }}" \
+          unikraft services create --metro "${{ inputs.metro }}" \
+            --domains "${{ inputs.domain }}" \
             --name "${{ inputs.name }}" \
-            "443:${{ inputs.port }}" \
+            --services "443:${{ inputs.port }}/http+tls" \
           ;
         fi
       fi
 
       # Save the generated domain as an output variable
-      echo "domain=$(kraft cloud --metro ${{ inputs.metro }} service get ${{ inputs.name }} -o raw | jq -r '.data.service_groups[0].domains[0].fqdn')" >> $GITHUB_OUTPUT
+      echo "domain=$(unikraft services list --filter metro==${{ inputs.metro }},name==${{ inputs.name }} -o raw | jq -r '.[0].domains[0].fqdn')" >> $GITHUB_OUTPUT
 
   - name: Deploy
     id: deploy
     shell: bash
     run: |
-      kraft cloud deploy \
-        --rollout remove \
-        --rollout-qualifier all \
+      set -e;
+
+      # Remember what's currently serving so we can retire them after rollout
+      OLD=$(unikraft instances list \
+        --filter "service.name==${{ inputs.name }},metro==${{ inputs.metro }}" \
+        -o json | jq -r '.[].name');
+
+      unikraft build . \
+        --output "internal/${{ inputs.name }}:latest" \
         --build-arg API_URL="https://${{ steps.service.outputs.domain }}" \
         --build-arg PUBLIC_API_URL="https://${{ steps.service.outputs.domain }}" \
         --build-arg VITE_PUBLIC_SITE_URL="https://${{ steps.service.outputs.domain }}" \
         --build-arg PUBLIC_STATUS_PAGE_SUMMARY_URL="https://status.unikraft.cloud/api/v1/summary" \
         --build-arg PUBLIC_POSTHOG_HOST="${{ inputs.posthog-host }}" \
         --build-arg PUBLIC_POSTHOG_KEY="${{ inputs.posthog-key }}" \
-        --build-arg CHANNEL="${{ inputs.channel }}" \
-        --memory "${{ inputs.memory }}" \
+        --build-arg CHANNEL="${{ inputs.channel }}";
+
+      NEW=$(unikraft run \
+        --metro "${{ inputs.metro }}" \
+        -m "${{ inputs.memory }}" \
         --service "${{ inputs.name }}" \
-        --image "${{ inputs.name }}" \
-        --as kraftfile-runtime \
-        .;
+        --image "internal/${{ inputs.name }}:latest" \
+        -o json | jq -r '.[].name');
+
+      echo "instance=$NEW" >> $GITHUB_OUTPUT;
+
+      # Wait for the new instance to be running, then retire the old ones
+      unikraft instances wait "$NEW" --until state==running;
+
+      if [ -n "$OLD" ]; then
+        unikraft instances delete $OLD;
+      fi
 
   - name: Test liveliness
     id: liveliness
@@ -122,7 +135,7 @@ runs:
     if: ${{ steps.liveliness.outcome == 'failure' }}
     shell: bash
     run: |
-      kraft cloud service logs "${{ inputs.name }}"
+      unikraft instances logs "${{ steps.deploy.outputs.instance }}"
       exit 1
 
   - name: Update Deployment

@@ -24,16 +24,18 @@ runs:
     id: service
     shell: bash
     run: |
-      kraft cloud --metro "${{ inputs.metro }}" service remove \
-        --drain \
-        "${{ inputs.name }}" \
-      ;
+      # Delete all instances in the service before removing the service
+      unikraft instances delete \
+        --filter "service.name==${{ inputs.name }},metro==${{ inputs.metro }}" \
+        --force;
+
+      unikraft services delete \
+        --filter "name==${{ inputs.name }},metro==${{ inputs.metro }}" \
+        --force;
 
   - name: Delete Image
     if: ${{ inputs.delete-image }}
     id: image
     shell: bash
     run: |
-      kraft cloud --metro "${{ inputs.metro }}" image remove \
-        "${{ inputs.name }}" \
-      ;
+      unikraft images delete "internal/${{ inputs.name }}:latest";
