@@ -1,7 +1,7 @@
 name: configure-insecure-metro
 
 description: |
-  Sets insecure: true for CI metros.
+  Sets insecure: true for CI metros and ensures the profile has just one metro ($UKC_METRO_NAME).
 
 runs:
   using: composite
@@ -23,15 +23,27 @@ runs:
     shell: bash
     run: |
       python3 - <<'PY'
-      import yaml, os
+      import yaml, os, sys
+
+      metro_name = os.environ.get('UKC_METRO_NAME', '').strip()
+      if not metro_name:
+          print('Missing UKC_METRO_NAME variable', file=sys.stderr)
+          sys.exit(1)
 
       config_path = os.path.expanduser('~/.config/unikraft/config.yaml')
       with open(config_path) as f:
           config = yaml.safe_load(f)
 
-      for profile in config.get('profiles', {}).values():
-          for metro in profile.get('metros', []):
+      for name, profile in (config.get('profiles') or {}).items():
+          metros = [m for m in profile.get('metros') or [] if m.get('name') == metro_name]
+          if not metros:
+              print(f'No {metro_name} metro in profile {name}', file=sys.stderr)
+              sys.exit(1)
+
+          for metro in metros:
               metro['insecure'] = True
+
+          profile['metros'] = metros
 
       with open(config_path, 'w') as f:
           yaml.safe_dump(config, f, default_flow_style=False)
