@@ -434,6 +434,29 @@ Kraftlet supports the following Unikraft Cloud platform features on Kraftlet-man
   Instances attached to a Unikraft Cloud service suspend automatically when idle.
   Scale-to-zero runs by default for service-backed pods and you can configure it via Pod annotations (see [Annotations](#annotations) below).
 
+* [**Custom network configuration**](/features/custom-network-configuration)
+
+  Instances can carry addresses and TAP devices that you choose instead of ones from the platform pool.
+  Kraftlet drives this through CNI plugins (see [Custom networking with CNI](#custom-networking-with-cni) below).
+
+## Custom networking with CNI
+
+{/* vale off */}
+:::caution[**Limited Access**]
+CNI-based networking for Kraftlet is available as part of enterprise plans.
+To enable it for your account, reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
+:::
+{/* vale on */}
+
+The [Container Network Interface](https://www.cni.dev/) (CNI) configures the networking stack of a workload through plugins.
+This split lets vendors such as AWS, Tigera and Isovalent each ship their own plugin for configuring networking.
+Kubernetes builds on the same interface, and the kubelet invokes the installed CNI plugins on every node of the cluster.
+
+Kraftlet takes that role for Pods that land on the Kraftlet node.
+It invokes the CNI plugins of your cluster and passes the resulting interfaces and addresses to Unikraft Cloud.
+The platform then creates the instance with [custom network interfaces](/features/custom-network-configuration) rather than with interfaces from its own address pool.
+Instances join the same networks as native Pods and follow the same address management as the rest of the cluster.
+
 ## Annotations
 
 Kraftlet reads the following annotations from Pod and Service objects to configure Unikraft Cloud resources.

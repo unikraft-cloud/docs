@@ -61,6 +61,7 @@ Each entry in the `instances` array contains the following fields:
 |-------|------|-------------|
 | `boot_time_us` | int | Time from boot trigger to app entry point, in microseconds. Omitted if `0`. |
 | `net_time_us` | int | Time to set up the network interface, in microseconds. Omitted if `0`. |
+| `template_time_us` | int | Time to create the template/snapshot, in microseconds. Omitted if `0`. |
 
 ### Resource usage
 
@@ -264,6 +265,10 @@ instance_boot_time_s{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea"} 0.097
 # TYPE instance_net_time_s gauge
 instance_net_time_s{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea"} 0.102963
 
+# HELP instance_template_time_s Template creation time in seconds
+# TYPE instance_template_time_s gauge
+instance_template_time_s{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea"} 0.000000
+
 # HELP instance_rss_bytes Resident set size in bytes
 # TYPE instance_rss_bytes gauge
 instance_rss_bytes{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea"} 0
@@ -306,22 +311,22 @@ instance_ntotal{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea"} 2
 
 # HELP instance_wakeup_latency_seconds Wakeup latencies in seconds
 # TYPE instance_wakeup_latency_seconds histogram
-instance_wakeup_latency_seconds{le="0.001000"} 0
-instance_wakeup_latency_seconds{le="0.002000"} 0
-instance_wakeup_latency_seconds{le="0.004000"} 0
-instance_wakeup_latency_seconds{le="0.008000"} 0
-instance_wakeup_latency_seconds{le="0.016000"} 0
-instance_wakeup_latency_seconds{le="0.032000"} 0
-instance_wakeup_latency_seconds{le="0.064000"} 0
-instance_wakeup_latency_seconds{le="0.128000"} 1
-instance_wakeup_latency_seconds{le="0.256000"} 1
-instance_wakeup_latency_seconds{le="0.512000"} 1
-instance_wakeup_latency_seconds{le="1.024000"} 1
-instance_wakeup_latency_seconds{le="2.048000"} 1
-instance_wakeup_latency_seconds{le="4.096000"} 1
-instance_wakeup_latency_seconds{le="+Inf"} 1
-instance_wakeup_latency_seconds_sum 104
-instance_wakeup_latency_seconds_count 1
+instance_wakeup_latency_seconds_bucket{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea",le="0.001000"} 0
+instance_wakeup_latency_seconds_bucket{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea",le="0.002000"} 0
+instance_wakeup_latency_seconds_bucket{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea",le="0.004000"} 0
+instance_wakeup_latency_seconds_bucket{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea",le="0.008000"} 0
+instance_wakeup_latency_seconds_bucket{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea",le="0.016000"} 0
+instance_wakeup_latency_seconds_bucket{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea",le="0.032000"} 0
+instance_wakeup_latency_seconds_bucket{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea",le="0.064000"} 0
+instance_wakeup_latency_seconds_bucket{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea",le="0.128000"} 1
+instance_wakeup_latency_seconds_bucket{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea",le="0.256000"} 1
+instance_wakeup_latency_seconds_bucket{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea",le="0.512000"} 1
+instance_wakeup_latency_seconds_bucket{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea",le="1.024000"} 1
+instance_wakeup_latency_seconds_bucket{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea",le="2.048000"} 1
+instance_wakeup_latency_seconds_bucket{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea",le="4.096000"} 1
+instance_wakeup_latency_seconds_bucket{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea",le="+Inf"} 1
+instance_wakeup_latency_seconds_sum{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea"} 0.104000
+instance_wakeup_latency_seconds_count{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea"} 1
 ```
 
   </TabsContent>

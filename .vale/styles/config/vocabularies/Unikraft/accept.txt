@@ -57,14 +57,20 @@ POSIX
 PV
 PVC
 EROFS
+GPU
+GPUs
+NVIDIA
 CPIO
 CDP
 FTP
 CIDR
 PATCH
 TAP
+CNI
 CSI
+CNI
 VPC
+XFS
 
 # ==============================================================================
 # NAMES OF THINGS
@@ -138,6 +144,7 @@ VPC
 (?i)GitLab
 (?i)Go
 (?i)Golang
+(?i)GPU(s)?
 (?i)grafana
 (?i)GraphQL
 (?i)gui

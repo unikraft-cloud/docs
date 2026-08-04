@@ -96,23 +96,27 @@ Disable it to leave the interface untouched, so your app or image can set up net
 
 ### Network shield and relay
 
-The network shield feature provides the ability to transparently insert a “shield” between a microVM and the public Internet.
+A relay redirects all network traffic to and from a network interface toward another network interface.
+You can set up a relay VM and configure its interface as the relay for another VM's interface, so that all its traffic transparently passes through the relay.
+
+The **network shield** is an example of a relay: an instance inserted between a microVM and the public Internet.
 The shield provides filtering capabilities but also the possibility to inject credentials/secrets for agentic or other use cases.
 This is useful in sandbox environments, as it means the sandbox won't need unfiltered network access or access to secrets.
-The shield relies on a relay feature that redirects all network traffic to and from a network interface toward another network interface.
-This allows for setting up a gateway/proxy VM and configure its interface as the relay for another VM's interface.
+A first official network shield image will be available soon.
 
 To use a relay, reference another interface by name inside a `relay` object:
 
+{/* TODO: Update this example to use the official network shield image once it becomes available. */}
+
 <CodeTabs syncKey="cli">
 
-```bash title="Gateway instance"
+```bash title="Relay instance"
 unikraft api /v1/instances \
   -d '{
-    "name": "my-gateway",
+    "name": "my-relay",
     "network_interfaces": [
       {
-        "name": "my-gateway-iface"
+        "name": "my-relay-iface"
       }
     ]
   }'
@@ -125,7 +129,7 @@ unikraft api /v1/instances \
     "network_interfaces": [
       {
         "relay": {
-          "name": "my-gateway-iface",
+          "name": "my-relay-iface",
           "relay_dns": true
         }
       }

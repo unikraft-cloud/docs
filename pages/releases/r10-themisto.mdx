@@ -1,6 +1,7 @@
 ---
 title: "Release 10: Themisto"
 description: Unikraft Cloud Release 10 (Themisto) release notes.
+date: "2026-06-05"
 ---
 **Released:** 2026-06-05
 
@@ -36,12 +37,12 @@ Deployments must now run with authorization enabled.
 
 ### Instance annotations
 
-Instances can now carry user-defined annotations, which you can also include in the instance log output.
+[Instances](/platform/instances) can now carry user-defined [annotations](/features/annotations), which you can also include in the instance log output.
 This makes it easier to correlate instance behavior with deployment-specific metadata such as environment, tenant, or release identifiers.
 
 ### Hotplug volumes for scale-to-zero and template-derived instances
 
-You can now hotplug new volumes to instances during scale-to-zero cycles and add volumes to instances created from templates.
+You can now hotplug new [volumes](/platform/volumes) to instances during [scale-to-zero](/features/scale-to-zero) cycles and add volumes to instances created from [templates](/features/on-demand-templates).
 This allows storage configuration to evolve over the lifetime of an instance without recreating it.
 
 ### Indefinite retention of instances
@@ -55,7 +56,7 @@ This gives operators a direct way to reclaim resources held by retained instance
 ### Metrics endpoint available for retained instances
 
 You can now query the `/v1/instances/metrics` endpoint for retained instances.
-Operators can continue to export metrics for instances that the platform still retains after removal, which is useful for debugging and accounting.
+Operators can continue to export [metrics](/platform/metrics) for instances that the platform still retains after removal, which is useful for debugging and accounting.
 
 ### Image pull policy forwarding
 
@@ -252,7 +253,7 @@ kraft cloud image list --metro fra
 
 ### Kraftlet
 
-Kraftlet is the Unikraft Cloud integration for Kubernetes, allowing you to run microVMs as Kubernetes pods.
+Kraftlet is the Unikraft Cloud [integration for Kubernetes](/integrations/kubernetes), allowing you to run microVMs as Kubernetes pods.
 
 #### CSI integration
 

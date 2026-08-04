@@ -43,3 +43,4 @@ dist/
 apis/platform.yaml
 build.log
 .examples/
+public/releases/rss.xml

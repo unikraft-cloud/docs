@@ -327,6 +327,34 @@ kraft cloud deploy --replicas 2 ...
 
 </CodeTabs>
 
+### GPUs
+
+:::caution[**Limited Access**]
+GPU support is currently only available as a preview for enterprise customers.
+The interface described here reflects the current implementation and may change before general availability.
+:::
+
+Instances can run with an NVIDIA GPU attached.
+Pass the `gpus` field in the [`POST /instances`](/api/platform/v1/instances#create-instance) request to request one:
+
+```json title="POST /instances"
+{
+  ...
+  "image": "my-inference-app:latest",
+  "memory_mb": 4096,
+  "type": "full",
+  "gpus": 1,
+  ...
+}
+```
+
+An instance can currently hold at most one GPU.
+
+:::note
+GPU instances are only available on GPU-provisioned hardware.
+Please [get in touch](https://unikraft.com/contact) if you need it.
+:::
+
 ### Wait for running
 
 By default [`POST /instances`](/api/platform/v1/instances#create-instance) returns as soon as the platform queues the instance.

@@ -466,6 +466,12 @@ kraft cloud instance rm test-http-python-rom1 test-http-python-rom2
 Instead of pre-packaging and pushing a ROM image to a registry, you can provide file contents directly in the instance creation request.
 This is useful when you create instances from a [template](/platform/instances#instance-templates) where the snapshot locks `ENV` and `ARGS`, but you still need to inject instance-specific data.
 
+{/* vale off */}
+:::note
+An inline ROM is ephemeral: it's automatically deleted once the last reference to it is closed.
+:::
+{/* vale on */}
+
 To use inline ROMs with `unikraft`, specify a local directory as source:
 
 ```bash title="unikraft"

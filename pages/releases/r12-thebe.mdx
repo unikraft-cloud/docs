@@ -1,0 +1,209 @@
+---
+title: "Release 12: Thebe"
+description: Unikraft Cloud Release 12 (Thebe) release notes.
+date: "2026-08-04"
+---
+**Released:** 2026-08-04
+
+---
+
+Release 12 introduces GPU support for enterprise customers, shared instance templates across nodes, and a set of image management features including pinning, strict authorization, and pull timeouts.
+On the tooling side, the dashboard adds user invitations and richer instance and volume pages, and Kraftlet gains CNI plugin support.
+
+---
+
+## Platform
+
+### GPU support
+
+The platform now supports NVIDIA GPUs.
+You select the instance type and GPU count when creating an instance via `POST /v1/instances`:
+
+```json
+{
+  "name": "my-gpu-instance",
+  "type": "full",
+  "gpus": 1
+}
+```
+
+`type` can be `micro` (default) or `full`.
+Adding `"gpus": 1` requests a GPU for the instance.
+The platform picks a free GPU from the host and keeps it assigned for the instance's entire lifetime, including while it isn't running.
+The platform releases the GPU when you delete the instance.
+
+Running GPU workloads requires a guest kernel built with NVIDIA driver support, and the host must allow GPU passthrough.
+
+**Breaking changes:** Instances default to `micro`, so existing workloads aren't affected.
+
+**Requirements and limitations:** GPU support is in its first iteration.
+At most one GPU per instance, and selecting a specific GPU isn't yet possible.
+Block-based volumes work, but virtiofs volumes don't.
+GPU VMs report as `RUNNING` immediately and forward network traffic regardless of whether the guest is listening.
+Requires a valid license.
+GPU snapshots are on the roadmap for the next release.
+
+**Enterprise only.**
+
+### Shared instance templates
+
+[Instance templates](/features/on-demand-templates) used to be node-local: every controller had to build its own copy before cloning instances from it.
+You can now publish templates to a directory shared between controllers:
+
+```sh
+ukpd --vm-shared-template-dir /mnt/shared/templates ...
+```
+
+With this option, the node publishes every named template it creates as a self-contained bundle.
+The export runs in the background, so the request returns as soon as the template is ready locally.
+A bundle carries the template, its dependencies (volumes, ephemeral images, parent templates), the memory snapshot, and the volume files.
+The importing node pulls registry images by address as usual.
+
+Referencing a template by name now consults the shared directory.
+When `POST /v1/instances` names a template that isn't present locally, the platform imports the newest matching bundle.
+The platform replaces an existing local template when a newer bundle is available.
+Templates key on name and owner, so the platform only imports a bundle for the user that exported it.
+
+The platform versions bundles rather than overwriting them, and readers select the newest version.
+`--vm-template-gc-threshold-s` (default 6h) sets how long the platform retains older versions after a new export.
+`--vm-template-recheck-interval-s` (default 10s) throttles how often the platform checks the directory for updates.
+
+**Requirements and limitations:** All nodes must see the same directory (for example, a shared network filesystem) and know the same users.
+The platform only exports named, non-ephemeral, fully converted templates with block-based volumes.
+Reflink support (XFS) is strongly recommended for performance.
+
+**Why it matters:** Building a template is expensive.
+You can now build a template once and have it materialize on every other node on first reference.
+Scaling out to a fresh node no longer means a cold boot-and-snapshot cycle, and rolling out a new version is a single export.
+
+**Enterprise only.**
+
+### Image pinning
+
+Two new endpoints, `POST /v1/images` and `DELETE /v1/images`, let you pull an image and pin it to a node ahead of time:
+
+```json
+{
+  "url": "user/image:latest",
+  "timeout_s": 60
+}
+```
+
+`timeout_s` lets you wait until the image is ready.
+If the platform can't pull the image, the API response contains the underlying error.
+
+[`GET /v1/images`](/platform/images) now also reports the state of each image:
+
+```json
+{
+  "state": "ready",
+  "persistent": true,
+  "url": "..."
+}
+```
+
+`state` is either `pending` (the platform is pulling it) or `ready` (usable).
+`persistent` is `true` for pinned or operator-defined images.
+
+Pinned images behave like operator-defined images, but you define them at runtime.
+The platform doesn't release either type automatically when no longer in use.
+You unpin an image with `DELETE /v1/images?uuid=X`.
+
+**Requirements and limitations:** Requires the `image_manager` permission.
+You must provide `timeout_s`.
+
+**Why it matters:** Pinning turns image availability into something you control explicitly.
+Operators running many regions can pre-stage a new image version everywhere and only then switch traffic to it.
+This removes on-demand pulls from the critical path of starting an instance.
+
+**Enterprise only.**
+
+### Strict image authorization
+
+The platform caches image access permissions per user, so referencing the same image twice normally triggers only a single access check.
+For customers who operate their own registry with distinct registry users behind a single platform user, one authorized user's access can leak to another.
+
+The new controller option `--images-always-authorize` closes this gap by requiring valid credentials every time you specify an image.
+
+**Breaking changes:** None by default.
+The option is opt-in.
+When enabled, you can only use the `never` pull policy with pinned or operator-defined images.
+
+**Enterprise only.**
+
+### Image pull timeout
+
+Image requests now have a timeout, configurable with `--images-request-timeout-s` (default 60 seconds, 0 disables it).
+On timeout, the instance moves to `STOPPED`.
+
+**Breaking changes:** Instances that would hang in `STARTING` now end up in `STOPPED` after 60 seconds by default.
+
+**Why it matters:** A failed pull now surfaces as a terminal state instead of a stuck instance.
+This lets error handling upstream react rather than waiting on a request that won't complete.
+
+**Enterprise only.**
+
+### Image request merge control
+
+When an image isn't yet in `READY` state and you reference it with differing credentials, each distinct reference produces its own request.
+This release raises the per-image limit on parallel requests from 16 to 64.
+A new option on the image object controls whether a reference merges with existing ones:
+
+```json
+{
+  "url": "...",
+  "merge_requests": false
+}
+```
+
+**Breaking changes:** `merge_requests` defaults to enabled, which differs from the previous behavior.
+
+**Requirements and limitations:** Setting `merge_requests` requires the `image_manager` permission.
+
+**Enterprise only.**
+
+---
+
+## Tooling
+
+#### Heartbeat signals
+
+Licensed Unikraft Cloud Platform installations now report regular health information to the central control plane.
+This currently includes simple, timestamped health data about the system.
+
+**Enterprise only.**
+
+#### Improved image pruning reliability
+
+Image pruning (introduced in Release 11) keeps disk space usage down, but a few configurations could cause unexpected behavior.
+This release fixes those edge cases.
+
+**Enterprise only.**
+
+### Dashboard
+
+#### Organization user invitations
+
+Organization admins can now invite new team members directly from the dashboard.
+Create an invite link for a new admin or member and share it through your preferred channel.
+
+#### Improved instance and volume pages
+
+The instance and volume pages now show more information, making it faster to diagnose errors and understand the scale of your resources at a glance.
+
+### Kraftlet
+
+Kraftlet is the Unikraft Cloud [integration for Kubernetes](/integrations/kubernetes), allowing you to run microVMs as Kubernetes pods.
+
+#### CNI plugin support
+
+Kraftlet now supports Container Network Interface (CNI) plugins for configuring the networking stack of Unikraft-backed pods.
+This allows integration with different networking solutions from vendors like AWS, Tigera, and Isovalent.
+
+A separate component, `remote-cni`, allows invoking CNI plugins via a gRPC service when Kraftlet isn't collocated with the platform.
+
+**Enterprise only.**
+
+---
+
+[Back to all releases](/releases)

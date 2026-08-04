@@ -15,6 +15,11 @@ CURL    ?= curl
 EXAMPLES_REPO     ?= unikraft-cloud/examples
 EXAMPLES_BRANCH   ?= main
 GUIDES_DIR        ?= $(WORKDIR)/pages/guides
+RELEASES_DIR      ?= $(WORKDIR)/pages/releases
+
+.PHONY: generate
+generate:
+	$(WORKDIR)/scripts/generate_releases_rss.py "$(RELEASES_DIR)" "$(WORKDIR)/public/releases/rss.xml"
 
 .PHONY: lint
 lint: $(VALE)

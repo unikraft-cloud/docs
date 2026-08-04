@@ -4,8 +4,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "zudoku dev --port 3131",
-    "build": "zudoku build",
+    "dev": "make generate && zudoku dev --port 3131",
+    "build": "make generate && zudoku build",
     "preview": "zudoku preview",
     "lint": "eslint"
   },

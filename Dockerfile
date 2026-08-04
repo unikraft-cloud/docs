@@ -37,6 +37,7 @@ RUN set -xe; \
     apk --no-cache add \
         ca-certificates \
         git \
+        make \
         python3 \
         wget \
     ;

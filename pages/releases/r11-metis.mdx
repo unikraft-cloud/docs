@@ -1,6 +1,7 @@
 ---
 title: "Release 11: Metis"
 description: Unikraft Cloud Release 11 (Metis) release notes.
+date: "2026-07-03"
 ---
 **Released:** 2026-07-03
 
@@ -152,19 +153,20 @@ They also form the foundation that the network shield builds on, which makes the
 
 ### Network shield and relay
 
-The network shield transparently inserts a shield between a microVM and the public Internet.
-The shield filters traffic and can inject credentials or secrets for agentic and other use cases.
-It relies on a relay feature that redirects all network traffic to and from a network interface toward another interface.
-This lets you set up a gateway or proxy VM and configure its interface as the relay for another VM's interface via `POST /v1/instances`:
+Relay redirects all network traffic to and from a network interface toward another interface.
+This lets you set up a relay VM and configure its interface as the relay for another VM's interface via `POST /v1/instances`:
 
 ```json
 {
   "name": "my-sandbox",
   "network_interfaces": [
-    { "relay": { "name": "my-gateway-iface", "relay_dns": true } }
+    { "relay": { "name": "my-relay-iface", "relay_dns": true } }
   ]
 }
 ```
+
+A network shield is one example of a relay.
+It sits between a microVM and the public Internet, filters traffic, and can inject credentials or secrets for agentic and other use cases.
 
 Relay is a core part of the sandbox support in Unikraft Cloud.
 A typical topology pairs a sandbox instance with a shield microVM that scans all traffic and injects secrets.
