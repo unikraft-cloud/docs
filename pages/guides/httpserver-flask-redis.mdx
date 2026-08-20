@@ -57,11 +57,21 @@ Redis is an internal service (not publicly accessible), reached via the `redis.i
 
 ```bash title="unikraft"
 unikraft build redis/ --output <my-org>/redis:latest
-unikraft run --scale-to-zero policy=idle,cooldown-time=1000,stateful=true --metro fra -m 256M --image <my-org>/redis:latest --domain redis.internal
+unikraft run --metro fra \
+  -m 256M \
+  --scale-to-zero policy=idle,cooldown-time=1000,stateful=true \
+  --domain redis.internal \
+  --image <my-org>/redis:latest
 ```
 
 ```bash title="kraft"
-kraft cloud deploy --scale-to-zero idle --scale-to-zero-stateful --scale-to-zero-cooldown 1s -M 256Mi --domain redis.internal redis/
+kraft cloud deploy \
+  -M 256Mi \
+  --scale-to-zero idle \
+  --scale-to-zero-stateful \
+  --scale-to-zero-cooldown 1s \
+  --domain redis.internal \
+  redis/
 ```
 
 </CodeTabs>
@@ -119,11 +129,24 @@ It connects to Redis using the `REDIS_HOST` and `REDIS_PORT` environment variabl
 
 ```bash title="unikraft"
 unikraft build flask/ --output <my-org>/flask:latest
-unikraft run --scale-to-zero policy=on,cooldown-time=1000 --metro fra -p 443:8000/tls+http -m 512M --image <my-org>/flask:latest --env REDIS_HOST=redis.internal --env REDIS_PORT=6379
+unikraft run --metro fra \
+  -m 512M \
+  -p 443:8000/tls+http \
+  --scale-to-zero policy=on,cooldown-time=1000 \
+  --env REDIS_HOST=redis.internal \
+  --env REDIS_PORT=6379 \
+  --image <my-org>/flask:latest
 ```
 
 ```bash title="kraft"
-kraft cloud deploy --scale-to-zero on --scale-to-zero-cooldown 1s -p 443:8000/tls+http -M 512Mi flask/ --env REDIS_HOST=redis.internal --env REDIS_PORT=6379
+kraft cloud deploy \
+  -M 512Mi \
+  -p 443:8000/tls+http \
+  --scale-to-zero on \
+  --scale-to-zero-cooldown 1s \
+  --env REDIS_HOST=redis.internal \
+  --env REDIS_PORT=6379 \
+  flask/
 ```
 
 </CodeTabs>

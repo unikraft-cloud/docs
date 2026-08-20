@@ -1,0 +1,135 @@
+---
+title: Network Shield and Relay
+navigation_icon: shield
+---
+
+{/* vale off */}
+:::caution[**Limited Access**]
+Network shield and relay is a new feature which is available to enterprise customers.
+If you would like to try it out now, please reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
+:::
+
+:::caution
+Dedicated `unikraft` CLI subcommands for the network shield and relay are coming soon.
+In the meantime, configure them through the [API](/api/platform/v1/instances#create-instance), which you can invoke with `curl` or the [`unikraft api`](/cli/unikraft/api) command.
+:::
+{/* vale on */}
+
+A relay redirects all network traffic to and from a network interface toward another network interface.
+You can set up a relay VM and configure its interface as the relay for another VM's interface, so that all its traffic transparently passes through the relay.
+
+## The network shield
+
+The **network shield** is an example of a relay: an instance inserted between a microVM and the public internet.
+It sits directly in the path, as a bump on the wire, so every packet the workload sends or receives goes through it first.
+Since many instances can specify the same microVM as their relay, many sandboxes can share the same network shield.
+
+<FlowDiagram caption="Nothing reaches the internet directly: the shield sits in the path, filters traffic, and adds the credentials the instance never holds.">
+  <FlowStack>
+    <FlowStackItem label="sandbox" chip="shell" />
+    <FlowStackItem label="sandbox" chip="filesystem" />
+    <FlowStackItem label="sandbox" chip="shell / fs" />
+  </FlowStack>
+  <FlowArrow accent bidirectional label="all traffic" />
+  <FlowBox accent title="Network shield" chip="API keys · tokens">
+    A microVM every packet passes through, which filters traffic and injects secrets
+  </FlowBox>
+  <FlowArrow bidirectional />
+  <FlowBox title="Public internet">
+    Third-party APIs, package registries
+  </FlowBox>
+</FlowDiagram>
+
+The shield provides filtering capabilities but also the possibility to inject credentials/secrets for agentic or other use cases.
+This is useful in sandbox environments, as it means the sandbox won't need unfiltered network access or access to secrets.
+
+Each shield runs as its own microVM.
+This means each shield:
+
+- Can be [scaled to zero](/features/scale-to-zero) and woken up when it receives traffic.
+- Is strongly isolated from the microVMs running the workloads, and also from other network shields.
+- Is fully flexible and extensible in the capabilities it provides.
+  The image it uses determines its behavior.
+
+A first official network shield image will be available soon.
+
+## Relay
+
+To use a relay, reference another interface by name inside a `relay` object:
+
+{/* TODO: Update this example to use the official network shield image once it becomes available. */}
+
+<CodeTabs syncKey="cli">
+
+```bash title="Relay instance"
+unikraft api /v1/instances \
+  -d '{
+    "name": "my-relay",
+    "network_interfaces": [
+      {
+        "name": "my-relay-iface"
+      }
+    ]
+  }'
+```
+
+```bash title="Sandbox instance (relay client)"
+unikraft api /v1/instances \
+  -d '{
+    "name": "my-sandbox",
+    "network_interfaces": [
+      {
+        "relay": {
+          "name": "my-relay-iface",
+          "relay_dns": true
+        }
+      }
+    ]
+  }'
+```
+
+</CodeTabs>
+
+Relay builds on [custom network configuration](/features/custom-network-configuration): the `relay` object is a field of a `network_interfaces` entry, so the same permission, license, and limitations apply.
+
+The `relay` object accepts the following fields:
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | Yes | The name of the interface to relay traffic through, which must belong to another instance in your account. |
+| `relay_dns` | No | Whether the relay forwards DNS requests, `true` by default, with `false` leaving them to the default DNS server. |
+
+### Relay notes
+
+ - All network traffic passes over the relay.
+   Many VMs can share a single relay.
+
+ - This feature supports managed interfaces with custom TAP devices.
+
+ - You don't need to enable VM-to-VM communication to use this feature (which you don't want in a sandbox environment).
+
+ - DNS requests can be either passed to the relay or the default DNS server.
+   This is to simplify setups where security isn't the focus as you don't need to run a DNS server in the relay VM.
+
+ - The guest acting as a relay VM should have net.ipv4.ip_forward=1 and rp_filter=0 set.
+
+## Error handling
+
+| Error message | Cause |
+|---------------|-------|
+| `Insufficient license. Please make sure your license is valid and includes custom network configurations` | Your account's license doesn't include custom network configuration, which relay is part of. |
+| `Unknown member 'network_interfaces'` | Your account lacks the `net_manager` permission required for this feature. |
+
+## Limitations
+
+- The feature requires the `net_manager` permission and a license that includes it (see the note at the top of this page).
+- Creating a [template](/platform/instances#instance-templates) from an instance **drops** its network configuration, since binding a template to a specific TAP device or IP defeats the purpose of cloning many instances from it.
+- The create call sets the configuration once, and **no** PATCH support exists yet.
+- Every [custom network configuration](/features/custom-network-configuration#limitations) limitation applies here too, since relay is part of that feature.
+
+## Learn more
+
+* [Custom network configuration](/features/custom-network-configuration): the interface, gateway, and nameserver settings that relay builds on.
+* [Instances](/platform/instances): how instances work, from their lifecycle to their configuration.
+* [Sandboxes](/use-cases/sandboxes): run untrusted code in a hardware-isolated microVM.
+* Unikraft Cloud's [REST API reference](/api/platform/v1), in particular the section on [instances](/api/platform/v1/instances).

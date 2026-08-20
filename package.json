@@ -16,7 +16,7 @@
     "react": ">=19.0.0",
     "react-dom": ">=19.0.0",
     "regex-utilities": "^2.3.0",
-    "zudoku": "^0.77.0"
+    "zudoku": "^0.82.3"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^8.0.0",

@@ -105,11 +105,27 @@ MariaDB is an internal service (not publicly accessible), reached via the `wordp
 
 ```bash title="unikraft"
 unikraft build ./mariadb --output <my-org>/mariadb:latest
-unikraft run --name mariadb --scale-to-zero policy=idle,cooldown-time=1000,stateful=true --metro fra -m 1G --volume wordpress-db-data:/var/lib/mysql --image <my-org>/mariadb:latest --domain wordpress-mariadb.internal --env MARIADB_ROOT_PASSWORD=unikraft
+unikraft run --metro fra \
+  --name mariadb \
+  -m 1G \
+  --scale-to-zero policy=idle,cooldown-time=1000,stateful=true \
+  --domain wordpress-mariadb.internal \
+  --env MARIADB_ROOT_PASSWORD=unikraft \
+  --volume wordpress-db-data:/var/lib/mysql \
+  --image <my-org>/mariadb:latest
 ```
 
 ```bash title="kraft"
-kraft cloud deploy --name mariadb --scale-to-zero idle --scale-to-zero-stateful --scale-to-zero-cooldown 1s -M 1Gi --volume wordpress-db-data:/var/lib/mysql --domain wordpress-mariadb.internal --env MARIADB_ROOT_PASSWORD=unikraft ./mariadb/
+kraft cloud deploy \
+  --name mariadb \
+  -M 1Gi \
+  --scale-to-zero idle \
+  --scale-to-zero-stateful \
+  --scale-to-zero-cooldown 1s \
+  --domain wordpress-mariadb.internal \
+  --env MARIADB_ROOT_PASSWORD=unikraft \
+  --volume wordpress-db-data:/var/lib/mysql \
+  ./mariadb/
 ```
 
 </CodeTabs>
@@ -173,17 +189,33 @@ The output shows the instance details:
 
 ## Deploy Wordpress
 
-Build and deploy the Wordpress instance:
+Build and deploy the Wordpress instance.
+Set `WORDPRESS_DB_HOST` to the same internal domain you assigned to the MariaDB instance (`wordpress-mariadb.internal` in this guide).
 
 <CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
 unikraft build ./wordpress --output <my-org>/wordpress:latest
-unikraft run --name wordpress --scale-to-zero policy=on,cooldown-time=1000 --metro fra -p 443:8080/tls+http -m 2G --volume wordpress-wordpress-data:/var/www/html --image <my-org>/wordpress:latest --env WORDPRESS_DB_HOST=wordpress-mariadb.internal
+unikraft run --metro fra \
+  --name wordpress \
+  -m 2G \
+  -p 443:8080/tls+http \
+  --scale-to-zero policy=on,cooldown-time=1000 \
+  --env WORDPRESS_DB_HOST=wordpress-mariadb.internal \
+  --volume wordpress-wordpress-data:/var/www/html \
+  --image <my-org>/wordpress:latest
 ```
 
 ```bash title="kraft"
-kraft cloud deploy --name wordpress --scale-to-zero on --scale-to-zero-cooldown 1s -p 443:8080/tls+http -M 2Gi --volume wordpress-wordpress-data:/var/www/html --env WORDPRESS_DB_HOST=wordpress-mariadb.internal ./wordpress/
+kraft cloud deploy \
+  --name wordpress \
+  -M 2Gi \
+  -p 443:8080/tls+http \
+  --scale-to-zero on \
+  --scale-to-zero-cooldown 1s \
+  --env WORDPRESS_DB_HOST=wordpress-mariadb.internal \
+  --volume wordpress-wordpress-data:/var/www/html \
+  ./wordpress/
 ```
 
 </CodeTabs>

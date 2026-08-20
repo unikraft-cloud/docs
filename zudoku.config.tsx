@@ -1,11 +1,18 @@
 import type { ZudokuConfig } from "zudoku";
+import {
+  FlowArrow,
+  FlowBox,
+  FlowDiagram,
+  FlowStack,
+  FlowStackItem,
+} from "./src/DiagramComponents";
 
 const config: ZudokuConfig = {
   metadata: {
     title: "%s | Unikraft Cloud Docs",
     description:
       "Unikraft Cloud documentation: guides, platform reference, CLI, and API docs for the millisecond, Linux-based microVM cloud platform.",
-    favicon: "/docs/favicon.ico",
+    favicon: "/favicon.ico",
   },
   basePath: "/docs",
   // Emit <link rel="canonical"> on every docs page (origin + basePath + route),
@@ -36,6 +43,15 @@ const config: ZudokuConfig = {
       llmsTxt: true, // Generate llms.txt
       llmsTxtFull: true, // Generate llms-full.txt
       includeProtected: false, // Exclude protected routes
+    },
+  },
+  mdx: {
+    components: {
+      FlowArrow,
+      FlowBox,
+      FlowDiagram,
+      FlowStack,
+      FlowStackItem,
     },
   },
   syntaxHighlighting: {
@@ -92,6 +108,7 @@ const config: ZudokuConfig = {
             "/features/checkpoints",
             "/features/plugins",
             "/features/custom-network-configuration",
+            "/features/network-shield",
             "/features/annotations",
           ],
         },
@@ -205,6 +222,7 @@ const config: ZudokuConfig = {
         "/guides/node-playwright-webkit", // Playwright (WebKit) with Node.js
         "/guides/postgres", // PostgreSQL
         "/guides/httpserver-prisma-expressjs4.19-node18", // Prisma HTTP Server
+        "/guides/prometheus-grafana", // Prometheus and Grafana
         "/guides/httpserver-node-express-puppeteer", // Puppeteer HTTP Server
         "/guides/httpserver-python3.12", // Python HTTP Server
         "/guides/httpserver-node22-react-router", // React Router HTTP Server
@@ -220,7 +238,7 @@ const config: ZudokuConfig = {
         "/guides/skipper0.18", // Skipper
         "/guides/httpserver-node21-solid-start", // SolidJS HTTP Server
         "/guides/spin-wagi-http", // Spin
-        "/guides/httpserver-java17-springboot3.5.x", // Spring Boot HTTP Server
+        "/guides/httpserver-java17-springboot", // Spring Boot HTTP Server
         "/guides/httpserver-java17-spring-petclinic", // Spring PetClinic
         "/guides/httpserver-c-debug", // SSH and HTTP Server with C and Debugging Tools
         "/guides/httpserver-node22-sveltekit", // SvelteKit HTTP Server
@@ -576,15 +594,15 @@ const config: ZudokuConfig = {
         "/releases/r12-thebe",
         "/releases/r11-metis",
         "/releases/r10-themisto",
-        { type: "link", label: "Release 9 — Leda", to: "/releases/index" },
-        { type: "link", label: "Release 8 — Ananke", to: "/releases/index" },
-        { type: "link", label: "Release 7 — Carme", to: "/releases/index" },
-        { type: "link", label: "Release 6 — Lysithea", to: "/releases/index" },
-        { type: "link", label: "Release 5 — Amalthea", to: "/releases/index" },
-        { type: "link", label: "Release 4 — Europa", to: "/releases/index" },
-        { type: "link", label: "Release 3 — Io", to: "/releases/index" },
-        { type: "link", label: "Release 2 — Callisto", to: "/releases/index" },
-        { type: "link", label: "Release 1 — Ganymede", to: "/releases/index" },
+        "/releases/r9-leda",
+        "/releases/r8-ananke",
+        "/releases/r7-carme",
+        "/releases/r6-lysithea",
+        "/releases/r5-amalthea",
+        "/releases/r4-europa",
+        "/releases/r3-io",
+        "/releases/r2-callisto",
+        "/releases/r1-ganymede",
       ],
     },
   ],
@@ -606,6 +624,11 @@ const config: ZudokuConfig = {
     },
   ],
   theme: {
+    customCss: `
+      .prose td code {
+        white-space: normal;
+      }
+    `,
     fonts: {
       sans: {
         fontFamily: "Inter, sans-serif",

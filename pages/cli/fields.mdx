@@ -322,7 +322,7 @@ fieldpath  := field ( "." field )*
 field      := quoted-string | identifier | index
 identifier := [A-Za-z] [A-Za-z0-9_-]*
 index      := [0-9]+
-operator   := "=" | "==" | "!=" | "!==" | "~=" | "!~="
+operator   := "=" | "==" | "!=" | "!==" | "~=" | "!~=" | ">" | "<" | ">=" | "<="
 value      := quoted-string | regex-string | unquoted-string
 ```
 
@@ -337,15 +337,73 @@ An **unquoted-string** is any run of non-whitespace, non-comma characters.
 
 ### Operators
 
-| Operator | Alias | Description                       | Example           |
-| -------- | ----- | --------------------------------- | ----------------- |
-| `==`     | `=`   | Equals                            | `state==running`  |
-| `!=`     | `!==` | Not equals                        | `state!=stopped`  |
-| `~=`     |       | Matches regular expression        | `name~="^web-.*"` |
-| `!~=`    |       | Doesn't match regular expression | `name!~="^test-"` |
-| _(none)_ |       | Field is present and non-empty    | `description`     |
+| Operator | Alias | Description                      | Example              |
+| -------- | ----- | --------------------------------- | -------------------- |
+| `==`     | `=`   | Equals                            | `state==running`     |
+| `!=`     | `!==` | Not equals                        | `state!=stopped`     |
+| `~=`     |       | Matches regular expression        | `name~="^web-.*"`    |
+| `!~=`    |       | Doesn't match regular expression  | `name!~="^test-"`    |
+| `>`      |       | Greater than                      | `resources.vcpus>2`  |
+| `<`      |       | Less than                         | `resources.vcpus<4`  |
+| `>=`     |       | Greater than or equal             | `resources.vcpus>=2` |
+| `<=`     |       | Less than or equal                | `resources.vcpus<=4` |
+| _(none)_ |       | Field is present and non-empty    | `description`        |
 
 Regular expressions use Go `regexp` syntax.
+
+### Comparisons
+
+`>`, `<`, `>=`, and `<=` order a field's value against the given value.
+They work on numeric fields (`resources.vcpus>2`) and on timestamp fields (`timestamps.created<2024-01-01T00:00:00Z`), but not on strings or booleans—those only support `==` and `!=`.
+
+```bash
+# Instances with more than 2 vCPUs
+unikraft instances list --filter 'resources.vcpus>2'
+
+# Instances with less than 512MiB of memory
+unikraft instances list --filter 'resources.memory<512MiB'
+```
+
+#### Absolute time
+
+Timestamp fields accept most common formats for an absolute point in time, so you don't need to look up or match one specific layout. For example:
+
+- RFC3339, with or without fractional seconds: `2024-01-01T00:00:00Z`
+- A date and time without a zone offset (interpreted as UTC): `2024-01-01T00:00:00` or `"2024-01-01 00:00:00"` (quote values containing a space)
+- A bare date (midnight UTC): `2024-01-01`
+- A Unix timestamp: `1704067200`
+
+```bash
+# Instances created before 2024
+unikraft instances list --filter 'timestamps.created<2024-01-01'
+```
+
+#### Relative time
+
+Timestamp fields also accept a relative duration on the right-hand side of `>`, `<`, `>=`, or `<=`, which is compared against the field's age (how long ago it occurred), rather than the timestamp itself.
+So `timestamps.created<7d` matches resources created less than 7 days ago, and `timestamps.created>30d` matches resources older than 30 days.
+
+A duration is a sequence of numbers with a unit, and units can be combined (for example `1d12h`):
+
+| Unit | Meaning |
+| ---- | ------- |
+| `s`  | seconds |
+| `m`  | minutes |
+| `h`  | hours   |
+| `d`  | days    |
+| `w`  | weeks   |
+| `y`  | years   |
+
+```bash
+# Instances created in the last 7 days
+unikraft instances list --filter 'timestamps.created<7d'
+
+# Instances older than 30 days
+unikraft instances list --filter 'timestamps.created>30d'
+
+# Instances created between 1 and 2 weeks ago
+unikraft instances list --filter 'timestamps.created>1w,timestamps.created<2w'
+```
 
 ### Wildcards
 
@@ -441,4 +499,10 @@ unikraft instances list --filter 'volumes.*.name==data'
 
 # Check that no label matches a pattern (all must satisfy !=)
 unikraft instances list --filter 'labels.*!=temporary'
+
+# Instances with more than 2 vCPUs
+unikraft instances list --filter 'resources.vcpus>2'
+
+# Instances created in the last 7 days
+unikraft instances list --filter 'timestamps.created<7d'
 ```

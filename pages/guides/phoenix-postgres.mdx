@@ -102,11 +102,31 @@ Update `POSTGRES_PASSWORD` with a secure password and build and deploy the Postg
 
 ```bash title="unikraft"
 unikraft build ./postgres --output <my-org>/postgres:latest
-unikraft run --scale-to-zero policy=idle,cooldown-time=1000,stateful=true --metro fra -m 2G --volume db-data:/var/lib/postgresql/data --image <my-org>/postgres:latest --domain postgres.internal --env POSTGRES_USER=postgres --env POSTGRES_PASSWORD=example_123 --env POSTGRES_DB=myapp_prod --env PGDATA=/var/lib/postgresql/data/pgdata
+unikraft run --metro fra \
+  -m 2G \
+  --scale-to-zero policy=idle,cooldown-time=1000,stateful=true \
+  --domain postgres.internal \
+  --env POSTGRES_USER=postgres \
+  --env POSTGRES_PASSWORD=example_123 \
+  --env POSTGRES_DB=myapp_prod \
+  --env PGDATA=/var/lib/postgresql/data/pgdata \
+  --volume db-data:/var/lib/postgresql/data \
+  --image <my-org>/postgres:latest
 ```
 
 ```bash title="kraft"
-kraft cloud deploy --scale-to-zero idle --scale-to-zero-stateful --scale-to-zero-cooldown 1s -M 2Gi --volume db-data:/var/lib/postgresql/data --domain postgres.internal --env POSTGRES_USER=postgres --env POSTGRES_PASSWORD=example_123 --env POSTGRES_DB=myapp_prod --env PGDATA=/var/lib/postgresql/data/pgdata postgres/
+kraft cloud deploy \
+  -M 2Gi \
+  --scale-to-zero idle \
+  --scale-to-zero-stateful \
+  --scale-to-zero-cooldown 1s \
+  --domain postgres.internal \
+  --env POSTGRES_USER=postgres \
+  --env POSTGRES_PASSWORD=example_123 \
+  --env POSTGRES_DB=myapp_prod \
+  --env PGDATA=/var/lib/postgresql/data/pgdata \
+  --volume db-data:/var/lib/postgresql/data \
+  postgres/
 ```
 
 </CodeTabs>
@@ -186,11 +206,24 @@ Then, deploy the Phoenix instance:
 
 ```bash title="unikraft"
 unikraft build ./phoenix --output <my-org>/phoenix:latest
-unikraft run --scale-to-zero policy=on,cooldown-time=1000 --metro fra -p 443:4000/tls+http -m 2G --image <my-org>/phoenix:latest --env SECRET_KEY_BASE=<your-secret-key-base> --env DATABASE_URL=ecto://postgres:example_123@postgres.internal:5432/myapp_prod
+unikraft run --metro fra \
+  -m 2G \
+  -p 443:4000/tls+http \
+  --scale-to-zero policy=on,cooldown-time=1000 \
+  --env SECRET_KEY_BASE=<your-secret-key-base> \
+  --env DATABASE_URL=ecto://postgres:example_123@postgres.internal:5432/myapp_prod \
+  --image <my-org>/phoenix:latest
 ```
 
 ```bash title="kraft"
-kraft cloud deploy --scale-to-zero on --scale-to-zero-cooldown 1s -p 443:4000/tls+http -M 2Gi --env SECRET_KEY_BASE=<your-secret-key-base> --env DATABASE_URL=ecto://postgres:example_123@postgres.internal:5432/myapp_prod phoenix/
+kraft cloud deploy \
+  -M 2Gi \
+  -p 443:4000/tls+http \
+  --scale-to-zero on \
+  --scale-to-zero-cooldown 1s \
+  --env SECRET_KEY_BASE=<your-secret-key-base> \
+  --env DATABASE_URL=ecto://postgres:example_123@postgres.internal:5432/myapp_prod \
+  phoenix/
 ```
 
 </CodeTabs>

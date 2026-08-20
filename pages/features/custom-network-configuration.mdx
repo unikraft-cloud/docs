@@ -13,7 +13,7 @@ If you would like to try it out now, please reach out to the [Unikraft Cloud Dis
 By default, Unikraft Cloud gives every instance a single network interface, allocated from the platform's address and TAP device pool.
 Custom network configuration lets you take control of this setup: attach up to four interfaces, supply your own IP addresses and TAP devices, and override the gateway and nameserver.
 
-This is the building block for private networking between your instances.
+This is the building block for private networking between your instances, and for the [network shield and relay](/features/network-shield).
 
 {/* vale off */}
 :::caution
@@ -76,7 +76,7 @@ Each entry in `network_interfaces` accepts the following fields:
 | `ip` | No | The interface IP address in CIDR notation. Provide it together with `tap_name` to bring your own interface. |
 | `tap_name` | No | The TAP device to attach the interface to (15 characters or less). Provide it together with `ip`. |
 | `autoconfig` | No | Whether the guest configures the interface itself. Defaults to `true`. |
-| `relay` | No | An object that routes all traffic through another interface. See [Relay](#relay). |
+| `relay` | No | An object that routes all traffic through another interface, as described under [network shield and relay](/features/network-shield). |
 
 You either specify both `ip` and `tap_name`, or neither.
 When you omit them, Unikraft Cloud picks an interface from the platform's TAP device pool.
@@ -96,68 +96,8 @@ Disable it to leave the interface untouched, so your app or image can set up net
 
 ### Network shield and relay
 
-A relay redirects all network traffic to and from a network interface toward another network interface.
-You can set up a relay VM and configure its interface as the relay for another VM's interface, so that all its traffic transparently passes through the relay.
-
-The **network shield** is an example of a relay: an instance inserted between a microVM and the public Internet.
-The shield provides filtering capabilities but also the possibility to inject credentials/secrets for agentic or other use cases.
-This is useful in sandbox environments, as it means the sandbox won't need unfiltered network access or access to secrets.
-A first official network shield image will be available soon.
-
-To use a relay, reference another interface by name inside a `relay` object:
-
-{/* TODO: Update this example to use the official network shield image once it becomes available. */}
-
-<CodeTabs syncKey="cli">
-
-```bash title="Relay instance"
-unikraft api /v1/instances \
-  -d '{
-    "name": "my-relay",
-    "network_interfaces": [
-      {
-        "name": "my-relay-iface"
-      }
-    ]
-  }'
-```
-
-```bash title="Sandbox instance (relay client)"
-unikraft api /v1/instances \
-  -d '{
-    "name": "my-sandbox",
-    "network_interfaces": [
-      {
-        "relay": {
-          "name": "my-relay-iface",
-          "relay_dns": true
-        }
-      }
-    ]
-  }'
-```
-
-</CodeTabs>
-
-The `relay` object accepts the following fields:
-
-| Field | Required | Description |
-|-------|----------|-------------|
-| `name` | Yes | The name of the interface to relay traffic through. This interface must belong to another instance in your account. |
-| `relay_dns` | No | Whether the relay forwards DNS requests. Set to `false` to let the default DNS server handle them instead. Defaults to `true`. |
-
-
-#### Relay notes
-
- - All network traffic passes over the relay. Many VMs can share a single relay.
-
- - This feature supports managed interfaces with custom TAP devices.
-
- - You don't need to enable VM-to-VM communication to use this feature (which you don't want in a sandbox environment).
-
- - DNS requests can be either passed to the relay or the default DNS server. This is to simplify setups where security isn't the focus as you don't need to run a DNS server in the relay VM.
-
- - The guest acting as a relay VM should have net.ipv4.ip_forward=1 and rp_filter=0 set.
+An interface can route all its traffic through another instance's interface, which is how the [network shield](/features/network-shield) filters a workload's traffic and injects secrets on its behalf.
+Configure it with the `relay` field of a `network_interfaces` entry.
 
 ## Error handling
 
@@ -179,6 +119,7 @@ The `relay` object accepts the following fields:
 
 ## Learn more
 
+* [Network shield and relay](/features/network-shield): route an instance's traffic through another instance that filters it and injects credentials.
 * [Instances](/platform/instances): how instances work, including their lifecycle and configuration.
 * [Branching](/features/branching) and [Checkpoints](/features/checkpoints): create independent copies and reusable restore points of running instances.
 * [Instance templates](/platform/instances#instance-templates): reusable images that you clone into new instances.

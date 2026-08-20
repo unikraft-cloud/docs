@@ -21,11 +21,11 @@ To run this example, follow these steps:
    Choose one of the CLIs below and only run the commands associated with it for the rest of this guide.
    :::
 
-2. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/httpserver-java17-springboot3.5.x/` directory:
+2. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/httpserver-java17-springboot/` directory:
 
    ```bash
    git clone https://github.com/unikraft-cloud/examples
-   cd examples/httpserver-java17-springboot3.5.x/
+   cd examples/httpserver-java17-springboot/
    ```
 
 Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
@@ -51,12 +51,22 @@ When done, invoke the following command to deploy this app on Unikraft Cloud:
 <CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
-unikraft build . --output <my-org>/httpserver-java17-springboot35x:latest
-unikraft run --scale-to-zero policy=idle,cooldown-time=1000,stateful=true --metro fra -p 443:8080/tls+http -m 1G --image <my-org>/httpserver-java17-springboot35x:latest
+unikraft build . --output <my-org>/httpserver-java17-springboot:latest
+unikraft run --metro fra \
+  -m 1G \
+  -p 443:8080/tls+http \
+  --scale-to-zero policy=idle,cooldown-time=1000,stateful=true \
+  --image <my-org>/httpserver-java17-springboot:latest
 ```
 
 ```bash title="kraft"
-kraft cloud deploy --scale-to-zero idle --scale-to-zero-stateful --scale-to-zero-cooldown 1s -p 443:8080/tls+http -M 1Gi .
+kraft cloud deploy \
+  -M 1Gi \
+  -p 443:8080/tls+http \
+  --scale-to-zero idle \
+  --scale-to-zero-stateful \
+  --scale-to-zero-cooldown 1s \
+  .
 ```
 
 </CodeTabs>
@@ -67,10 +77,10 @@ The output shows the instance address and other details:
 
 ```ansi title="unikraft"
 [1mmetro[22m:        fra
-[1mname[22m:         httpserver-java17-springboot35x-qseeo
+[1mname[22m:         httpserver-java17-springboot-qseeo
 [1muuid[22m:         b081166d-a2a0-43af-982d-1aa17f06b5c4
 [1mstate[22m:        [38;2;144;161;185mstarting[0m
-[1mimage[22m:        <my-org>/httpserver-java17-springboot35x
+[1mimage[22m:        <my-org>/httpserver-java17-springboot
 [1mresources[22m:
 [3m  memory[23m:     1024MiB
 [3m  vcpus[23m:      1
@@ -90,21 +100,21 @@ The output shows the instance address and other details:
 ```ansi title="kraft"
 [38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
  [38;5;245m│[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mname[0m: httpserver-java17-springboot35x-qseeo
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mname[0m: httpserver-java17-springboot-qseeo
  [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245muuid[0m: b081166d-a2a0-43af-982d-1aa17f06b5c4
  [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
  [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mstate[0m: [92mstarting[0m
  [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mdomain[0m: https://long-dust-si7xsngk.fra.unikraft.app
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/httpserver-java17-springboot35x@sha256:cc2f2ad18ce8e36b8e8f4debee096fef7b0bb8b47762575a2ba5a9de8199c64a
+ [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/httpserver-java17-springboot@sha256:cc2f2ad18ce8e36b8e8f4debee096fef7b0bb8b47762575a2ba5a9de8199c64a
  [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmemory[0m: 1024 MiB
  [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mservice[0m: long-dust-si7xsngk
- [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: httpserver-java17-springboot35x-qseeo.internal
+ [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: httpserver-java17-springboot-qseeo.internal
  [38;5;245m└[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mprivate ip[0m: 10.0.6.2
 ```
 
 </CodeTabs>
 
-In this case, the instance name is `httpserver-java17-springboot35x-qseeo` and the address is `https://long-dust-si7xsngk.fra.unikraft.app`.
+In this case, the instance name is `httpserver-java17-springboot-qseeo` and the address is `https://long-dust-si7xsngk.fra.unikraft.app`.
 They're different for each run.
 
 Use `curl` to query the Spring Boot server's `hello` endpoint:
@@ -122,11 +132,11 @@ When done, you can remove the instance:
 <CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
-unikraft instances delete httpserver-java17-springboot35x-qseeo
+unikraft instances delete httpserver-java17-springboot-qseeo
 ```
 
 ```bash title="kraft"
-kraft cloud instance remove httpserver-java17-springboot35x-qseeo
+kraft cloud instance remove httpserver-java17-springboot-qseeo
 ```
 
 </CodeTabs>
@@ -185,12 +195,12 @@ kraft cloud instance list
 
 ```ansi title="unikraft"
 [1mMETRO[22m  [1mNAME[22m                                   [1mSTATE[22m    [1mIMAGE[22m                                     [1mARGS[22m  [1mMEMORY[22m   [1mVCPUS[22m  [1mFQDN[22m                                 [1mCREATED[22m
-fra    httpserver-java17-springboot35x-qseeo  [38;2;0;188;125mrunning[0m  <my-org>/httpserver-java17-springboot35x        1024MiB  1      long-dust-si7xsngk.fra.unikraft.app  2 minutes ago
+fra    httpserver-java17-springboot-qseeo     [38;2;0;188;125mrunning[0m  <my-org>/httpserver-java17-springboot           1024MiB  1      long-dust-si7xsngk.fra.unikraft.app  2 minutes ago
 ```
 
 ```ansi title="kraft"
 [0;1;39mNAME[0m                                   [0;1;39mFQDN[0m                                 [0;1;39mSTATE[0m    [0;1;39mSTATUS[0m        [0;1;39mIMAGE[0m                                                                  [0;1;39mMEMORY[0m   [0;1;39mVCPUS[0m  [0;1;39mARGS[0m  [0;1;39mBOOT TIME[0m
-httpserver-java17-springboot35x-qseeo  long-dust-si7xsngk.fra.unikraft.app  [0;32mrunning[0m  1 minute ago  oci://unikraft.io/<my-org>/httpserver-java17-springboot35x@sha256:...  1.0 GiB  1            421.30 ms
+httpserver-java17-springboot-qseeo     long-dust-si7xsngk.fra.unikraft.app  [0;32mrunning[0m  1 minute ago  oci://unikraft.io/<my-org>/httpserver-java17-springboot@sha256:...     1.0 GiB  1            421.30 ms
 ```
 
 </CodeTabs>
@@ -200,11 +210,11 @@ When done, you can remove the instance:
 <CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
-unikraft instances delete httpserver-java17-springboot35x-qseeo
+unikraft instances delete httpserver-java17-springboot-qseeo
 ```
 
 ```bash title="kraft"
-kraft cloud instance remove httpserver-java17-springboot35x-qseeo
+kraft cloud instance remove httpserver-java17-springboot-qseeo
 ```
 
 </CodeTabs>

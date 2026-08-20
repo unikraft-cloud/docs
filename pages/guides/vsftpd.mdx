@@ -54,13 +54,34 @@ When done, invoke the following command to deploy this app on Unikraft Cloud:
 unikraft volume create --set metro=fra --set name=vsftpd-workspace --set size=1G
 
 unikraft build . --output <my-org>/vsftpd:latest
-unikraft run --metro fra --scale-to-zero policy=on,cooldown-time=40000,stateful=true -p 20:20/tls -p 21:21/tls -p 222:22/tls -p 990:990/tls -p 10100:10100/tls -m 1G --volume vsftpd-workspace:/root --image <my-org>/vsftpd:latest
+unikraft run --metro fra \
+  -m 1G \
+  -p 20:20/tls \
+  -p 21:21/tls \
+  -p 222:22/tls \
+  -p 990:990/tls \
+  -p 10100:10100/tls \
+  --scale-to-zero policy=on,cooldown-time=40000,stateful=true \
+  --volume vsftpd-workspace:/root \
+  --image <my-org>/vsftpd:latest
 ```
 
 ```bash title="kraft"
 kraft cloud volume create --name vsftpd-workspace --size 1Gi
 
-kraft cloud deploy --scale-to-zero on --scale-to-zero-stateful --scale-to-zero-cooldown 3s --name vsftpd -p 20:20/tls -p 21:21/tls -p 222:22/tls -p 990:990/tls -p 10100:10100/tls -M 1Gi -v vsftpd-workspace:/root .
+kraft cloud deploy \
+  --name vsftpd \
+  -M 1Gi \
+  -p 20:20/tls \
+  -p 21:21/tls \
+  -p 222:22/tls \
+  -p 990:990/tls \
+  -p 10100:10100/tls \
+  --scale-to-zero on \
+  --scale-to-zero-stateful \
+  --scale-to-zero-cooldown 3s \
+  -v vsftpd-workspace:/root \
+  .
 ```
 
 </CodeTabs>

@@ -56,18 +56,22 @@ When done, invoke the following command to deploy this app on Unikraft Cloud:
 
 ```bash title="unikraft"
 unikraft build . --output <my-org>/novnc-browser:latest
-unikraft run --scale-to-zero policy=on,cooldown-time=4000,stateful=true --metro fra -p 443:6080/tls+http -m 4G --image <my-org>/novnc-browser:latest
+unikraft run --metro fra \
+  -m 4G \
+  -p 443:6080/tls+http \
+  --scale-to-zero policy=on,cooldown-time=4000,stateful=true \
+  --image <my-org>/novnc-browser:latest
 ```
 
 ```bash title="kraft"
 kraft cloud deploy \
-    --scale-to-zero on \
-    --scale-to-zero-stateful \
-    --scale-to-zero-cooldown 4s \
-    -p 443:6080/tls+http \
-    -M 4Gi \
-    -n vnc-browser \
-    .
+  -n vnc-browser \
+  -M 4Gi \
+  -p 443:6080/tls+http \
+  --scale-to-zero on \
+  --scale-to-zero-stateful \
+  --scale-to-zero-cooldown 4s \
+  .
 ```
 
 </CodeTabs>

@@ -52,11 +52,25 @@ For extensive debug information with `strace`, add the `USE_STRACE=1` environmen
 
 ```bash title="unikraft"
 unikraft build . --output <my-org>/httpserver-c-debug:latest
-unikraft run --scale-to-zero policy=off --metro fra -p 443:8080/tls+http -p 2222:2222/tls -e PUBKEY=.... -e USE_STRACE=1 -m 256M --image <my-org>/httpserver-c-debug:latest
+unikraft run --metro fra \
+  -m 256M \
+  -p 443:8080/tls+http \
+  -p 2222:2222/tls \
+  --scale-to-zero policy=off \
+  -e PUBKEY=.... \
+  -e USE_STRACE=1 \
+  --image <my-org>/httpserver-c-debug:latest
 ```
 
 ```bash title="kraft"
-kraft cloud deploy --scale-to-zero off -p 443:8080/tls+http -p 2222:2222/tls -M 256Mi -e PUBKEY="...." -e USE_STRACE=1 .
+kraft cloud deploy \
+  -M 256Mi \
+  -p 443:8080/tls+http \
+  -p 2222:2222/tls \
+  --scale-to-zero off \
+  -e PUBKEY="...." \
+  -e USE_STRACE=1 \
+  .
 ```
 
 </CodeTabs>
