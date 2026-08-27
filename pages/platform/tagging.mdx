@@ -31,7 +31,8 @@ unikraft instance create \
   --metro fra \
   --image ... \
   --memory ... \
-  --tags production,customer_A
+  --tag production \
+  --tag customer_A
 ```
 ```bash title="API"
 curl -X POST \
@@ -52,7 +53,8 @@ curl -X POST \
 unikraft instance template create \
   --set image=... \
   --set resources.memory=... \
-  --set tags=production,customer_A
+  --set tags=production \
+  --set tags=customer_A
 ```
 ```bash title="API"
 curl -X POST \
@@ -73,7 +75,8 @@ curl -X POST \
 unikraft volume create \
   --metro fra \
   --size ... \
-  --tags production,customer_A
+  --tag production \
+  --tag customer_A
 ```
 ```bash title="API"
 curl -X POST \
@@ -92,7 +95,8 @@ curl -X POST \
 ```bash title="unikraft"
 unikraft volume template create \
   --set size=... \
-  --set tags=production,customer_A
+  --set tags=production \
+  --set tags=customer_A
 ```
 ```bash title="API"
 curl -X POST \
@@ -121,7 +125,8 @@ Add tags to an existing resource (`"op": "set"` will replace all existing tags):
   <CodeTabs syncKey="cli">
 ```bash title="unikraft"
 unikraft instance edit <instance-name> \
-  --tags testsystem,customer_B
+  --tag testsystem \
+  --tag customer_B
 ```
 ```bash title="API"
 curl -X PATCH \
@@ -141,7 +146,8 @@ curl -X PATCH \
   <CodeTabs syncKey="cli">
 ```bash title="unikraft"
 unikraft instance template edit <instance-template-name> \
-  --tags testsystem,customer_B
+  --tag testsystem \
+  --tag customer_B
 ```
 ```bash title="API"
 curl -X PATCH \
@@ -161,7 +167,8 @@ curl -X PATCH \
   <CodeTabs syncKey="cli">
 ```bash title="unikraft"
 unikraft volume edit <volume-name> \
-  --tags testsystem,customer_B
+  --tag testsystem \
+  --tag customer_B
 ```
 ```bash title="API"
 curl -X PATCH \
@@ -181,7 +188,8 @@ curl -X PATCH \
   <CodeTabs syncKey="cli">
 ```bash title="unikraft"
 unikraft volume template edit <volume-template-name> \
-  --tags testsystem,customer_B
+  --tag testsystem \
+  --tag customer_B
 ```
 ```bash title="API"
 curl -X PATCH \
