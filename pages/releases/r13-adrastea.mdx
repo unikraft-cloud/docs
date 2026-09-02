@@ -1,0 +1,662 @@
+---
+title: "Release 13: Adrastea"
+description: Unikraft Cloud Release 13 (Adrastea) release notes.
+date: "2026-09-02"
+---
+**Released:** 2026-09-02
+
+:::note
+Read the [Release 13: Adrastea announcement](https://unikraft.com/blog/adrastea-13-release) on the Unikraft blog.
+:::
+
+---
+
+Release 13 brings the platform to ARM64 hosts and decouples the guest kernel from the app image.
+Networking gains caller-chosen MAC addresses, address-less interfaces, and CNI-driven guest configuration.
+On the tooling side, the CLI builds for both architectures at once and drives branching, checkpointing, GPUs, and tunnels.
+A Karpenter provider makes Unikraft capacity elastic from inside Kubernetes, and a Go SDK reduces a plugin to about 20 lines.
+
+---
+
+## Platform
+
+### ARM64 support
+
+The platform now runs on ARM64 hosts.
+Packages ship for `arm64` alongside `amd64` on every supported distribution.
+That covers Debian 11, 12, and 13, plus Ubuntu 24.04 and 26.04.
+MicroVMs, full VMs, the API, and all tooling behave the same as on x86-64.
+
+See [image architectures](/platform/images#architectures) for how architectures apply to images.
+
+**Breaking changes:** None.
+Nothing changes for existing x86-64 deployments.
+
+**Requirements and limitations:** ARM64 hosts don't yet support GPU passthrough for full VMs.
+
+**Why it matters:** ARM64 capacity is a large, and often cheaper, part of what cloud providers offer.
+The same platform, with the same API and tooling, now runs on ARM64 hosts.
+Use it to cut the cost per instance, or to serve ARM64 workloads natively instead of emulating them.
+
+**Enterprise only.**
+
+### Platform kernel and kernel-less images
+
+An image no longer has to carry its own kernel.
+An image that ships only a config and an initrd boots with the kernel installed on the node, which the operator points the controller at:
+
+```sh
+ukpd --images-kernel-path /usr/share/unikraft/kernel ...
+```
+
+The directory holds a `kernel` binary and a `config.json` with the same shape as an image config.
+Leaving the option empty disables the feature.
+
+The platform picks up a replaced kernel automatically.
+The next instance to start uses the new one, and running instances keep the kernel they booted with until they shut down.
+An instance that resumes from a snapshot always boots the exact kernel the snapshot captured, including across clone, branch, and template start.
+The guest kernel ships as its own package, so a node moves to a new guest kernel independently of the images that run on it.
+
+See [platform kernel](/platform/images#platform-kernel).
+
+**Breaking changes:** None.
+Images that carry a kernel behave exactly as before.
+
+**Requirements and limitations:** A kernel-less image must still provide an initrd.
+
+**Why it matters:** The guest kernel no longer ties to the app image.
+A kernel update, including a security fix, no longer means rebuilding and re-pushing every image, and the operator rolls out one kernel package for the whole node instead.
+Images also get considerably smaller, which shortens pulls and cold starts.
+
+**Enterprise only.**
+
+### Scheduled checkpoints
+
+[Scheduled operations](/features/cron-jobs) gained a `checkpoint` action, so an instance checkpoints itself on a schedule with nothing driving it from the outside:
+
+```json
+{
+  "schedops": [
+    { "name": "nightly", "when": "*-*-* 03:00:00", "action": "checkpoint" }
+  ]
+}
+```
+
+Each occurrence creates a checkpoint exactly as `POST /v1/instances/<UUID>/checkpoints` does, named after the instance with a random suffix.
+See [scheduled checkpoints](/features/cron-jobs#scheduled-checkpoints).
+
+**Breaking changes:** None.
+`checkpoint` adds to the existing `start`, `stop`, `delete`, and `exec` actions.
+
+**Requirements and limitations:** Requires a license with the checkpointing feature.
+Full VMs don't support checkpointing yet.
+
+**Why it matters:** Periodic checkpointing becomes a property of the instance rather than a job someone has to run and watch.
+Long-lived stateful instances build a rolling set of restore points on their own.
+
+**Enterprise only.**
+
+### Nested virtualization
+
+An instance can now reach the host's virtualization extensions, so a hypervisor runs inside the guest.
+Request the feature per instance with the new `nested-virt` feature flag:
+
+```json
+{
+  "name": "my-nested-vm",
+  "features": ["nested-virt"]
+}
+```
+
+Instances without the flag continue to see virtualization extensions masked off, exactly as before.
+The instance status reports the active flags in its `features` array.
+Snapshotting a nested-virt instance and resuming it works.
+
+See [nested virtualization](/platform/instances#nested-virtualization).
+
+**Breaking changes:** None.
+The flag is opt-in and defaults to off.
+
+**Requirements and limitations:** Requires the new `nested_virt` user permission, and the host must carry a nested virtualization configuration.
+An instance created from a snapshot, whether template, branch or checkpoint, can't take the flag: choose it for the instance that takes the snapshot.
+
+**Why it matters:** Customer software that ships its own VMs used to need bare metal.
+It now runs as an ordinary platform instance alongside everything else.
+
+**Enterprise only.**
+
+### Custom MAC addresses and address-less interfaces
+
+Managed network interfaces became considerably more flexible.
+A custom interface carries a caller-chosen MAC address, and an interface can exist with no IP address at all:
+
+```json
+{
+  "network_interfaces": [
+    {
+      "tap_name": "tap-custom0",
+      "mac": "02:1a:2b:3c:4d:5e",
+      "autoconfig": false
+    }
+  ]
+}
+```
+
+Setting `ip` or `mac` now requires a `tap_name`.
+Before, `ip` and `tap_name` had to appear together.
+The new `autoconfig` field controls whether the platform configures the address inside the guest.
+It defaults to on for the default interface and for interfaces with an IP, and must be off for an interface without one.
+An interface with no address reports no `private_ip`, and takes no part in DNS registration or service routing.
+MAC addresses must be unicast and must fall outside the platform's own address pool.
+Custom IPv4 networks are no longer limited to `/30` or smaller.
+
+See [custom network configuration](/features/custom-network-configuration).
+
+**Breaking changes:** None.
+Combinations the platform accepted before keep working.
+
+**Requirements and limitations:** Custom interfaces require the `net_manager` permission, as before.
+Custom interfaces don't offer the relay feature.
+The platform now rejects a request for it instead of accepting the request and ignoring the field.
+
+**Why it matters:** A guest whose licensing, clustering or peer identity ties to a MAC address keeps that identity across a recreation of the instance.
+An interface handed over without an address is what a customer-managed network needs, whether an external IPAM, a CNI plugin, or a virtual appliance doing its own addressing.
+The platform provides the link, and the tenant decides what runs on it.
+
+**Enterprise only.**
+
+### Guest network configuration with CNI
+
+The guest reads a CNI result document from an instance annotation and applies it to its network interfaces:
+
+```json
+{
+  "annotations": {
+    "unikraft.com/cni": "{\"cniVersion\":\"1.0.0\",\"interfaces\":[...],\"ips\":[...]}"
+  }
+}
+```
+
+The document is a standard CNI Result (`types/100`).
+The guest matches addresses to interfaces by MAC address.
+Updating the annotation on a running instance reconciles against the current configuration, so an address change needs no restart.
+
+See [guest network configuration with CNI](/features/annotations#guest-network-configuration-with-cni).
+
+**Breaking changes:** None.
+Nothing changes for instances without the annotation.
+
+**Requirements and limitations:** The guest applies only `interfaces[].mac`, `ips[].interface`, and `ips[].address`.
+It ignores routes, gateways, DNS, and the maximum transmission unit.
+At most 8 interfaces and 16 addresses per document.
+Requires the latest guest kernel.
+
+**Why it matters:** This closes the loop for address-less interfaces.
+An external CNI plugin or IPAM system decides the addressing and writes its result into an annotation, and the guest configures itself from it.
+Nothing needs installing inside the guest, and no custom boot scripts need maintaining.
+
+**Enterprise only.**
+
+### Instance annotation events
+
+The event log gained a `vm.annotate` event, which fires whenever an instance's annotations change:
+
+```json
+{
+  "type": "vm.annotate",
+  "timestamp": "2026-08-19T10:04:11Z",
+  "data": {
+    "vm": "b495f451-0370-4d8e-8b94-a5b22d2212f9",
+    "annotations": { "env": "prod", "team": "search" }
+  }
+}
+```
+
+See [annotation events](/features/annotations#annotation-events).
+
+**Breaking changes:** `POST /v1/instances` and `PATCH /v1/instances` now reject annotation values containing ASCII control characters (`0x00` to `0x1f`, or `0x7f`, including tab, newline, and carriage return) with `400 Bad Request`.
+This breaks clients that stored binary or multi-line values.
+Any other byte sequence, including multi-byte UTF-8, is still accepted, and stored annotations keep their values.
+
+**Requirements and limitations:** Enable the event in the event configuration, like the other event types.
+
+**Why it matters:** Annotations are how you attach your own meaning to an instance: owner, environment, tenant, billing code.
+Emitting them as events lets external systems track changes rather than polling the instance API to find out that a label moved.
+It also maps instance UUIDs to annotations during log processing.
+
+**Enterprise only.**
+
+### Autoscale pressure signal
+
+An [autoscale](/features/autoscale) group takes a high watermark, and the proxy reports a crossing back to the client on the response:
+
+```json
+{
+  "n_max": 50,
+  "high_watermark": 0.8
+}
+```
+
+`high_watermark` is a fraction in `[0, 1]` of `n_max`, and `0` disables the signal.
+The autoscale status endpoint reports it back in the same form.
+Enable the header on the proxy, and a response whose request triggered a scale-out carries the group's state.
+The format is a structured-field dictionary, as defined by [RFC 9651](https://www.rfc-editor.org/rfc/rfc9651.html):
+
+{/* vale off */}
+```text
+Autoscale-Info: high-watermark-crossed=?1, n-total=41, n-max=50
+```
+{/* vale on */}
+
+The header is off by default.
+The proxy configuration enables it, and optionally renames it, through `UKP_PROXY_AUTOSCALE_INFO_HEADER` and `UKP_PROXY_AUTOSCALE_INFO_HEADER_NAME`.
+
+See [high watermark](/features/autoscale#high-watermark).
+
+**Breaking changes:** None.
+`high_watermark` defaults to off, and the header is opt-in.
+
+**Requirements and limitations:** The signal rides on responses whose request caused a scale-out, so it reflects the state at that moment rather than forming a continuous stream.
+Update the controller and the proxy together.
+
+**Why it matters:** Spreading load across regions or clusters means knowing that a group is running out of room before it fills.
+The signal travels on the response path the client already reads.
+A client steers new work elsewhere without polling a separate metrics endpoint, and without waiting for a scale-out to fail.
+
+**Enterprise only.**
+
+### Configurable plugin authorization
+
+Instance [plugins](/features/plugins) choose the rule that admits a request.
+A plugin description takes an optional `authorization` object:
+
+```json
+{
+  "plugins": [
+    {
+      "name": "my-plugin",
+      "rom": "...",
+      "authorization": { "type": "bearer", "token": "s3cr3t" }
+    }
+  ]
+}
+```
+
+With `"type": "bearer"`, the plugin's own token authorizes the request.
+Without the object the previous behavior applies: the supplied token must belong to a platform user with access to the instance.
+The instance status reports a non-default authorization `type`, and never reports the token back.
+
+See [plugin authorization](/features/plugins#authorization).
+
+**Breaking changes:** None.
+A plugin without an `authorization` object behaves exactly as before.
+
+**Requirements and limitations:** A `bearer` token is mandatory, and it has a maximum length.
+Update the controller and the proxy together.
+
+**Why it matters:** Software that addresses a plugin often holds no platform account and needs none.
+Think of a sidecar, a customer's own control plane, or a webhook from a third-party service.
+A per-plugin token admits those callers without minting platform users and without granting them access to the platform API.
+
+**Enterprise only.**
+
+### User information API
+
+Two new endpoints report what a user is and what it may do:
+
+```text
+GET /v1/users
+GET /v1/users/<UUID>
+```
+
+```json
+{
+  "status": "success",
+  "data": {
+    "users": [
+      {
+        "uuid": "e2a4a5b0-...",
+        "created_at": "2026-08-12T09:14:03Z",
+        "permissions": ["net_manager", "image_manager", "nested_virt"],
+        "disabled": false
+      }
+    ]
+  }
+}
+```
+
+A regular user sees itself.
+A root user queries any user by UUID, or lists every user by omitting the UUID.
+The API reports `disabled` to root only.
+
+**Breaking changes:** None.
+Both endpoints are new.
+
+**Requirements and limitations:** Listing users, or querying a user other than yourself, requires the `root` permission.
+
+**Why it matters:** Clients used to hard-code which capabilities their token holds, or discover them by experiment.
+They now ask instead.
+A UI hides features a user can't reach, and automation fails early with a clear reason rather than hitting a permission error deep inside a workflow.
+
+**Enterprise only.**
+
+---
+
+## Tooling
+
+### CLI
+
+#### Multi-platform builds
+
+`x86_64` and `arm64` are now equal citizens.
+`unikraft build` produces an image for every architecture you ask for in a single invocation, and carries ROMs through multi-architecture builds as well.
+Because neither architecture is the default any more, the build no longer picks one for you.
+Every build names its architectures, through the `targets:` key in the Kraftfile or the new `--arch` flag.
+
+For an image with a `runtime`, little changes in practice, because the build still uses every one of the runtime's architectures unless you narrow them down.
+For a ROM, the target is now required:
+
+```yaml
+spec: v0.7
+roms:
+  - ./Dockerfile
+targets:
+  - kraftcloud/x86_64
+```
+
+See [image architectures](/platform/images#architectures).
+
+**Breaking changes:** Building a ROM without `targets:` or `--arch` now fails rather than defaulting to a single architecture.
+The old default assumed that ROMs were platform-independent, which they aren't, so the explicit form is both more correct and simpler to follow.
+
+**Requirements and limitations:** BuildKit must be [configured on the host for multi-platform builds](https://docs.docker.com/build/building/multi-platform/).
+
+**Why it matters:** ARM hosts arrive with this release, and an image runs only on a host matching the architecture of its build.
+Naming targets explicitly means one Kraftfile builds for both, and nobody discovers the mismatch at deploy time.
+
+**Enterprise only.**
+
+#### Branching and checkpointing
+
+[Branching](/features/branching) and [checkpointing](/features/checkpoints) have been available on the platform for a while, and the CLI now drives both.
+You create an instance from one of four sources rather than only from an image: `--image`, `--template`, `--branch`, or `--checkpoint`:
+
+```sh
+unikraft instance create --branch my-instance --set name=my-branch
+```
+
+Branching preserves the source's in-memory state, and works whether the source is running, stopped, or itself a template.
+Checkpoints and templates each get their own command group, `unikraft instance checkpoint` and `unikraft instance template`, with the usual `list`, `get`, `create`, `edit`, and `delete`, plus `checkpoint history` to walk the lineage of a checkpoint.
+
+**Breaking changes:** None.
+Every existing way to create an instance continues to work.
+
+**Requirements and limitations:** Branching and checkpointing require a licensed platform.
+A branch must stay within the metro of its source.
+
+**Why it matters:** These were the last big platform capabilities that still needed a hand-written `unikraft api` call.
+Branching and checkpointing now stay inside the CLI, with the same fields, filters, and output formats as the rest of it.
+
+#### GPUs
+
+Release 12 brought NVIDIA GPUs to the platform, and the CLI now speaks that language too.
+`--gpus` requests a GPU when creating an instance:
+
+```sh
+unikraft instance create --type full --gpus 1 --image my-app:latest
+```
+
+Listings and inspect output show the GPUs an instance holds as `gpus.*.uuid` and `gpus.*.model`, alongside a `resources.gpus` count, so they filter and sort like every other field.
+See [GPUs](/platform/instances#gpus).
+
+**Breaking changes:** None.
+
+**Requirements and limitations:** Requires instance `type` `full` and a plan with GPU support.
+At most one GPU per instance for now, and you can't choose the specific GPU: the platform picks a free one from the host.
+
+**Why it matters:** You create a GPU instance the same way as any other instance.
+
+**Enterprise only.**
+
+#### Instance tunneling
+
+Not every port an instance listens on belongs on the public internet.
+Think of a database, an admin endpoint, or a debug server.
+`unikraft instance tunnel` forwards a local port to a port on an unexposed instance, through an intermediate TLS tunnel service:
+
+```sh
+# Forward local port 8080 to instance "nginx" port 8080
+unikraft instance tunnel nginx:8080
+
+# Pick the local port yourself
+unikraft instance tunnel 8333:nginx:8080
+
+# Several ports, several instances, one command
+unikraft instance tunnel 8080:my-instance1:8080/tcp 8443:my-instance2:8080/tcp
+```
+
+Targets take the form `[LOCAL_PORT:]<INSTANCE>:DEST_PORT[/TYPE]`.
+The command creates the tunnel proxy instance for you and deletes it again when it exits, so nothing stays running behind you.
+`port-forward` works as an alias for anyone arriving from `kubectl`.
+See [`unikraft instance tunnel`](/cli/unikraft/instances/tunnel).
+
+**Breaking changes:** None.
+The command comes across from `kraft cloud`.
+
+**Requirements and limitations:** The node must permit internal traffic between VMs (`--net-internal-traffic=vm`).
+The tunnel goes away when the command exits, so it's a foreground tool rather than a persistent route.
+
+**Why it matters:** Reaching an unexposed port used to mean publishing it temporarily, which is exactly what you were trying to avoid.
+This closes one of the last gaps against `kraft cloud` and makes the safe option the convenient one.
+
+#### Comparison operators in filters
+
+`--filter` used to test equality and nothing else, which suits states and names and suits nothing you can measure.
+It now understands the four comparison operators across every resource the CLI lists:
+
+```sh
+unikraft instance list --filter "resources.memory>128mib"
+unikraft volume list --filter "size<=1gib"
+```
+
+Timestamps compare too, in absolute or relative form, so "everything created in the last week" becomes a filter rather than a script:
+
+```sh
+unikraft instance list --filter "timestamps.created<7d"
+```
+
+Sizes, memory, vCPUs, quotas, and limits all work with all four operators, and the comparison follows the field's own type rather than string ordering.
+See [filtering](/cli/fields#filtering) and the [filter expression reference](/cli/fields#filter-expression-reference).
+
+**Breaking changes:** None.
+`=` behaves as it always did.
+
+**Why it matters:** Filtering is what makes a listing usable once an account holds more than a screenful of resources.
+Without comparisons, questions as ordinary as "which volumes are almost full" or "what appeared today" needed JSON piped into something else.
+
+#### Volume usage bars
+
+Listing volumes now reports how full each one is, not only the size it started with:
+
+```text
+METRO  NAME                  STATE    USAGE            FREE    SIZE    CREATED
+dal2   cloud-jetstream-data  mounted  80%  ⣿⣿⣿⣿⣿⣿⣿⣿⣀⣀  25MiB   128MiB  4 weeks ago
+```
+
+The bar takes its color from how close the volume is to full, so a table reads at a glance.
+The `usage` field is real data rather than decoration, and it sorts and filters by the used/total ratio.
+Machine-readable output renders it as a plain `used/total` pair rather than braille.
+Quotas use the same display.
+
+**Breaking changes:** None.
+The listing gains a `USAGE` column, and keeps `FREE` and `SIZE` as they were.
+
+**Why it matters:** A volume filling up stays invisible right up until it isn't.
+The listing used to report only the size the volume started with, and finding out how much room remained meant looking somewhere else.
+
+#### Nested JSON for the `unikraft api` command
+
+[`unikraft api`](/cli/unikraft/api) is the escape hatch for anything the CLI doesn't model yet, but its `-d` flag used to take a complete JSON body, which meant hand-writing and quoting JSON on the command line.
+It now also accepts nested-JSON syntax:
+
+```sh
+unikraft api /v1/volumes name=data size_mb:=256
+unikraft api /v1/something 'tags[]=production' 'tags[]=eu-west'
+```
+
+`key=value` sets a string, and `key:=value` sets a raw JSON value.
+The `[]` and `.` markers build arrays and nested objects.
+The generated command documentation covers the syntax.
+
+**Breaking changes:** None.
+Passing a full JSON body to `-d` works exactly as before.
+
+**Why it matters:** The escape hatch sees the most use when something is urgent, which is the worst time to count quotes and braces.
+Ad-hoc API calls become something you type correctly the first time.
+
+### Dashboard
+
+#### ROMs, templates, and checkpoints
+
+The dashboard shows the objects that branching and checkpointing produce.
+Instances gained templates and checkpoints views, each with a detail page.
+A checkpoint's page shows its lineage, so you see the checkpoint's source and everything descending from it.
+An instance's ROMs appear under its mounts tab.
+
+**Breaking changes:** None.
+
+**Requirements and limitations:** Templates and checkpoints require a licensed platform, so the views stay empty on installations without them.
+
+**Why it matters:** Branching and checkpointing turn an instance from one object into a small family tree, and a list of instance names is no way to understand one.
+Seeing the lineage is most of what makes the feature usable by anyone who didn't create the checkpoints.
+
+#### Consistent lists, navigation, and controls
+
+Every resource list now searches, sorts, filters, and pages the same way.
+A list's search, sort, and page position live in the address.
+Bookmark a filtered view, or send it to a colleague, and the same view comes back.
+Filtering came with it: instances by their own attributes, volumes by metro and state, and attachments by what they attach to.
+A filter marks itself as active while it holds a selection, so a list that looks short because of a filter says so.
+Live updates hold up better too, and a metro that fails to answer no longer stops the rest of the dashboard from updating.
+
+The title bar carries a breadcrumb trail, so a page says where it sits and offers a way back up.
+The trail used to appear only on narrow screens with a bare link to the organization root.
+It's now always there, which also lets the sidebar collapse to an icon rail at any width, and the sidebar remembers whether you left it collapsed.
+Image manifests get a crumb per hop rather than collapsing back to the image root, so digging into a manifest list and back out again works.
+Links between pages load in place rather than reloading everything, the document title keeps up as you navigate, and a 404 keeps its sidebar.
+
+The organization page moved into tabs and remembers which tab you were on across a reload.
+Account details went the same way and now lists your memberships.
+The instance page now organizes around the two questions people open it with, namely how to reach this instance and why it stopped, rather than one growing column of cards.
+Dialogs and buttons look and behave consistently across the dashboard, buttons grey out while they work, dropdown text is legible, and charts always show rather than hiding behind a toggle.
+
+**Breaking changes:** None.
+
+**Why it matters:** Resource lists are where most dashboard time goes, and inconsistency between them reads as unreliability.
+You stop trusting that sorting a column does what it did on the last page.
+
+---
+
+## Integrations
+
+### Karpenter provider
+
+[Kraftlet](/integrations/kubernetes) lets a Kubernetes cluster schedule pods onto Unikraft, but the cluster still had to hold the nodes to schedule them onto.
+The new [Karpenter provider](/integrations/karpenter) closes that loop.
+When a pod finds no room, the provider provisions a node, installs Kraftlet onto it, and joins it to the cluster.
+It removes the node again once the capacity is no longer needed.
+
+A node class describes what a provisioned node looks like.
+It covers the machine type, whether nested virtualization applies, images to pre-pull so a new node doesn't arrive cold, and any custom user data to run.
+ARM and x86 nodes come from the same configuration.
+The provider supports Karpenter's capacity buffers for keeping warm headroom, and replaces a node whose class changed underneath it.
+A node joins the cluster only once the platform on it reports healthy, so pods don't land on a node that's still coming up.
+
+**Breaking changes:** None.
+This is a new component.
+
+**Requirements and limitations:** Preview.
+Requires a Kubernetes cluster running Kraftlet, and credentials for the node provisioning API.
+
+**Why it matters:** Without it, a Kraftlet cluster scales only as far as the nodes someone remembered to provision.
+This makes Unikraft capacity elastic from inside Kubernetes, driven by the autoscaler Kubernetes users already run.
+
+**Enterprise only.**
+
+### Plugin SDK for Go
+
+The [Go plugin SDK](/integrations/sdks/go) wraps the instance plugin system.
+A plugin is a sidecar HTTP server that the platform loads next to your main app, from its own ROM image, and reaches over a per-instance, authenticated endpoint.
+
+Writing a plugin by hand means re-implementing the same boilerplate every time.
+That covers parsing the init command line, adopting the socket the platform hands you, and decoding the JSON configuration from STDIN.
+It also covers standing up a router, wiring graceful shutdown, and integrating scale-to-zero.
+The SDK does every part of that.
+You write a configuration declaration and a route registration function, and a complete plugin comes to about 20 lines:
+
+```go
+package main
+
+import (
+	"context"
+
+	"github.com/gin-gonic/gin"
+
+	"unikraft.com/cloud/pluginsdk"
+)
+
+// Config is populated from the platform `config` JSON on STDIN (by its `json:`
+// tag), then overridden by environment variables and command-line flags.
+type Config struct {
+	Greeting string `json:"greeting" default:"Hello"`
+}
+
+func main() {
+	pluginsdk.Main(&pluginsdk.Plugin[Config]{
+		Name: "example",
+		Register: func(ctx context.Context, cfg *Config, engine *gin.Engine) error {
+			engine.GET("/hello", func(g *gin.Context) {
+				data := gin.H{"message": cfg.Greeting + ", world!"}
+
+				env, code, _ := pluginsdk.OK(&data)
+				g.JSON(code, env)
+			})
+
+			return nil
+		},
+	})
+}
+```
+
+A plugin serves an OpenAPI contract, and the `sdkgen` tool renders the matching client-side Go SDK from it as a build artifact.
+The two version together, so callers get a typed client rather than hand-rolled HTTP calls:
+
+```sh
+go run unikraft.com/cloud/pluginsdk/tools/sdkgen@prod-staging \
+  -i openapi.yaml \
+  -o ./sdk
+```
+
+**Breaking changes:** None.
+This is a new component.
+
+**Requirements and limitations:** Go is the only language in this release, and further SDKs follow.
+
+**Why it matters:** The plugin substrate has been reachable for a while, but only by re-implementing the same startup contract every time.
+Getting any part of it wrong shows up as a plugin the platform won't talk to.
+Handing that to an SDK reduces a plugin to the twenty lines that are specific to it.
+
+### Sandbox plugin
+
+Sandboxes now ship as a ready-made [plugin](/features/plugins#sandbox-plugin), alongside the [JavaScript SDK](/integrations/sdks/js).
+
+**Breaking changes:** None.
+This is a new component.
+
+**Why it matters:** Running untrusted code per user session no longer means assembling the plugin yourself.
+
+**Enterprise only.**
+
+---
+
+[Back to all releases](/releases)
