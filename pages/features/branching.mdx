@@ -8,11 +8,6 @@ navigation_icon: git-branch
 Branching is a new feature which is available to enterprise customers, and is coming soon to the hosted platform.
 If you would like to try it out now, please reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
 :::
-
-:::caution
-Dedicated `unikraft` CLI subcommands for branching are coming soon.
-In the meantime, configure branching through the [API](/api/platform/v1/instances#create-instance), which you can invoke with `curl` or the [`unikraft api`](/cli/unikraft/api) command.
-:::
 {/* vale on */}
 
 Branching lets you create a clone (a **branch**) of an existing instance, including its memory and volume state.
@@ -37,45 +32,44 @@ The source instance's [state](/platform/instances#instance-states) determines ho
 
 ## Creating a branch
 
-To create a branch, send a [`POST /instances`](/api/platform/v1/instances#create-instance) request with a `branch_from` field that names the source instance:
+To create a branch, pass the source instance to `--branch`:
 
 <CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
-unikraft api /v1/instances \
-  -d '{
-    "name": "my-branch",
-    "branch_from": {
-      "name": "my-instance"
-    }
-  }'
+unikraft instance create --metro fra \
+  --name my-branch \
+  --branch my-instance
 ```
 
 </CodeTabs>
 
 You can also reference the source by its UUID instead of its name.
+Use `unikraft run --branch` instead of `unikraft instance create --branch` to create the branch and follow its logs in one step.
 
-Apart from `branch_from`, the request accepts the same fields as a regular instance creation.
+Apart from the branch source, a branch accepts the same options as a regular instance creation.
 You can attach [ROMs](/features/roms) and [volumes](/platform/volumes), configure a [service](/platform/services), and set other options as when you create an instance from a template.
 
 ## What the branch inherits
 
 A branch derives the following from its source, so you **can't** set these fields in the create request:
 
-- The image
-- The number of vCPUs (`vcpus`)
-- The memory size (`memory_mb`)
-- The app arguments (`args`)
-- The environment variables (`env`)
+- The image (`--image`)
+- The number of vCPUs (`--vcpus`)
+- The memory size (`--memory`)
+- The app arguments (`--args`)
+- The environment variables (`--env`)
 - The memory and volume state at the time of the snapshot
 
-Setting any of these alongside `branch_from` makes the request fail (see [Error handling](#error-handling)).
+Setting any of these alongside a branch source makes the request fail (see [Error handling](#error-handling)).
 
 You can still give the branch its own configuration, as when instantiating a template, including a `name`, [ROMs](/features/roms), [volumes](/platform/volumes), and a [service](/platform/services).
 
 ## Error handling
 
-A `branch_from` request can fail for the following reasons:
+The CLI rejects `--branch` alongside `--image`, `--template`, or `--checkpoint` before it sends anything, with `only one of --image, --template, --branch, or --checkpoint may be specified`.
+It also rejects a source in a different metro from the new instance, with `cannot create instance: metro mismatch between branch ("fra") and instance ("dal2")`.
+Otherwise, a branch request can fail for the following reasons:
 
 | Error message | Cause |
 |---------------|-------|
@@ -88,6 +82,10 @@ A `branch_from` request can fail for the following reasons:
 
 ## Limitations
 
+- A branch must stay in the metro of its source.
+  The CLI catches a cross-metro source before it sends the request.
+- Branching needs the default `micro` instance type.
+  QEMU-backed full VMs (`type: full`), which [GPU instances](/platform/instances#gpus) require, don't support branching, and a create request can't combine `type` with a branch source.
 - Branching only works with block-based volumes (for example, `ext4`).
   The branch clones the source's volume state consistently with its memory snapshot, which isn't supported for other volume types.
 - Branching requires a license that includes the feature (see the note at the top of this page).

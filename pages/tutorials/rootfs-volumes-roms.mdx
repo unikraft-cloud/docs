@@ -167,13 +167,16 @@ Finally, it's considered good practice to keep ROMs small and focused, and the i
 
 You could package ROMs as an OCI image and push them to the registry, or you could create them directly from a local directory.
 They show up as any other image in the registry, but don't have a kernel.
+Because a ROM has no `runtime` to take architectures from, its `Kraftfile` must name them under `targets`, or you pass `--arch` on the command line.
 To package them you can use the CLI:
 
 <CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
-# make sure to specify the rom path in the Kraftfile
+# make sure to specify the rom path and the build targets in the Kraftfile
 # ...
+# targets:
+# - kraftcloud/x86_64
 # roms:
 # - ./fs
 # ...

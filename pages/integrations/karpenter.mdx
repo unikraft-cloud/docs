@@ -1,0 +1,166 @@
+---
+title: Karpenter
+navigation_icon: scaling
+---
+
+{/* vale off */}
+:::caution[**Limited Access**]
+The Karpenter provider for Unikraft is a preview feature available as part of enterprise plans.
+The behavior described here reflects the current implementation and may change before general availability.
+To try the preview, reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
+:::
+{/* vale on */}
+
+[Kraftlet](/integrations/kubernetes) lets a Kubernetes cluster run Pods on Unikraft Cloud, but the cluster still needs nodes to schedule those Pods onto.
+The Karpenter provider for Unikraft creates them on demand.
+
+When a Pod has nowhere to run, the provider launches a machine running the Unikraft Cloud platform and installs Kraftlet against that machine.
+Then the provider joins it to the cluster as a node.
+Once the capacity goes unused, the provider removes the node and the machine again.
+
+The provider builds on [Karpenter](https://karpenter.sh), the Kubernetes node autoscaler, so the objects and the workflow are the ones Karpenter users already know.
+
+## How a node comes up
+
+{/* vale off */}
+<div className="not-prose my-8 rounded-lg border border-border bg-card p-6">
+  <div className="overflow-x-auto">
+    <svg
+      role="img"
+      viewBox="0 0 1240 680"
+      className="h-auto w-full"
+      style={{ minWidth: "760px" }}
+    >
+      <title>
+        An unschedulable Pod triggers a NodeClaim, the Karpenter provider reads the
+        nodeclass and creates a machine through the cloud API, then installs Kraftlet,
+        which connects to the machine and registers it as a node that runs the Pod.
+      </title>
+
+      <defs>
+        <marker
+          id="ukc-arrow"
+          viewBox="0 0 10 10"
+          refX="9"
+          refY="5"
+          markerWidth="7"
+          markerHeight="7"
+          orient="auto-start-reverse"
+        >
+          <path d="M0 0 L10 5 L0 10 z" fill="var(--muted-foreground)" />
+        </marker>
+      </defs>
+
+      {/* Cluster boundary */}
+      <rect x="10" y="10" width="910" height="650" rx="18" fill="none" stroke="var(--border)" strokeWidth="2" />
+      <text x="34" y="50" fontSize="20" fill="var(--card-foreground)">Kubernetes cluster (EKS, GKE, AKS)</text>
+
+      {/* Control plane */}
+      <rect x="34" y="96" width="180" height="464" rx="14" fill="var(--muted)" fillOpacity="0.5" stroke="var(--border)" strokeWidth="2" />
+      <text x="50" y="126" fontSize="16" fill="var(--muted-foreground)">Control plane</text>
+
+      <rect x="54" y="150" width="140" height="64" rx="10" fill="var(--card)" stroke="var(--border)" strokeWidth="2" />
+      <text x="124" y="189" fontSize="17" textAnchor="middle" fill="var(--card-foreground)">etcd</text>
+
+      <rect x="54" y="456" width="140" height="68" rx="10" fill="var(--card)" stroke="var(--border)" strokeWidth="2" />
+      <text x="124" y="485" fontSize="17" textAnchor="middle" fill="var(--card-foreground)">Kubernetes</text>
+      <text x="124" y="507" fontSize="17" textAnchor="middle" fill="var(--card-foreground)">API</text>
+
+      <path d="M124 452 V226" fill="none" stroke="var(--muted-foreground)" strokeWidth="2" strokeDasharray="6 6" markerEnd="url(#ukc-arrow)" />
+
+      {/* Kubernetes objects */}
+      <rect x="252" y="150" width="200" height="76" rx="12" fill="var(--card)" stroke="var(--border)" strokeWidth="2" />
+      <text x="352" y="196" fontSize="18" textAnchor="middle" fill="var(--card-foreground)">NodeClaim</text>
+
+      <rect x="252" y="380" width="200" height="86" rx="12" fill="var(--card)" stroke="var(--border)" strokeWidth="2" />
+      <text x="352" y="415" fontSize="18" textAnchor="middle" fill="var(--card-foreground)">Pod</text>
+      <text x="352" y="440" fontSize="15" textAnchor="middle" fill="var(--muted-foreground)">(unschedulable)</text>
+
+      {/* Unikraft components */}
+      <rect x="596" y="120" width="250" height="114" rx="14" fill="var(--primary)" fillOpacity="0.06" stroke="var(--primary)" strokeWidth="2" />
+      <text x="721" y="165" fontSize="18" textAnchor="middle" fill="var(--primary)">Karpenter provider</text>
+      <text x="721" y="192" fontSize="18" textAnchor="middle" fill="var(--primary)">for Unikraft</text>
+
+      <rect x="596" y="516" width="250" height="90" rx="14" fill="var(--primary)" fillOpacity="0.06" stroke="var(--primary)" strokeWidth="2" />
+      <text x="721" y="569" fontSize="19" textAnchor="middle" fill="var(--primary)">Kraftlet</text>
+
+      {/* Outside the cluster */}
+      <rect x="1010" y="120" width="200" height="114" rx="12" fill="var(--card)" stroke="var(--border)" strokeWidth="2" />
+      <text x="1110" y="165" fontSize="18" textAnchor="middle" fill="var(--card-foreground)">Cloud API</text>
+      <text x="1110" y="192" fontSize="16" textAnchor="middle" fill="var(--muted-foreground)">(AWS, GCP)</text>
+
+      <rect x="1010" y="516" width="200" height="104" rx="14" fill="var(--primary)" fillOpacity="0.06" stroke="var(--primary)" strokeWidth="2" />
+      <text x="1110" y="557" fontSize="17" textAnchor="middle" fill="var(--primary)">Unikraft Cloud</text>
+      <text x="1110" y="581" fontSize="17" textAnchor="middle" fill="var(--primary)">machine</text>
+
+      {/* Steps */}
+      <g fill="none" stroke="var(--muted-foreground)" strokeWidth="2" markerEnd="url(#ukc-arrow)">
+        <path d="M352 376 V234" />
+        <path d="M592 168 L458 180" />
+        <path d="M850 198 H1006" />
+        <path d="M1110 238 V512" />
+        <path d="M721 238 V512" />
+        <path d="M850 561 H1006" />
+        <path d="M592 590 H124 V528" />
+        <path d="M592 545 H352 V470" />
+      </g>
+
+      <g fontSize="16" fill="var(--muted-foreground)">
+        <text x="472" y="300">1. Triggers a NodeClaim</text>
+        <text x="510" y="98" textAnchor="middle">2. Reads the</text>
+        <text x="510" y="120" textAnchor="middle">UnikraftNodeClass</text>
+        <text x="928" y="152" textAnchor="middle">3. Creates a</text>
+        <text x="928" y="174" textAnchor="middle">machine</text>
+        <text x="1094" y="362" textAnchor="end">4. Starts the</text>
+        <text x="1094" y="384" textAnchor="end">machine</text>
+        <text x="742" y="362">5. Installs Kraftlet</text>
+        <text x="742" y="384">with its Helm chart</text>
+        <text x="928" y="498" textAnchor="middle">6. Connects to the</text>
+        <text x="928" y="520" textAnchor="middle">platform API</text>
+        <text x="470" y="530" textAnchor="middle">8. Runs the Pod</text>
+        <text x="340" y="622" textAnchor="middle">7. Registers as a node</text>
+      </g>
+    </svg>
+  </div>
+  <div className="mt-6 border-t border-border pt-3 text-sm text-muted-foreground">
+    Karpenter turns unschedulable Pods into machines, and Kraftlet turns each machine into a node.
+  </div>
+</div>
+{/* vale on */}
+
+No kubelet runs on the machine.
+Kraftlet takes that role from inside your cluster and reaches the machine over the network, so each machine needs an endpoint your cluster can reach.
+
+A node joins the cluster only once the platform on its machine reports healthy.
+
+## What it's good for
+
+Without it, a Kraftlet cluster scales to a limited, static capacity.
+The provider makes Unikraft Cloud capacity elastic from inside Kubernetes, driven by the autoscaler Kubernetes users already run.
+Nodes arrive when Pods need them and go away once they empty, so a deployment that swings between nothing and thousands of instances holds nodes only while it runs.
+It also keeps a full node from stalling the cluster.
+A Pod that no longer fits goes back to its controller and lands on a node with room, or on a new one, as [Pod rescheduling](/integrations/kubernetes#pod-rescheduling) describes.
+
+## What a setup looks like
+
+The provider needs the following objects in the cluster:
+
+1. **A `UnikraftNodeClass`** describes the machine behind a node: its image, where it runs, how it gets its DNS records and certificate, and the Kraftlet release that fronts it.
+
+2. **A `NodePool`** specifies which machine sizes to pick, how many nodes to allow, and when to remove the ones that empty.
+
+3. **Your workloads** reach the pool through a toleration and a node selector, the same way they reach a fixed Kraftlet node.
+
+Everything the [Kubernetes integration](/integrations/kubernetes) describes then applies to the Pods that land there, including services, volumes, ROMs, plugins, and annotations.
+
+Unikraft provides the machine images, and the setup steps for your cluster.
+The enterprise documentation covers the configuration in full.
+
+## Requirements and limitations
+
+* The provider needs a Kubernetes cluster and a cloud account of your own.
+  At the moment, the provider can provision machines on AWS and GCP.
+* Machines launch as on-demand instances, so a NodePool that asks for `karpenter.sh/capacity-type: spot` gets none.
+* A node advertises the platform quotas of its machine rather than the size of the machine underneath.
+  You can cap the total vCPUs, memory, and volume storage a node advertises, and [scale-to-zero](/features/scale-to-zero) lets you overcommit those caps by a wide margin.
+* Changing a nodeclass replaces the machines made from it rather than reconfiguring them in place.

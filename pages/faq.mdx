@@ -88,6 +88,9 @@ spec: v0.7
 
 runtime: python:3.12
 
+targets:
+  - kraftcloud/x86_64
+
 rootfs:
   source: ./Dockerfile
   format: erofs
@@ -97,6 +100,11 @@ cmd: ["/usr/bin/python3", "/src/server.py"]
 
 The `runtime` specifies one of the Unikraft Cloud runtimes (microVMs) built to run different languages and apps.
 Here it specifies a Python runtime.
+
+The `targets` parameter specifies the platform and architecture pairs to build for.
+Here it targets `kraftcloud` (Unikraft Cloud) on `x86_64`, which is the architecture the hosted platform runs on.
+No architecture is the default, so list every one you need, for example `kraftcloud/arm64` alongside `kraftcloud/x86_64`.
+See [architectures](/platform/images#architectures) for more detail.
 
 The `rootfs` parameter tells the CLI to use a `Dockerfile` in the same directory to build the root filesystem as an [EROFS image](/tutorials/rootfs-formats).
 
@@ -212,6 +220,23 @@ The CLI can run on Mac and Linux out of the box.
 Windows isn't officially supported, but you can use [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) to run the CLI on Windows.
 
 
+{/* vale off */}
+#### What CPU architectures can you deploy to?
+{/* vale on */}
+
+Both `x86_64` and `arm64`, and the hosted platform runs on `x86_64`.
+The architecture of the guest image must match the host architecture, so name the architectures you deploy to in the `targets` key of your `Kraftfile` or through the `--arch` flag.
+Neither architecture is the default, and a single `unikraft build` invocation produces an image for every architecture you ask for.
+See [architectures](/platform/images#architectures) for more detail.
+
+{/* vale off */}
+:::caution[**Limited Access**]
+`arm64` hosts are available as part of enterprise plans.
+To deploy to them, reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
+:::
+{/* vale on */}
+
+
 #### How can you track instances on Unikraft Cloud?
 
 Unikraft provides full `stdout` and `stderr` log support for all users.
@@ -296,12 +321,14 @@ You should first experiment with this or discuss it with a Unikraft Engineer to 
 
 #### What can you push as an image?
 
-An image is specifically a pair of a kernel and a rootfs bundled together as different layers of an OCI package.
+An image typically bundles a kernel and a rootfs together as different layers of an OCI package.
 To keep things light, certain optimizations are in place to not repush existing kernels and to reuse them from your account.
 If these aren't automatically detected, the CLI pushes the kernel again.
 
 At the same time, things like [ROMs](/features/roms) use the same packaging systems, but push images with a missing kernel and only a rootfs.
 These have specific metadata that identifies them as ROMs.
+
+An image can also ship a rootfs alone and boot on the kernel installed on the node instead of one of its own, which the [platform kernel](/platform/images#platform-kernel) section covers.
 
 Finally, kernels can also run without a rootfs.
 They don't do anything, but support exists to run them.

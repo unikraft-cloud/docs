@@ -104,8 +104,8 @@ Create a new persistent [service](/platform/services) for autoscale to manage:
 ```bash title="unikraft"
 unikraft service create --metro fra \
   --name nginx-autoscale-service \
-  --domains nginx-autoscale \
-  --services 443:8080/http+tls
+  --domain nginx-autoscale \
+  --service 443:8080/http+tls
 ```
 
 The command prints the new service's details, including its `uuid` (for example, `996d006f-a491-44ae-a1dc-7a6186971351`).
@@ -125,7 +125,7 @@ Achieve this with the following commands:
 
 ```bash title="unikraft"
 unikraft api /v1/services/<service-uuid>/autoscale -X POST --metro fra \
-  -d '{
+  '{
     "min_size": 1,
     "max_size": 8,
     "warmup_time_ms": 1000,
@@ -136,7 +136,7 @@ unikraft api /v1/services/<service-uuid>/autoscale -X POST --metro fra \
   }'
 
 unikraft api /v1/services/<service-uuid>/autoscale/policies -X POST --metro fra \
-  -d '{
+  '{
     "name": "scale-out-policy",
     "type": "step",
     "metric": "cpu",
@@ -148,7 +148,7 @@ unikraft api /v1/services/<service-uuid>/autoscale/policies -X POST --metro fra 
   }'
 
 unikraft api /v1/services/<service-uuid>/autoscale/policies -X POST --metro fra \
-  -d '{
+  '{
     "name": "scale-in-policy",
     "type": "step",
     "metric": "cpu",
@@ -175,6 +175,23 @@ Set them with the `warmup_time_ms` and `cooldown_time_ms` fields.
 Refer to the API autoscale [reference](/api/platform/v1/autoscale) for more details.
 Keep in mind that a few restrictions apply to how you define scale-in/scale-out steps.
 :::
+
+### High watermark
+
+{/* vale off */}
+:::caution[**Limited Access**]
+The high watermark signal is available to enterprise customers.
+If you would like to try it out now, please reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
+:::
+{/* vale on */}
+
+An autoscale group can be configured with a high watermark - as an early warning that it's getting close to its maximum size.
+Set it through the `high_watermark` field, as a fraction of `max_size` between `0` and `1`.
+The default is `0`, which turns the signal off.
+
+Once a service crosses its watermark, the platform can report this on the responses it sends back.
+A client that spreads load across metros uses this to steer new work elsewhere before the service fills up.
+Your metro operator switches that response header on.
 
 To check it's working, list the autoscale properties of the service:
 
@@ -314,7 +331,7 @@ You should order steps by lower bound with no gaps between them and no overlaps:
 
 ```bash title="unikraft"
 unikraft api /v1/services/<service-uuid>/autoscale/policies -X POST --metro fra \
-  -d '{
+  '{
     "name": "my-step-policy",
     "type": "step",
     "metric": "cpu",
@@ -354,7 +371,7 @@ This prevents request queuing but introduces cold start delays.
 
 ```bash title="unikraft"
 unikraft api /v1/services/<service-uuid>/autoscale -X POST --metro fra \
-  -d '{
+  '{
     "policies": [
       {
         "name": "scale-out",
@@ -392,7 +409,7 @@ Setting `replace` to true deletes the original VM after the new one starts.
 
 ```bash title="unikraft"
 unikraft api /v1/services/<service-uuid>/autoscale -X POST --metro fra \
-  -d '{
+  '{
     "policies": [
       {
         "name": "create",
@@ -434,7 +451,7 @@ The `idle` policy scales in (removes instances) when the service has been idleâ€
 
 ```bash title="unikraft"
 unikraft api /v1/services/<service-uuid>/autoscale -X POST --metro fra \
-  -d '{
+  '{
     "policies": [
       {
         "name": "scale-in",

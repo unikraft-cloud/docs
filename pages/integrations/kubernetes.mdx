@@ -92,6 +92,12 @@ With `kraftlet.replication.enabled=true`, each replica registers a node named af
 Select on `unikraft.com/virtual-kubelet` rather than on `kubernetes.io/hostname` to spread Pods across every replica.
 :::
 
+## Autoscaling the cluster
+
+The chart above registers one node per Kraftlet, against capacity that already exists.
+To let the cluster create that capacity on demand, add the [Karpenter provider for Unikraft](/integrations/karpenter).
+It launches a machine when a Pod has nowhere to run, installs Kraftlet against it, joins it as a node, and removes both again once the capacity goes unused.
+
 ## Examples
 
 Below are examples of Kubernetes configurations that define Unikraft Cloud apps through Kubernetes concepts.
@@ -518,9 +524,12 @@ It derives the Pod phase from the state of the backing instances:
 | `standby` | `Running`, or `Pending` while the platform reports a failure |
 | `stopped` after a clean shutdown | `Succeeded` |
 | `stopped` after a fault or a failed image pull | `Failed` |
+| Any state, once the platform stopped the instance for insufficient quota | `Failed` |
 
 The container status carries the detail behind a failure.
-An instance the platform stopped for running out of memory surfaces as `OOMKilled` with exit code 137, a failed image pull surfaces as `ErrImagePull`, and any other platform-side stop surfaces as `PlatformError`.
+An instance the platform stopped for running out of memory surfaces as `OOMKilled` with exit code 137.
+A failed image pull surfaces as `ErrImagePull`, a stop for insufficient quota surfaces as `QuotaExceeded` with exit code 1, and any other platform-side stop surfaces as `PlatformError`.
+Note that the running quota is dynamic, so on the next request, an instance which failed to start with `QuotaExceeded` might succeed.
 An instance with exactly one network interface also contributes its private IP as the Pod IP.
 
 Kraftlet records what it does on the Pod as events:
@@ -558,6 +567,26 @@ It also maps quota exhaustion and platform health onto node conditions:
 | `UnikraftPlatformHealthy` | The platform health endpoint reports a healthy state |
 
 An unreachable platform turns `Ready` to false, so the scheduler stops placing new Pods on the node until the platform answers again.
+
+### Pod rescheduling
+
+Idle instances go to `standby` and hold no live memory, which lets a node carry far more Pods than its live memory quota can run at once.
+Resuming one can fail once the quota is full, and the platform then leaves the instance in a stopped or scaled-to-zero state rather than starting it.
+
+Kraftlet reports such a Pod as `Failed` with the reason `QuotaExceeded`, and then deletes the Pod so the controller that owns it schedules a replacement.
+The node reports `MemoryPressure` as soon as its next quota refresh finds the live memory quota exhausted.
+That condition becomes a `node.kubernetes.io/memory-pressure:NoSchedule` taint, which your Pods don't tolerate, so the replacement stays off that node until live memory frees up.
+On a cluster that [autoscales with Karpenter](/integrations/karpenter), the replacement lands on another node, or on a node the autoscaler creates for it.
+
+Keep these in mind when running your workloads:
+
+* Run Pods under a Deployment, ReplicaSet, StatefulSet or Job, since Kraftlet reclaims only a Pod that has a controller behind it.
+  It leaves a bare Pod `Failed` in place, because deleting that Pod would leave nothing behind to replace it.
+* Reclaiming a Pod runs the same teardown as a delete, so its instances and Pod-scoped volumes (including `emptyDir` and `hostPath` volumes) go with it.
+  Volumes behind PersistentVolumeClaims remain until you delete their claims.
+
+Kraftlet reclaims failed Pods by default.
+Set `kraftlet.enableFailedPodReclaim=false` to leave them in place instead.
 
 ### Resource lifecycle
 
@@ -613,6 +642,11 @@ Kraftlet supports the following Unikraft Cloud platform features on Kraftlet-man
   Instances can carry addresses and TAP devices that you choose instead of ones from the platform pool.
   Kraftlet drives this through CNI plugins.
 
+* [**Annotations**](/features/annotations)
+
+  Instance metadata that also reaches the guest.
+  Kraftlet writes the [CNI result](/features/annotations#guest-network-configuration-with-cni) that a guest configures its own interfaces from.
+
 ## Custom networking with CNI
 
 {/* vale off */}
@@ -632,6 +666,11 @@ The platform then creates the instance with [custom network interfaces](/feature
 Instances join the same networks as native Pods and follow the same address management as the rest of the cluster.
 
 A companion component, `remote-cni`, exposes the plugins over gRPC for clusters where Kraftlet runs apart from the machine that hosts the instances.
+
+An instance's `network_interfaces` only accept IPv4 addresses.
+Therefore, the Kraftlet hands the rest of a plugin result—IPv6 addresses, in practice—to the guest through the [`unikraft.com/cni` annotation](/features/annotations#guest-network-configuration-with-cni), and the guest configures them on its own interfaces.
+Kraftlet does this for the Pod's default network, a secondary network contributes its IPv4 addresses alone.
+You can write the same annotation yourself on an instance you create through the API, for an [interface without an address](/features/custom-network-configuration#interfaces-without-an-address) whose addressing an IPAM system owns.
 
 ## Annotations
 
@@ -705,6 +744,7 @@ The values below cover the settings most deployments touch.
 | `kraftlet.replication.enabled` and `kraftlet.replication.replicas` | `false` and `1` | Run more than one Kraftlet, each registering its own node. |
 | `kraftlet.enablePvcWatcher` | `false` | Manage the lifecycle of `ukc-volume` claims. |
 | `kraftlet.enableInstanceFqdnAnnotations` | `false` | Annotate Pods with the FQDNs of their instances. |
+| `kraftlet.enableFailedPodReclaim` | `true` | Delete a Pod that fails because the live memory quota is full, so its controller replaces it. |
 | `kraftlet.podStatusUpdateInterval` | `15s` | How often Kraftlet refreshes Pod status from the platform. |
 | `kraftlet.podSyncWorkers` | `1` | Number of Pod reconcile workers. |
 | `kraftlet.logLevel` and `kraftlet.logType` | `info` and `json` | Log verbosity and format. |

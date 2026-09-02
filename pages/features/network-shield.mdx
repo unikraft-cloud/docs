@@ -63,7 +63,7 @@ To use a relay, reference another interface by name inside a `relay` object:
 
 ```bash title="Relay instance"
 unikraft api /v1/instances \
-  -d '{
+  '{
     "name": "my-relay",
     "network_interfaces": [
       {
@@ -75,7 +75,7 @@ unikraft api /v1/instances \
 
 ```bash title="Sandbox instance (relay client)"
 unikraft api /v1/instances \
-  -d '{
+  '{
     "name": "my-sandbox",
     "network_interfaces": [
       {
@@ -104,7 +104,7 @@ The `relay` object accepts the following fields:
  - All network traffic passes over the relay.
    Many VMs can share a single relay.
 
- - This feature supports managed interfaces with custom TAP devices.
+ - Both ends of a relay have to be interfaces that Unikraft Cloud allocates, meaning entries where you set no `ip`, `mac`, or `tap_name` of your own.
 
  - You don't need to enable VM-to-VM communication to use this feature (which you don't want in a sandbox environment).
 
@@ -119,12 +119,17 @@ The `relay` object accepts the following fields:
 |---------------|-------|
 | `Insufficient license. Please make sure your license is valid and includes custom network configurations` | Your account's license doesn't include custom network configuration, which relay is part of. |
 | `Unknown member 'network_interfaces'` | Your account lacks the `net_manager` permission required for this feature. |
+| `Invalid relay '<interface>'. Please make sure the relay exists and does not create a circular dependency` | The interface you named doesn't exist, already relays through another interface, or is itself a custom interface. |
+| `Network interface without an IP address cannot use a relay` | You configured a `relay` on an interface without an `ip`, and the relay datapath keys on the client interface's address. |
 
 ## Limitations
 
 - The feature requires the `net_manager` permission and a license that includes it (see the note at the top of this page).
 - Creating a [template](/platform/instances#instance-templates) from an instance **drops** its network configuration, since binding a template to a specific TAP device or IP defeats the purpose of cloning many instances from it.
 - The create call sets the configuration once, and **no** PATCH support exists yet.
+- Both ends of a relay have to be interfaces that Unikraft Cloud allocates, meaning entries where you set no `ip`, `mac`, or `tap_name` of your own.
+- Neither direction of a relay chain works.
+  An interface that already relays can't serve as a relay, and one serving as a relay for others can't take a relay itself.
 - Every [custom network configuration](/features/custom-network-configuration#limitations) limitation applies here too, since relay is part of that feature.
 
 ## Learn more

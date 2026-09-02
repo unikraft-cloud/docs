@@ -35,6 +35,7 @@ Deploy HTTP servers written in your language of choice on Unikraft Cloud.
 ### Go
 
 - [Go HTTP Server](/guides/httpserver-go1.21)
+- [Go and Redis HTTP Server](/guides/httpserver-go1.22-redis)
 
 ### Java
 
@@ -50,9 +51,9 @@ Deploy HTTP servers written in your language of choice on Unikraft Cloud.
 - [Puppeteer HTTP Server](/guides/httpserver-node-express-puppeteer)
 - [Prisma HTTP Server](/guides/httpserver-prisma-expressjs4.19-node18)
 - [Next.js HTTP Server](/guides/httpserver-node21-nextjs)
-- [Remix HTTP Server](/guides/httpserver-node21-remix)
+- [React Router HTTP Server](/guides/httpserver-node22-react-router)
 - [SolidJS HTTP Server](/guides/httpserver-node21-solid-start)
-- [SvelteKit HTTP Server](/guides/httpserver-node21-sveltekit)
+- [SvelteKit HTTP Server](/guides/httpserver-node22-sveltekit)
 - [Vite HTTP Server (Nginx)](/guides/httpserver-nginx-vite-vanilla)
 - [Vite HTTP Server (Node)](/guides/httpserver-node-vite-vanilla)
 - [Vite SSR HTTP Server (Node)](/guides/httpserver-node-vite-ssr-vanilla)
@@ -76,6 +77,7 @@ Deploy HTTP servers written in your language of choice on Unikraft Cloud.
 - [FastAPI HTTP Server](/guides/httpserver-python3.12-fastapi-0.121.3)
 - [Flask HTTP Server](/guides/httpserver-python3.12-flask3.0)
 - [Flask and SQLite HTTP Server](/guides/httpserver-python3.12-flask3.0-sqlite)
+- [Flask + Redis HTTP Server](/guides/httpserver-flask-redis)
 
 ### Ruby
 
@@ -84,9 +86,9 @@ Deploy HTTP servers written in your language of choice on Unikraft Cloud.
 ### Rust
 
 - [Rust HTTP Server](/guides/httpserver-rust1.91)
-- [Rust (Actix Web) HTTP Server](/guides/httpserver-rust1.87-actix-web4)
+- [Rust (Actix Web) HTTP Server](/guides/httpserver-rust1.88-actix-web4)
 - [Rust (Leptos + Trunk) HTTP Server](/guides/httpserver-rust-trunkrs-leptos)
-- [Rust (Rocket) HTTP Server](/guides/httpserver-rust1.81-rocket0.5)
+- [Rust (Rocket) HTTP Server](/guides/httpserver-rust1.88-rocket0.5)
 - [Rust (Tokio) HTTP Server](/guides/httpserver-rust1.75-tokio)
 
 ## Web Servers & Reverse Proxies
@@ -98,6 +100,7 @@ Serve static content or route traffic with popular web server and proxy tools.
 - [HAProxy](/guides/haproxy)
 - [Skipper](/guides/skipper0.18)
 - [Traefik](/guides/traefik)
+- [Tyk](/guides/tyk)
 
 ## Databases & Caching
 
@@ -127,12 +130,20 @@ Run WebAssembly workloads on Unikraft Cloud.
 - [Spin](/guides/spin-wagi-http)
 - [Wazero](/guides/wazero-import-go)
 
+## Code Execution & Build Environments
+
+Package user code as auxiliary ROMs and run it on a generic base image.
+
+- [Build/Test Environments with ROMs](/guides/build-environments)
+- [Node.js Code Execution with ROMs](/guides/node-code-execution)
+
 ## AI & MCP Servers
 
 Deploy Model Context Protocol (MCP) servers and AI-enabled services.
 
 - [Simple MCP Server](/guides/mcp-server-simple)
 - [ArXiv MCP Server](/guides/mcp-server-arxiv)
+- [OpenClaw](/guides/openclaw)
 
 ## Observability & Monitoring
 
@@ -155,14 +166,19 @@ Access remote development environments and file transfer services.
 
 Deploy complete web applications and content management systems.
 
-- [WordPress](/guides/wordpress-all-in-one)
+- [WordPress (All-in-One)](/guides/wordpress-all-in-one)
+- [WordPress with Nginx and MariaDB](/guides/wordpress)
 - [Ruby on Rails](/guides/ruby3.2-rails)
+- [Phoenix with PostgreSQL](/guides/phoenix-postgres)
+- [Flask with MongoDB](/guides/nginx-flask-mongo)
 - [Hugo](/guides/hugo0.122)
 
 ## Browser Automation
 
 Run browser automation and end-to-end testing workloads on Unikraft Cloud.
 
+- [Chromium CDP](/guides/chromium-cdp)
+- [Chromium CDP with Token Authentication](/guides/chromium-cdp-auth)
 - [Playwright Chromium (Node)](/guides/node-playwright-chromium)
 - [Playwright Firefox (Node)](/guides/node-playwright-firefox)
 - [Playwright WebKit (Node)](/guides/node-playwright-webkit)
@@ -176,6 +192,7 @@ Multiplayer and WebSocket-based applications.
 - [Agar.io Clone](/guides/node18-agario)
 - [Wings.io Clone](/guides/node18-wingsio)
 - [Node AllKaraoke](/guides/node24-karaoke)
+- [Minecraft](/guides/minecraft)
 
 ## Integration & Automation
 

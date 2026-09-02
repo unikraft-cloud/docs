@@ -202,7 +202,7 @@ kraft cloud image rm <my-org>/<my-app>[:<tag>]
 
 ## Kernel layer deduplication
 
-An image has two OCI layers: a kernel layer and a rootfs layer.
+An image typically has two OCI layers: a kernel layer and a rootfs layer.
 When you push an update to an existing image, the CLI checks whether the kernel layer is already present in the registry and skips re-uploading it.
 Only the rootfs layer travels over the wire.
 This makes iterative pushes faster and cheaper on bandwidth.
@@ -210,6 +210,7 @@ This makes iterative pushes faster and cheaper on bandwidth.
 [ROMs](/features/roms) follow the same packaging system but go out without a kernel layer.
 They only have a rootfs.
 They appear in the image list alongside regular images.
+Images that boot on the [platform kernel](/platform/images#platform-kernel) carry a rootfs layer alone in the same way.
 
 ## Instance creation
 

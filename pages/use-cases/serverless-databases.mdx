@@ -303,34 +303,36 @@ Checkpoints are reusable, named restore points that keep a history.
 Start a fresh instance from any checkpoint to recover from a failed migration or an erroneous write.
 For a full description of how checkpointing works, see the [checkpointing feature page](/features/checkpoints).
 
-To checkpoint a running instance, call the [`POST /instances/checkpoints`](/api/platform/v1/instances) endpoint with the source instance name:
+To checkpoint a running instance, pass it to `unikraft instance checkpoint create`:
 
 <CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
-unikraft api /v1/instances/checkpoints \
-  -d '{
-    "name": "before-migration",
-    "from": {
-      "name": "<source-instance>"
-    }
-  }'
+unikraft instance checkpoint create <source-instance>
+```
+
+```bash title="kraft"
+# checkpointing is not supported in the legacy CLI
+# use the unikraft CLI
 ```
 
 </CodeTabs>
 
-Later, restore the database by creating a new instance from the checkpoint:
+List the checkpoints you've taken with `unikraft instance history <source-instance>`.
+
+Later, restore the database by creating a new instance from one of those checkpoints:
 
 <CodeTabs syncKey="cli">
 
 ```bash title="unikraft"
-unikraft api /v1/instances \
-  -d '{
-    "name": "restored-postgres",
-    "checkpoint": {
-      "name": "before-migration"
-    }
-  }'
+unikraft run --metro fra \
+  -p 5432:5432/tls \
+  --checkpoint <checkpoint-name>
+```
+
+```bash title="kraft"
+# checkpointing is not supported in the legacy CLI
+# use the unikraft CLI
 ```
 
 </CodeTabs>

@@ -95,7 +95,7 @@ First, create a new service with the CLI:
 ```bash title="unikraft"
 unikraft services create --metro fra \
   --name my-service \
-  --services 443:8080/http+tls
+  --service 443:8080/http+tls
 ```
 
 ```bash title="kraft"
@@ -183,7 +183,7 @@ The output shows the instance address and other details:
 [3m  uuid[23m:       9bfe76ea-2679-482a-954e-577de7d122b3
 [3m  name[23m:       my-service
 [3m  domains[23m:
-[3m  - fqdn[23m:     my-service-f4744h0c.fra.unikraft.app
+[3m  - fqdn[23m:     my-service-pc4xjplc.fra.unikraft.app
 [1mnetworks[22m:
 [3m- uuid[23m:       51f79dc1-e989-908d-894b-bdf0a87e7901
 [3m  private-ip[23m: 10.0.3.3
@@ -211,12 +211,12 @@ The output shows the instance address and other details:
 
 
 In this case, the instance name is `httpserver-go121-9a2wv`.
-The address is `https://my-service-f4744h0c.fra.unikraft.app`.
+Notice that the service ID is the same from the service created earlier, and so is the FQDN, which is `https://my-service-pc4xjplc.fra.unikraft.app`.
 
 Use `curl` to query the Go HTTP server:
 
 ```bash
-curl https://my-service-f4744h0c.fra.unikraft.app
+curl https://my-service-pc4xjplc.fra.unikraft.app
 ```
 
 ```text title=""
@@ -286,9 +286,9 @@ For example, the following creates the service `my-service` with three published
 ```bash title="unikraft"
 unikraft services create --metro fra \
   --name my-service \
-  --services 443:8080/tls+http \
-  --services 80:8080/http+redirect \
-  --services 10000:10000/tls
+  --service 443:8080/tls+http \
+  --service 80:8080/http+redirect \
+  --service 10000:10000/tls
 ```
 
 ```bash title="kraft"
@@ -347,7 +347,7 @@ You can use the CLI to set the connection limits for a service:
 ```bash title="unikraft"
 unikraft services create --metro fra \
   --name my-service \
-  --services 443:8080/http+tls \
+  --service 443:8080/http+tls \
   --soft-limit 5 \
   --hard-limit 10
 ```

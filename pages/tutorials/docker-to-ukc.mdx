@@ -75,6 +75,9 @@ spec: v0.7
 
 runtime: base-compat:latest
 
+targets:
+  - kraftcloud/x86_64
+
 rootfs:
   source: ./Dockerfile
   format: erofs
@@ -85,6 +88,8 @@ cmd: ["/path/from-entrypoint", "arg1", "arg2"]
 In this first-pass `Kraftfile`:
 
 * `runtime: base-compat:latest` selects the generic compatibility runtime.
+* `targets: kraftcloud/x86_64` specifies the platform and architecture pairs to build for.
+  No architecture is the default, so add `kraftcloud/arm64` to the list to also build for ARM hosts.
 * `rootfs: ./Dockerfile` tells the CLI to build the root filesystem from the `Dockerfile`.
 * `cmd: [...]` explicitly sets the process arguments that should run inside the instance.
 

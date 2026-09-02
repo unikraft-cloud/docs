@@ -3,8 +3,8 @@ title: Cron Jobs / Scheduled Wake-ups
 navigation_icon: clock
 ---
 
-Scheduled operations let you automatically start, stop, delete, or exec a command in instances on a calendar-based schedule.
-Each scheduled operation specifies a name, a calendar expression, and an action (`start`, `stop`, `delete`, or `exec`).
+Scheduled operations let you automatically start, stop, delete, checkpoint, or exec a command in instances on a calendar-based schedule.
+Each scheduled operation specifies a name, a calendar expression, and an action (`start`, `stop`, `delete`, `exec`, or `checkpoint`).
 
 :::info
 When you clone an instance from a [template](/platform/instances#instance-templates), the clone inherits its scheduled operations.
@@ -20,7 +20,7 @@ Unikraft Cloud uses systemd calendar events (see [`systemd.time(7)`](https://www
 Calendar expressions have the following fields:
 
 ```text title=""
-[weekday] [[year-]month-day] [hour:minute[:second]]
+[WEEKDAY] [[YEAR-]MONTH-DAY] [HOUR:MINUTE[:SECOND]]
 ```
 
 The expression syntax supports ranges, steps, and comma-separated lists:
@@ -41,7 +41,7 @@ For example, to start an instance every day at 09:00 UTC and stop it at 18:00 UT
 <CodeTabs syncKey="cli">
 ```bash title="unikraft"
 unikraft api /v1/instances -X POST --metro fra \
-  -d '{
+  '{
     "image": "...",
     "schedules": [
       {
@@ -85,7 +85,7 @@ To run a command inside the instance every night at midnight, use the `exec` act
 <CodeTabs syncKey="cli">
 ```bash title="unikraft"
 unikraft api /v1/instances -X POST --metro fra \
-  -d '{
+  '{
     "image": "...",
     "schedules": [
       {
@@ -123,7 +123,7 @@ Add, set, or remove scheduled operations via [PATCH](/api/platform/v1/instances#
 <CodeTabs syncKey="cli">
 ```bash title="unikraft"
 unikraft api /v1/instances/<instance-uuid> -X PATCH --metro fra \
-  -d '{
+  '{
     "prop": "schedules",
     "op": "add",
     "value": [
@@ -159,7 +159,7 @@ Add an `exec` schedule the same way, but include `args` with the command to run:
 <CodeTabs syncKey="cli">
 ```bash title="unikraft"
 unikraft api /v1/instances/<instance-uuid> -X PATCH --metro fra \
-  -d '{
+  '{
     "prop": "schedules",
     "op": "add",
     "value": [
@@ -197,7 +197,7 @@ curl -X PATCH \
 <CodeTabs syncKey="cli">
 ```bash title="unikraft"
 unikraft api /v1/instances/<instance-uuid> -X PATCH --metro fra \
-  -d '{
+  '{
     "prop": "schedules",
     "op": "del",
     "value": [
@@ -228,6 +228,7 @@ curl -X PATCH \
 | `stop` | Stop the instance at the scheduled time |
 | `delete` | Delete the instance at the scheduled time |
 | `exec` | Execute a command inside the instance at the scheduled time. Requires the `args` field. |
+| `checkpoint` | Create a [checkpoint](/features/checkpoints) of the instance at the scheduled time, as described under [scheduled checkpoints](#scheduled-checkpoints) |
 
 The `args` field is an array of strings specifying the command to run when using the `exec` action.
 The first element is the executable and the remaining elements are its arguments.
@@ -243,6 +244,50 @@ The first element is the executable and the remaining elements are its arguments
 
 No need to specify it for all other actions.
 
+## Scheduled checkpoints
+
+{/* vale off */}
+:::caution[**Limited Access**]
+Checkpointing is a new feature which is available to enterprise customers, and is coming soon to the hosted platform.
+If you would like to try it out now, please reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
+:::
+{/* vale on */}
+
+The `checkpoint` action periodically creates restore points for an instance.
+Every occurrence creates a [checkpoint](/features/checkpoints) of the instance, the same way a call to [`POST /instances/checkpoints`](/api/platform/v1/instances) does.
+This builds a history of restore points without an external scheduler, but it doesn't rotate older checkpoints - they persist until explicitly deleted.
+
+To checkpoint an instance every night at 03:00 UTC:
+
+<CodeTabs syncKey="cli">
+```bash title="unikraft"
+unikraft api /v1/instances -X POST --metro fra \
+  '{
+    "image": "...",
+    "schedules": [
+      {
+        "name": "nightly-checkpoint",
+        "when": "*-*-* 03:00:00",
+        "action": "checkpoint"
+      }
+    ]
+  }'
+```
+</CodeTabs>
+
+The platform names each new checkpoint after the instance and appends a random suffix, which matches the name a checkpoint gets when you create one through the API without one.
+Find the resulting checkpoints in the instance's [checkpoint history](/features/checkpoints#checkpoint-history).
+
+Note the following:
+
+* Scheduled checkpoints need a license that covers checkpointing.
+  The platform checks the license when you configure the schedule and again at every occurrence, so an expired or replaced license stops an existing schedule from taking further checkpoints.
+* Scheduled checkpoints only work with block-based volumes (for example, `ext4`) - occurrences fail for other volume types.
+* Full VMs (`"type": "full"`) don't support checkpointing yet, so the action fails on them.
+* A failing occurrence leaves the schedule in place and doesn't affect the other scheduled operations of the instance.
+  Because the instance status reports only the next elapse of a schedule and not the result of past runs, use the checkpoint history to confirm that occurrences produce checkpoints.
+
 ## Learn more
 
+* [Checkpoints](/features/checkpoints): creating, listing, and loading the restore points a `checkpoint` schedule produces.
 * Unikraft Cloud's [REST API reference](/api/platform/v1), in particular the section on [instances](/api/platform/v1/instances).

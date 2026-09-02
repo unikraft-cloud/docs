@@ -70,15 +70,15 @@ runs:
       if [[ $(unikraft services list --filter "name==${{ inputs.name }},metro==${{ inputs.metro }}" -o raw | jq 'length') -ne 1 ]]; then
         if [[ "${{ inputs.domain }}" == "" ]]; then
           unikraft services create --metro "${{ inputs.metro }}" \
-            --domains "${{ inputs.name }}" \
+            --domain "${{ inputs.name }}" \
             --name "${{ inputs.name }}" \
-            --services "443:${{ inputs.port }}/http+tls" \
+            --service "443:${{ inputs.port }}/http+tls" \
           ;
         else
           unikraft services create --metro "${{ inputs.metro }}" \
-            --domains "${{ inputs.domain }}" \
+            --domain "${{ inputs.domain }}" \
             --name "${{ inputs.name }}" \
-            --services "443:${{ inputs.port }}/http+tls" \
+            --service "443:${{ inputs.port }}/http+tls" \
           ;
         fi
       fi

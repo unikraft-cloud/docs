@@ -11,7 +11,9 @@ If you would like to try it out now, please reach out to the [Unikraft Cloud Dis
 {/* vale on */}
 
 By default, Unikraft Cloud gives every instance a single network interface, allocated from the platform's address and TAP device pool.
-Custom network configuration lets you take control of this setup: attach up to four interfaces, supply your own IP addresses and TAP devices, and override the gateway and nameserver.
+Custom network configuration lets you take control of this setup.
+It allows you to attach up to four interfaces, supply your own IP addresses, MAC addresses, and TAP devices, or take an interface with no address at all.
+You can also override the gateway and nameserver that the guest uses.
 
 This is the building block for private networking between your instances, and for the [network shield and relay](/features/network-shield).
 
@@ -47,7 +49,7 @@ Add a `network_interfaces` array to your [`POST /instances`](/api/platform/v1/in
 
 ```bash title="unikraft"
 unikraft api /v1/instances \
-  -d '{
+  '{
     "name": "my-instance",
     "image": "nginx:latest",
     "network_interfaces": [
@@ -73,40 +75,113 @@ Each entry in `network_interfaces` accepts the following fields:
 | Field | Required | Description |
 |-------|----------|-------------|
 | `name` | No | The interface name. If omitted, Unikraft Cloud generates one as `<instance-name>-ethX`, falling back to `eth-<suffix>` when the instance name is too long. |
-| `ip` | No | The interface IP address in CIDR notation. Provide it together with `tap_name` to bring your own interface. |
-| `tap_name` | No | The TAP device to attach the interface to (15 characters or less). Provide it together with `ip`. |
-| `autoconfig` | No | Whether the guest configures the interface itself. Defaults to `true`. |
+| `ip` | No | The interface IP address in CIDR notation. |
+| `mac` | No | The interface MAC address as `hh:hh:hh:hh:hh:hh`, see [custom MAC addresses](#custom-mac-addresses). |
+| `tap_name` | No | The TAP device to attach the interface to (15 characters or less), which on its own gives you [an interface without an address](#interfaces-without-an-address). |
+| `autoconfig` | No | Whether the platform configures the interface inside the guest, as described under [autoconfiguration](#autoconfiguration). |
 | `relay` | No | An object that routes all traffic through another interface, as described under [network shield and relay](/features/network-shield). |
 
-You either specify both `ip` and `tap_name`, or neither.
-When you omit them, Unikraft Cloud picks an interface from the platform's TAP device pool.
-The `ip` and `tap_name` you supply must not come from that pool.
+An `ip` and a `mac` each require a `tap_name`, while a `tap_name` on its own is enough.
+When you omit all three, Unikraft Cloud allocates the interface, its address, and its MAC from the platform's own pools.
+Each value you supply has to stay outside the matching pool: the platform's address ranges for an `ip`, its `12:b0:` prefix for a `mac`, and its TAP device names for a `tap_name`.
+The TAP device itself is yours to create: Unikraft Cloud attaches the interface to a device that already exists.
+Nothing caps a custom network at a `/30`, though a `/31` or a `/32` leaves the platform no address to derive a gateway or nameserver from.
 
 The top-level `gateway` and `nameserver` fields override the values configured inside the guest.
-If you omit them, Unikraft Cloud derives them from the last address in the IP network of the first pool-allocated interface, or, if there is none, the primary interface.
+If you omit them, Unikraft Cloud derives them from the last usable address in the IP network of the first pool-allocated interface.
+An instance whose interfaces are all custom gets neither, so supply both fields or configure them in the guest.
 
 Like other object names, an interface `name` is **global to your account**, not local to the instance.
 This lets you reference one instance's interface from another.
 
+### Custom MAC addresses
+
+By default the platform sets an interface's MAC address.
+Pass the `mac` field to pick the address yourself, so a guest that derives its licensing, clustering, or peer identity from its MAC address stays recognizable across recreations of the instance:
+
+```json title="POST /instances"
+{
+  ...
+  "network_interfaces": [
+    {
+      "tap_name": "tap-custom0",
+      "mac": "02:1a:2b:3c:4d:5e",
+      "ip": "192.168.0.1/24"
+    }
+  ]
+}
+```
+
+Write the address as `hh:hh:hh:hh:hh:hh`, without shorthand groups or surrounding whitespace, and observe two rules:
+
+- The address has to be unicast, so its first octet has to be even.
+- The address has to sit outside the platform's own pool, so it must not start with `12:b0:`.
+
+A `mac` requires a `tap_name`.
+Whether you pick the address or leave it to the platform, [`GET /instances`](/api/platform/v1/instances#list-instances) reports the address each interface ended up with as the `mac` field of its entry in `network_interfaces`.
+
+### Interfaces without an address
+
+An interface that carries a `tap_name` but no `ip` gives the guest a link on your TAP device with no address on it:
+
+```json title="POST /instances"
+{
+  ...
+  "network_interfaces": [
+    {
+      "tap_name": "tap-custom0",
+      "mac": "02:1a:2b:3c:4d:5e",
+      "autoconfig": false
+    }
+  ]
+}
+```
+
+This is what a fully customer-managed network needs—an external IPAM, a CNI plugin, or a virtual appliance that handles its own addressing.
+Your side provides the TAP device and decides the addressing on it, and the platform only attaches the guest's interface to that device.
+
+A CNI plugin can also supply the link's addressing without requiring your application or image to configure it.
+Write the plugin's result into the instance's [`unikraft.com/cni` annotation](/features/annotations#guest-network-configuration-with-cni), and the guest matches the addresses in it to this interface by MAC address and configures them itself.
+
+Such an interface differs from an addressed one in three ways:
+
+- `autoconfig` has to be `false`, because the platform has no address to configure in the guest.
+- The interface reports no `private_ip`, and neither does the instance when the address-less interface is its primary one.
+- The platform keeps the interface out of the internal DNS and routes no service traffic to it.
+
+The platform also never derives a gateway or nameserver from a custom interface's network.
+Set the instance-level `gateway` and `nameserver` fields, or configure both inside the guest.
+
 ### Autoconfiguration
 
-`autoconfig` is independent of which TAP device an interface uses and defaults to `true`.
-When enabled, the guest configures the interface for you.
-Disable it to leave the interface untouched, so your app or image can set up networking on its own.
+`autoconfig` decides whether the platform configures the interface inside the guest.
+With it on, the platform hands the guest the interface's address—together with the gateway, nameserver, and hostname—at boot, and the guest brings the interface up with them.
+With it off, the platform passes nothing and skips the interface, so your app or image sets up networking on its own.
+
+It defaults to on for the default pool-allocated interface and for any interface with an `ip`.
+An interface without one has to keep it off, because the platform then has no address to configure in the guest.
 
 ### Network shield and relay
 
 An interface can route all its traffic through another instance's interface, which is how the [network shield](/features/network-shield) filters a workload's traffic and injects secrets on its behalf.
 Configure it with the `relay` field of a `network_interfaces` entry.
 
+Both ends of a relay have to be interfaces that Unikraft Cloud allocates, meaning entries where you set no `ip`, `mac`, or `tap_name` of your own.
+
 ## Error handling
 
 | Error message | Cause |
 |---------------|-------|
 | `Insufficient license. Please make sure your license is valid and includes custom network configurations` | Your account's license doesn't include custom network configuration. |
-| `Network interface must specify an IP address when a TAP device is provided and vice versa` | You set only one of `ip` and `tap_name`. Provide both or neither. |
+| `Network interface IP and MAC address require a TAP device` | You set `ip` or `mac` without a `tap_name`, so either add the TAP device or drop the address. |
 | `Network interface IP address cannot be from the platform's address pool` | The `ip` overlaps the platform's managed address pool. Use an address outside it. |
 | `Network interface TAP device cannot be from the platform's device pool` | The `tap_name` refers to a platform-managed TAP device. Use one of your own. |
+| `Invalid MAC address '<value>'` | The `mac` isn't a `hh:hh:hh:hh:hh:hh` address, or it's all-zero, which the platform reads as an omitted field. |
+| `Network interface MAC address must be a unicast address` | The `mac` has its multicast bit set, so choose an address whose first octet is even. |
+| `Network interface MAC address cannot be from the platform's address pool` | The `mac` starts with `12:b0:`, which the platform reserves for the addresses it derives itself. |
+| `Network interface without an IP address cannot be auto-configured in the guest` | You set `autoconfig` to `true` on an interface without an `ip`, which has to keep autoconfiguration off. |
+| `Network interface without an IP address cannot use a relay` | You configured a `relay` on an interface without an `ip`, and the relay datapath keys on the client interface's address. |
+| `Invalid relay '<interface>'. Please make sure the relay exists and does not create a circular dependency` | The interface named as the relay doesn't exist, already relays through another interface, or is itself a custom interface. |
 | `Unknown member 'network_interfaces'` | Your account lacks the `net_manager` permission required for this feature. |
 
 ## Limitations
@@ -115,11 +190,14 @@ Configure it with the `relay` field of a `network_interfaces` entry.
 - The feature requires the `net_manager` permission and a license that includes it (see the note at the top of this page).
 - Creating a [template](/platform/instances#instance-templates) from an instance **drops** its network configuration, since binding a template to a specific TAP device or IP defeats the purpose of cloning many instances from it.
 - You currently **can't** [branch](/features/branching) or [checkpoint](/features/checkpoints) an instance with more than one interface.
+- The [relay](/features/network-shield) feature works between pool-allocated interfaces only, on both ends.
 - The create call sets the configuration once; **no** PATCH support exists yet.
 
 ## Learn more
 
 * [Network shield and relay](/features/network-shield): route an instance's traffic through another instance that filters it and injects credentials.
+* [Annotations](/features/annotations#guest-network-configuration-with-cni): hand a CNI result to the guest through the `unikraft.com/cni` annotation, and let it address its own interfaces.
+* [Kubernetes](/integrations/kubernetes#custom-networking-with-cni): how Kraftlet runs the CNI plugins of your cluster for Unikraft Cloud instances.
 * [Instances](/platform/instances): how instances work, including their lifecycle and configuration.
 * [Branching](/features/branching) and [Checkpoints](/features/checkpoints): create independent copies and reusable restore points of running instances.
 * [Instance templates](/platform/instances#instance-templates): reusable images that you clone into new instances.

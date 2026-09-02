@@ -7,7 +7,7 @@ Unikraft Cloud uses a **registry** to store images used to instantiate apps.
 At a high level, you use the CLI to build and push an image to the registry, and then ask the controller to start an app from it.
 
 This process utilizes two types of registries: central and local.
-Built images default to the central registry (`index.unikraft.io`). 
+Built images default to the central registry (`index.unikraft.io`).
 The platform pulls from this registry automatically upon starting an instance for the first time.
 
 You can choose to push an image directly to a node's local registry instead.
@@ -40,6 +40,9 @@ spec: v0.7
 
 runtime: base-compat:latest
 
+targets:
+  - kraftcloud/x86_64
+
 rootfs:
   source: ./Dockerfile
   format: erofs
@@ -47,11 +50,11 @@ rootfs:
 cmd: ["/usr/bin/python3", "/src/server.py"]
 ```
 
-The file is simple. 
-It defines the start command, instructs the CLI to build the root filesystem, and specifies the `base-compat:latest` runtime.
+The file is simple.
+It defines the start command, instructs the CLI to build the root filesystem, specifies the `base-compat:latest` runtime, and targets `kraftcloud` on `x86_64`.
 
 On Unikraft Cloud, a runtime provides a base image containing the minimal code your app needs to execute.
-The CLI combines your app files with this base image during the build step. 
+The CLI combines your app files with this base image during the build step.
 It uses the `Dockerfile` as the source to generate the directory structure.
 When packaging these files into a root filesystem, Unikraft offers two main options: [CPIO and EROFS](/tutorials/rootfs-formats).
 The file specifies the EROFS format to create a read-only disk image, which is the [preferred format for Unikraft Cloud](/tutorials/rootfs-formats#conclusion).
@@ -64,18 +67,6 @@ FROM python:3.12 AS build
 
 RUN set -xe; \
     /usr/sbin/ldconfig /usr/local/lib
-
-FROM scratch
-
-# copy the dependencies from the base image
-COPY --from=build /usr/local/lib /usr/local/lib
-COPY --from=build /usr/local/bin/python3 /usr/bin/python3
-COPY --from=build /lib/x86_64-linux-gnu/libc.so.6 /lib/x86_64-linux-gnu/libc.so.6
-COPY --from=build /lib/x86_64-linux-gnu/libm.so.6 /lib/x86_64-linux-gnu/libm.so.6
-COPY --from=build /usr/lib/x86_64-linux-gnu/libz.so.1 /usr/lib/x86_64-linux-gnu/libz.so.1
-COPY --from=build /usr/lib/x86_64-linux-gnu/libcrypto.so.3 /usr/lib/x86_64-linux-gnu/libcrypto.so.3
-COPY --from=build /lib64/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
-COPY --from=build /etc/ld.so.cache /etc/ld.so.cache
 
 # copy the python image
 COPY ./server.py /src/server.py
@@ -99,6 +90,73 @@ This is a good start for [porting existing Dockerfiles to Unikraft Cloud](/tutor
 Be aware that this choice may increase image size, memory use, and boot time.
 :::
 
+
+## Platform kernel
+
+{/* vale off */}
+:::caution[**Limited Access**]
+Kernel-less images are available as part of enterprise plans.
+To try out this feature, reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
+:::
+{/* vale on */}
+
+An image doesn't have to carry its own kernel.
+An image that ships only a rootfs boots on the kernel installed on the node, which your metro operator maintains as a separate package.
+Images that do ship a kernel keep working exactly as before.
+
+This decouples the guest kernel from your app.
+A kernel update, including a security fix, becomes available to workloads that cold-boot after the operator rolls out the new kernel package.
+You no longer rebuild and re-push every image to pick one up.
+Images also get smaller, which shortens image pull times.
+
+A new kernel on the node applies to the next instance that starts.
+Running instances keep the kernel they booted with until they fully shut down, and an instance resuming from a [snapshot](/features/snapshots) always boots the kernel that snapshot captured.
+
+## Architectures
+
+The Unikraft Cloud platform runs on both `x86_64` and `arm64` hosts, and the hosted platform runs on `x86_64`.
+The architecture of the guest images must match the host architecture.
+
+{/* vale off */}
+:::caution[**Limited Access**]
+`arm64` hosts are available as part of enterprise plans.
+To deploy to them, reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
+:::
+{/* vale on */}
+
+List the architectures you want under `targets` in the `Kraftfile`:
+
+```yaml title="Kraftfile"
+spec: v0.7
+
+runtime: base-compat:latest
+
+targets:
+  - kraftcloud/x86_64
+  - kraftcloud/arm64
+
+rootfs:
+  source: ./Dockerfile
+  format: erofs
+
+cmd: ["/usr/bin/python3", "/src/server.py"]
+```
+
+A single `unikraft build` invocation then produces an image for every architecture in the list.
+The `--arch` flag names architectures on the command line instead, which is handy for narrowing a multi-architecture `Kraftfile` down to one architecture.
+
+How the build resolves architectures depends on what the `Kraftfile` declares:
+
+| `Kraftfile` | Architectures used |
+|-------------|--------------------|
+| `runtime` with no `targets` or `--arch` | Every architecture the runtime provides. |
+| `runtime` with `targets` or `--arch` | Only the architectures listed in both `targets` and `--arch`, which must be ones the runtime provides. |
+| [`roms`](/features/roms) with no `runtime` | Only the architectures listed in both `targets` and `--arch`, and the build fails when you supply neither. |
+
+:::caution
+Multi-platform builds need a correctly configured BuildKit builder on the host.
+Learn more [here](https://docs.docker.com/build/building/multi-platform/)
+:::
 
 ## Example workflows
 

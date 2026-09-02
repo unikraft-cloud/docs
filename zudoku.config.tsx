@@ -159,7 +159,10 @@ const config: ZudokuConfig = {
           collapsed: false,
           items: [
             "/integrations/kubernetes",
+            "/integrations/karpenter",
             "/integrations/sdks/go",
+            "/integrations/sdks/js",
+            "/integrations/sdks/plugin",
           ],
         },
       ],
@@ -174,11 +177,14 @@ const config: ZudokuConfig = {
         "/guides/httpserver-dotnet10.0", // .NET HTTP Server
         "/guides/node18-agario", // Agar.io (Node)
         "/guides/mcp-server-arxiv", // ArXiv MCP Server
+        "/guides/build-environments", // Build/Test Environments with ROMs
         "/guides/httpserver-bun", // Bun HTTP Server
         "/guides/httpserver-gcc13.2", // C HTTP Server
         "/guides/httpserver-boost1.74-gpp13.2", // C++ Boost HTTP Server
         "/guides/httpserver-gpp13.2", // C++ HTTP Server
         "/guides/caddy2.7-go1.21", // Caddy
+        "/guides/chromium-cdp", // Chromium CDP
+        "/guides/chromium-cdp-auth", // Chromium CDP with Token Authentication
         "/guides/debian-ssh", // Debian SSH server
         "/guides/httpserver-python3.12-django5.0", // Django HTTP Server
         "/guides/dragonflydb", // DragonflyDB
@@ -202,6 +208,7 @@ const config: ZudokuConfig = {
         "/guides/httpserver-lua5.1", // Lua HTTP Server
         "/guides/mariadb", // MariaDB
         "/guides/memcached1.6", // Memcached
+        "/guides/minecraft", // Minecraft
         "/guides/minio", // Minio
         "/guides/mongodb", // MongoDB
         "/guides/mysql", // MySQL
@@ -211,7 +218,9 @@ const config: ZudokuConfig = {
         "/guides/node24-karaoke", // Node AllKaraoke
         "/guides/httpserver-node26", // Node HTTP Server
         "/guides/node21-websocket", // Node WebSocket Server
+        "/guides/node-code-execution", // Node.js Code Execution with ROMs
         "/guides/novnc-browser", // noVNC
+        "/guides/openclaw", // OpenClaw
         "/guides/opentelemetry-collector", // OpenTelemetry Collector
         "/guides/httpserver-perl5.42", // Perl HTTP Server
         "/guides/phoenix-postgres", // Phoenix with PostgreSQL

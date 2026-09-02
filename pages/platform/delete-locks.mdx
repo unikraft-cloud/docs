@@ -34,7 +34,7 @@ You can set a delete lock on a resource via a `PATCH` operation:
   <CodeTabs syncKey="cli">
 ```bash title="unikraft"
 unikraft api /v1/instances -X PATCH --metro fra \
-  -d '[{
+  '[{
     "name": "<instance-name>",
     "prop": "delete_lock",
     "op": "set",
@@ -60,7 +60,7 @@ curl -X PATCH \
   <CodeTabs syncKey="cli">
 ```bash title="unikraft"
 unikraft api /v1/instances/templates -X PATCH --metro fra \
-  -d '[{
+  '[{
     "name": "<instance-template-name>",
     "prop": "delete_lock",
     "op": "set",
@@ -85,7 +85,7 @@ curl -X PATCH \
   <CodeTabs syncKey="cli">
 ```bash title="unikraft"
 unikraft api /v1/volumes -X PATCH --metro fra \
-  -d '[{
+  '[{
     "name": "<volume-name>",
     "prop": "delete_lock",
     "op": "set",
@@ -110,7 +110,7 @@ curl -X PATCH \
   <CodeTabs syncKey="cli">
 ```bash title="unikraft"
 unikraft api /v1/volumes/templates -X PATCH --metro fra \
-  -d '[{
+  '[{
     "name": "<volume-template-name>",
     "prop": "delete_lock",
     "op": "set",
@@ -148,7 +148,7 @@ Before you can delete a resource, you need to remove the delete lock by setting 
   <CodeTabs syncKey="cli">
 ```bash title="unikraft"
 unikraft api /v1/instances -X PATCH --metro fra \
-  -d '[{
+  '[{
     "name": "<instance-name>",
     "prop": "delete_lock",
     "op": "set",
@@ -173,7 +173,7 @@ curl -X PATCH \
   <CodeTabs syncKey="cli">
 ```bash title="unikraft"
 unikraft api /v1/instances/templates -X PATCH --metro fra \
-  -d '[{
+  '[{
     "name": "<instance-template-name>",
     "prop": "delete_lock",
     "op": "set",
@@ -198,7 +198,7 @@ curl -X PATCH \
   <CodeTabs syncKey="cli">
 ```bash title="unikraft"
 unikraft api /v1/volumes -X PATCH --metro fra \
-  -d '[{
+  '[{
     "name": "<volume-name>",
     "prop": "delete_lock",
     "op": "set",
@@ -223,7 +223,7 @@ curl -X PATCH \
   <CodeTabs syncKey="cli">
 ```bash title="unikraft"
 unikraft api /v1/volumes/templates -X PATCH --metro fra \
-  -d '[{
+  '[{
     "name": "<volume-template-name>",
     "prop": "delete_lock",
     "op": "set",

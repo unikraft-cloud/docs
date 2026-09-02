@@ -119,6 +119,9 @@ spec: v0.7
 
 runtime: base-compat:latest
 
+targets:
+  - kraftcloud/x86_64
+
 rootfs:
   source: ./Dockerfile
   format: erofs
@@ -195,6 +198,12 @@ The commands below will use the `at` field to automount the ROM.
 That's why the `Kraftfile` omits the `wrapper.sh` script and the app can read the ROM file directly from `/rom/rom.py`.
 :::
 
+:::note
+This base image builds for `x86_64` only, and its `Dockerfile` copies libraries from architecture-specific paths such as `/lib/x86_64-linux-gnu`.
+To run the same base image on ARM hosts, add `kraftcloud/arm64` to `targets`, and copy from the matching `aarch64-linux-gnu` paths.
+See [architectures](/platform/images#architectures) for more detail.
+:::
+
 Package and push the base image:
 
 <CodeTabs syncKey="cli">
@@ -248,6 +257,9 @@ def function():
 ```yaml title="rom1/Kraftfile"
 spec: v0.7
 
+targets:
+- kraftcloud/x86_64
+
 roms:
 - ./fs
 ```
@@ -260,10 +272,20 @@ def function():
 ```yaml title="rom2/Kraftfile"
 spec: v0.7
 
+targets:
+- kraftcloud/x86_64
+
 roms:
 - ./fs
 ```
 </CodeTabs>
+
+:::caution
+ROMs are architecture-specific.
+A ROM `Kraftfile` has no `runtime` to take architectures from, so it names them itself under `targets`, or you pass `--arch` on the command line.
+A ROM build that does neither fails.
+Listing more than one architecture builds the ROM for each of them in one invocation, and each instance needs the ROM that matches the architecture of its base image.
+:::
 
 Package and push the ROMs:
 

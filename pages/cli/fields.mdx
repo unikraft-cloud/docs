@@ -268,6 +268,23 @@ The `--add` flag works the same way, appending the given value instead of removi
 
 You can combine `--set`, `--add`, and `--del` flags in a single `edit` invocation.
 
+### List and map fields
+
+Each flag carries exactly one element, so a field holding a list or a map takes one flag per entry.
+The CLI never splits a value on commas—a comma inside a value is part of that value.
+
+```bash
+unikraft instances edit httpserver-rust175-tokio \
+  --set tags=production \
+  --set tags=customer_A
+```
+
+To pass a whole list or map in a single flag, write it as JSON instead.
+
+```bash
+unikraft instances edit httpserver-rust175-tokio --set tags='["production","customer_A"]'
+```
+
 ## Visual editing
 
 Pass `--visual` to open the resource in your editor and edit its fields interactively.

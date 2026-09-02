@@ -300,6 +300,19 @@ A manual start or stop of the instance aborts the restart sequence and resets th
 
 ## Creating instances
 
+### Instance types
+
+Every instance runs as one of two virtual machine types, which you pick with `--type`:
+
+| Type | Description |
+|------|-------------|
+| `micro` | The default, running on Firecracker. |
+| `full` | Runs on QEMU, which [GPU support](#gpus) requires, and needs a plan with full VM support. |
+
+Full VMs trade platform features for that extra hardware access.
+A QEMU-backed instance supports neither [scale-to-zero](/features/scale-to-zero), [instance templates](#instance-templates), [branching](/features/branching), nor [checkpointing](/features/checkpoints), and works only with block-based volumes rather than [virtiofs](/platform/volumes#filesystems).
+A create request therefore can't combine `--type` with `--template`, `--branch`, or `--checkpoint`.
+
 ### Replicas
 
 The [`POST /instances`](/api/platform/v1/instances#create-instance) request accepts a `replicas` field (default 0) that creates more copies of the instance alongside the base one.
@@ -331,29 +344,41 @@ kraft cloud deploy --replicas 2 ...
 
 :::caution[**Limited Access**]
 GPU support is currently only available as a preview for enterprise customers.
+To try out the preview, reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
 The interface described here reflects the current implementation and may change before general availability.
 :::
 
 Instances can run with an NVIDIA GPU attached.
-Pass the `gpus` field in the [`POST /instances`](/api/platform/v1/instances#create-instance) request to request one:
+Pass `--gpus` when you create the instance, together with the `full` instance type that GPUs require:
 
-```json title="POST /instances"
-{
-  ...
-  "image": "my-inference-app:latest",
-  "memory_mb": 4096,
-  "type": "full",
-  "gpus": 1,
-  ...
-}
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft instance create --metro fra \
+  --name my-inference-app \
+  --image my-inference-app:latest \
+  --memory 4096 \
+  --type full \
+  --gpus 1
 ```
 
-An instance can currently hold at most one GPU.
+</CodeTabs>
 
-:::note
-GPU instances are only available on GPU-provisioned hardware.
-Please [get in touch](https://unikraft.com/contact) if you need it.
-:::
+An instance can currently hold at most one GPU, and you can't choose which one.
+The platform picks a free GPU from the host and keeps it assigned for the instance's entire lifetime, releasing it when you delete the instance.
+
+To see the GPUs an instance holds, inspect it:
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft instance get my-inference-app
+```
+
+</CodeTabs>
+
+The `gpus.*.uuid` and `gpus.*.model` fields report the GPUs themselves, and `resources.gpus` reports how many the instance holds.
+Listings sort and filter on all three like any other [field](/docs/cli/fields).
 
 ### Wait for running
 
@@ -419,6 +444,46 @@ unikraft instance create --rm ...
 To use the "delete-on-stop" feature, set the `restart_policy` to `never`.
 :::
 
+### Nested virtualization
+
+{/* vale off */}
+:::caution[**Limited Access**]
+Nested virtualization is available as part of enterprise plans.
+To enable it for your account, reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
+:::
+{/* vale on */}
+
+An instance runs without the host's virtualization extensions by default, since the platform hides them from the guest.
+Pass `nested-virt` in the features array to expose them, so that a workload shipping its own virtual machines runs as an ordinary instance:
+
+```json title="POST /instances"
+{
+  ...
+  "image": "my-workload:latest",
+  "memory_mb": 4096,
+  "features": ["nested-virt"],
+  ...
+}
+```
+
+You can also use the CLI to set this up:
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft instance create --feature nested-virt ...
+```
+
+</CodeTabs>
+
+The guest kernel needs the matching driver to use the extensions.
+A Linux guest needs `CONFIG_KVM` together with `CONFIG_KVM_INTEL` or `CONFIG_KVM_AMD`, and exposes `/dev/kvm` once it loads the module.
+
+:::note
+A create request that starts from a snapshot—an [instance template](#instance-templates), a [branch](/features/branching), or a [checkpoint](/features/checkpoints)—can't add `nested-virt`.
+Set the feature on the instance that you snapshot instead, and every instance that starts from that snapshot inherits it.
+:::
+
 ## Stopping instances
 
 ### Drain timeout
@@ -470,6 +535,11 @@ An instance template is a snapshotted instance that acts as a source for cloning
 Cloning a template creates a new instance that resumes from the exact original system state.
 It preserves memory contents, open files, and populated caches to bypass the standard boot sequence.
 Once you convert an instance into a template, you can't reverse the process.
+
+:::note
+Templates need the default `micro` [instance type](#instance-types).
+QEMU-backed full VMs (`--type full`), which [GPU instances](#gpus) require, don't support them.
+:::
 
 To transition an actively running instance into a template, from the guest write the value 1 to `/uk/libukp/template_instance`:
 

@@ -22,6 +22,22 @@ Unikraft Cloud built plugins to provide a native sandbox experience.
 In the sandbox case, a plugin runs a small HTTP server that accepts commands to run inside the instance, exposes filesystem services, and more.
 The same mechanism fits any helper you want to reach over a per-instance, authenticated endpoint.
 
+## Official plugins
+
+### Sandbox plugin
+
+{/* vale off */}
+:::caution[**Limited Access**]
+The sandbox plugin is available as part of enterprise plans.
+To try it out, reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
+:::
+{/* vale on */}
+
+The sandbox plugin lets you run commands and manipulate the filesystem inside an instance, over the plugin endpoint:
+
+- **Commands**: start a shell command inside the instance, inspect it, read its output, feed its standard input, wait for it, and signal it.
+- **Filesystem**: create directories, and read, write, and upload files.
+
 ## How it works
 
 Each plugin loads from its own [ROM image](/features/roms).
@@ -39,7 +55,9 @@ A request to `.../plugins/my-plugin/files/list` reaches the plugin with the path
 
 This design has a few notable properties:
 
-- **Authenticated like any API call.** The platform checks the request against your account and confirms that you own the target instance before it forwards anything. This sets plugins apart from running an HTTP server as a regular [service](/platform/services).
+- **Authorized before it reaches the plugin.** By default the platform checks the request against your account and confirms your access to the target instance.
+  A plugin can carry [a token of its own](#authorization) instead, which lets callers without a platform account in.
+  Either method settles the request before the plugin sees it, which sets plugins apart from running an HTTP server as a regular [service](/platform/services).
 - **A direct line to one instance.** You talk to a single instance, so no [load balancing](/features/load-balancing) or [autoscale](/features/autoscale) sits in the path, and the instance needs no [service group](/platform/services).
 - **Works with scale-to-zero.** When [scale-to-zero](/features/scale-to-zero) has put the instance to sleep, the platform wakes it to serve the request and keeps it up for the duration, the same way a normal request does.
 
@@ -67,7 +85,7 @@ List your plugins in the `plugins` field of a [`POST /instances`](/api/platform/
 
 ```bash title="unikraft"
 unikraft api /v1/instances \
-  -d '{
+  '{
     "name": "my-instance",
     "plugins": [
       {
@@ -90,8 +108,69 @@ Each entry in the `plugins` array accepts these fields:
 | `name` | Yes | The plugin name. It becomes the `<plugin_name>` segment in the plugin endpoint. See [Plugin names](#plugin-names) for the allowed format. |
 | `rom` | Yes | The plugin's ROM image, given as an image reference string such as `user/myplugin:latest`, or as an image object with a `url` and optional `headers` and `pull_policy`, the same as elsewhere in the API. |
 | `config` | No | Arbitrary JSON that the platform passes to the plugin's `init` on `STDIN`. Any JSON value works, including a string, a number, or an object. |
+| `authorization` | No | How the platform authorizes requests to this plugin, as described under [authorization](#authorization). |
 
 You can attach up to 8 plugins to an instance.
+
+## Authorization
+
+Every request to a plugin endpoint carries a token in an `Authorization: Bearer <token>` header.
+The platform authorizes the request before it forwards anything, and strips that header on the way, so the plugin never sees the token.
+
+A plugin picks how the platform checks the token with an optional `authorization` object:
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `type` | Yes | Either `userdb` or `bearer`. |
+| `token` | For `bearer` | The plugin's own token, at most 256 characters, which only a `bearer` plugin may carry. |
+
+### Platform users
+
+A plugin without an `authorization` object uses the `userdb` method.
+The token has to belong to a platform user with access to the instance, so the token you use for the rest of the API reaches the plugin as well.
+
+### A token of the plugin's own
+
+With `"type": "bearer"` the platform compares the supplied token against the plugin's own token and consults no user account:
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft api /v1/instances \
+  '{
+    "name": "my-instance",
+    "plugins": [
+      {
+        "name": "my-plugin",
+        "rom": "user/myplugin:latest",
+        "authorization": {
+          "type": "bearer",
+          "token": "s3cr3t"
+        }
+      }
+    ]
+  }'
+```
+
+</CodeTabs>
+
+A caller then reaches the plugin with that token alone:
+
+```bash
+curl -H "Authorization: Bearer s3cr3t" \
+  https://api.fra.unikraft.cloud/v1/instances/<uuid>/plugins/my-plugin/files/list
+```
+
+This suits callers with no platform account and no business holding one: a sidecar, your own control plane, or a webhook from a third-party service.
+The token opens that one plugin on that one instance, and nothing else of the API.
+
+The instance status echoes a non-default `type` back in the plugin's `authorization` object, and never echoes the token.
+A plugin on the default method reports no `authorization` object at all.
+
+Two consequences follow from `bearer` consulting no user account:
+
+- Your platform token stops working on that plugin, so the plugin's token becomes the only way in.
+- Changing the token takes the same [PATCH path](#adding-plugins-to-an-existing-instance) as adding a plugin, so it lands the next time the instance stops.
 
 ## Plugin names
 
@@ -110,7 +189,7 @@ Set `prop` to `plugins`, and pass the plugins in `value`:
 
 ```bash title="unikraft"
 unikraft api /v1/instances -X PATCH \
-  -d '[{
+  '[{
     "name": "my-instance",
     "prop": "plugins",
     "op": "add",
@@ -160,9 +239,12 @@ Plugins fit other patterns too. A few ideas:
 - You can attach at most 8 plugins to an instance.
 - Adding plugins works today, and unloading a plugin from an instance is coming in a future release.
 - A plugin name has a maximum length of 63 characters and uses only letters, digits, `-`, and `_`.
+- A `bearer` token has a maximum length of 256 characters.
 
 ## Learn more
 
+* [Plugin SDK](/integrations/sdks/plugin): build a plugin in Go without hand-rolling the platform contract.
+* [Sandboxes](/use-cases/sandboxes): run untrusted code in a hardware-isolated microVM.
 * [ROMs](/features/roms): the image format that plugins build on.
 * [Instances](/platform/instances): create and manage the instances that host plugins.
 * [Scale-to-zero](/features/scale-to-zero): how an idle instance wakes to serve a plugin request.

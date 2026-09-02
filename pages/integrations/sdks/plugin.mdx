@@ -1,0 +1,599 @@
+---
+title: Plugin SDK
+navigation_icon: puzzle
+---
+
+The Unikraft Cloud Plugin SDK is a small framework for building [plugins](/features/plugins) in Go.
+A plugin runs as a sidecar HTTP server next to your app inside an instance, and loads from its own [ROM image](/features/roms).
+It answers the requests that the platform forwards to it over a per-instance, authenticated endpoint.
+
+Every plugin meets the same platform contract.
+It parses the `init` command line, adopts the socket the platform hands it, and decodes the JSON `config` from `STDIN`.
+It also stands up a router with middleware and drains in-flight requests on shutdown.
+The SDK takes care of each step.
+You write a configuration struct and a route registration function, and `pluginsdk.Main` does the rest.
+A complete plugin takes about 25 lines.
+
+## Installation
+
+```bash
+go get unikraft.com/cloud/pluginsdk
+```
+
+Requires Go 1.26.4 or later.
+
+## Quickstart
+
+```go title="main.go"
+package main
+
+import (
+  "context"
+
+  "github.com/gin-gonic/gin"
+
+  "unikraft.com/cloud/pluginsdk"
+)
+
+// Config takes its values from the platform `config` JSON on STDIN, through
+// each field's `json` tag. A --greeting flag overrides that value; an `env`
+// tag would bind an environment variable as well.
+type Config struct {
+  Greeting string `json:"greeting" default:"Hello"`
+}
+
+func main() {
+  pluginsdk.Main(&pluginsdk.Plugin[Config]{
+    Name: "example",
+    Register: func(ctx context.Context, cfg *Config, engine *gin.Engine) error {
+      engine.GET("/hello", func(g *gin.Context) {
+        data := gin.H{"message": cfg.Greeting + ", world!"}
+
+        env, code, _ := pluginsdk.OK(&data)
+        g.JSON(code, env)
+      })
+
+      return nil
+    },
+  })
+}
+```
+
+That covers the whole plugin.
+`pluginsdk.Main` takes these steps in order:
+
+1. Parses the command line: `--api_fd`, `--api-addr`, `--log-level`, `--log-type`, and one flag per field of `Config`.
+2. Reads the JSON `config` from `STDIN` and decodes it into `Config`.
+3. Configures logging, then runs the optional `Setup` hook.
+4. Adopts the `--api_fd` socket as its listener.
+5. Builds the [gin](https://gin-gonic.com) engine with the default middleware and calls `Register`.
+6. Serves until `SIGINT` or `SIGTERM` arrives, then drains and shuts down.
+
+Run the plugin locally with `--api-addr` in place of `--api_fd`:
+
+```bash
+echo '{"greeting":"Hey"}' | go run . --api-addr :8080 --log-type text
+curl -s localhost:8080/hello
+```
+
+```json
+{"status":"success","data":{"message":"Hey, world!"}}
+```
+
+## Configuration
+
+A plugin declares its configuration once, as a plain Go struct, and that declaration acts as the single source of truth.
+It validates the platform `config`, supplies the defaults, and derives the command-line flags and environment variables.
+
+### Where values come from
+
+Four sources feed a plugin's configuration.
+The SDK merges them in this order, from lowest precedence to highest:
+
+```
+struct default  <  platform config on STDIN  <  environment  <  command-line flag
+```
+
+- **Struct default**: the fallback that the `default` tag bakes into the binary.
+- **Platform `config`**: the JSON you attach to the plugin when you create the instance, which is the production path.
+- **Environment**: any field that carries an `env` tag.
+- **Command-line flag**: an explicit flag for local development and debugging.
+
+A field that defaults to `/tmp` stays `/tmp` unless the platform `config` sets `"workdir":"/data"`, unless `WORKDIR=/srv` sits in the environment, unless `--workdir /mnt` appears on the command line.
+
+### Struct tags
+
+A config field carries two kinds of tag.
+A `json` tag names the field's key in the platform `config`, and [kong](https://github.com/alecthomas/kong) tags govern the command-line flag and the environment override.
+The two work independently: JSON keys conventionally use `snake_case` while flags use `kebab-case`, so `json:"source_type"` and `name:"source-type"` routinely sit on the same field.
+
+| Tag | Purpose | Example |
+|-----|---------|---------|
+| `json:"…"` | Key in the platform `config` on `STDIN` | `json:"source_url"` |
+| `name:"…"` | Flag name, in kebab-case | `name:"source-url"` |
+| `env:"…"` | Environment variable to bind the field to | `env:"SOURCE_URL"` |
+| `help:"…"` | Help text | `help:"Repository URL."` |
+| `default:"…"` | Default value | `default:"/tmp"` |
+| `enum:"a,b,c"` | Restrict the value to a set | `enum:"git,tar"` |
+| `placeholder:"…"` | Help placeholder | `placeholder:"dir"` |
+| `required:""` | Make the flag mandatory | `required:""` |
+| `hidden:""` | Hide the flag from `--help` | `hidden:""` |
+| `kong:"-"` | Ignore the field entirely | `kong:"-"` |
+
+The `json` tag belongs to the SDK rather than to kong.
+The SDK reads it to map each config key onto a field, and kong owns every other tag.
+A field without a `json` tag takes its exact Go field name as the key, so `Greeting` matches `"Greeting"` and misses `"greeting"`.
+That lookup runs case-sensitively, unlike `encoding/json`, so give every field a `json` tag.
+The map covers a struct's own exported fields, so a field inside an embedded struct gets no config key at all.
+
+```go
+type Config struct {
+  Workdir    string `json:"workdir" name:"workdir" env:"WORKDIR" help:"Working directory." default:"/tmp"`
+  SourceType string `json:"source_type" name:"source-type" env:"SOURCE_TYPE" help:"Source type." enum:"git,tar" default:"git"`
+  Verbose    bool   `json:"verbose" name:"verbose" env:"VERBOSE" help:"Enable verbose output."`
+
+  // Never surfaces as a flag or a config key; code populates it.
+  internalToken string `json:"-" kong:"-"`
+}
+```
+
+### The platform config
+
+Attach a `config` to the plugin in the [create instance](/api/platform/v1/instances#create-instance) request, and it reaches the plugin's `init` on `STDIN`:
+
+```json
+{
+  "name": "example",
+  "rom": "user/example:latest",
+  "config": { "greeting": "Bonjour" }
+}
+```
+
+The platform accepts a non-object `config` as well: a bare string or a number counts as valid JSON.
+A value of that shape maps onto no fields, so reach for the raw bytes instead:
+
+```go
+raw := pluginsdk.RawConfig(ctx) // []byte, exactly as STDIN delivered it
+```
+
+## Routing
+
+`Register` receives the base context, your typed configuration, and the gin engine:
+
+```go
+Register: func(ctx context.Context, cfg *Config, engine *gin.Engine) error {
+  engine.GET("/files/:name", handleGetFile)
+  engine.POST("/files", handleWriteFile)
+
+  v1 := engine.Group("/v1")
+  v1.GET("/status", handleStatus)
+
+  return nil
+}
+```
+
+Define your routes relative to `/`.
+The platform strips the `plugins/<plugin_name>/` prefix before the request reaches the plugin, so a call to `.../plugins/example/files/list` arrives as `GET /files/list`.
+A plugin never needs to know its own name to route correctly.
+
+The SDK builds the engine with `gin.New()` in release mode, turns on `HandleMethodNotAllowed`, and rejects unknown JSON fields, which keeps generated types strict.
+
+### Default middleware
+
+Ahead of your routes, the SDK installs a global middleware stack from `unikraft.com/x/middleware`:
+
+| Middleware | Effect |
+|------------|--------|
+| `CORS()` | Cross-origin resource sharing headers |
+| `ExtraHeaders()` | Static response headers |
+| `Logger(ctx)` | Structured per-request logging |
+| `DefaultCacheControl()` | Sensible `Cache-Control` defaults |
+
+Append your own middleware, or replace the defaults outright:
+
+```go
+pluginsdk.Main(&pluginsdk.Plugin[Config]{
+  Name:       "example",
+  Register:   register,
+  Middleware: []gin.HandlerFunc{myMiddleware()}, // appended to the defaults
+
+  // ...or drop the defaults and bring your own stack:
+  // DisableDefaultMiddleware: true,
+})
+```
+
+### Generated services
+
+Plugins describe their API in [TypeSpec](https://typespec.io) and generate a typed gin service interface from it.
+Register that generated service from inside `Register`:
+
+```go
+Register: func(ctx context.Context, cfg *Config, engine *gin.Engine) error {
+  api.RegisterX(engine, handler, nil)
+
+  return nil
+}
+```
+
+`pluginsdk.OK` and `pluginsdk.Error` return the `(payload, status, error)` triple that a generated handler method produces, so a handler body often comes down to a single `return pluginsdk.OK(&data)`.
+
+## Responses
+
+The platform wraps every response in a standard envelope, and two helpers build it for you:
+
+```go
+// Success. OK takes a pointer and returns three values.
+env, code, _ := pluginsdk.OK(&data)
+g.JSON(code, env)
+
+// Error.
+env, code, _ := pluginsdk.Error[any](http.StatusBadRequest, "bad input")
+g.JSON(code, env)
+```
+
+A handler that calls `OK` produces the same shape as the rest of the API:
+
+```json
+{
+  "status": "success",
+  "data": { "message": "Bonjour, world!" }
+}
+```
+
+The `status` field holds `success`, `partial_success`, or `error`.
+In Go the envelope type is `platform.Response[T]` from `unikraft.com/cloud/sdk/platform`, which the [Go SDK](/integrations/sdks/go) uses as well.
+
+:::note
+`Error` derives the HTTP status from its `status` argument.
+A non-positive status yields `0`, which gin rejects, so always pass a real status code.
+:::
+
+## Global flags
+
+Every plugin accepts these four flags, whatever its own configuration declares:
+
+| Flag | Environment | Meaning |
+|------|-------------|---------|
+| `--api_fd <n>` | `API_FD` | Serve on file descriptor `n`, which the platform supplies |
+| `--api-addr <addr>` | `API_ADDR` | Serve on a TCP address such as `:8080`, for local development |
+| `--log-level` | `LOG_LEVEL` | One of `trace`, `debug`, `info`, `warn`, `error`, `fatal` |
+| `--log-type` | `LOG_TYPE` | Either `text` or `json` |
+
+The platform spells `--api_fd` with an underscore, and every other flag uses a hyphen.
+
+## Lifecycle
+
+`Main` runs this sequence:
+
+1. Read the `config` from `STDIN`, then parse the command line.
+2. Configure logging from `--log-level` and `--log-type`.
+3. Run the optional `Setup` hook.
+4. Bind the listener: `--api_fd` in production, `--api-addr` locally.
+5. Build the router with the default and user middleware, then call the registration function.
+6. Serve on the listener.
+7. Block until a signal arrives or the context cancels.
+8. Drain: stop accepting connections, finish in-flight requests, then shut down.
+
+`Serve` covers step 2, then steps 4 through 8.
+It takes an already-resolved configuration rather than reading the command line or `STDIN`, and it runs no `Setup` hook.
+
+`--api_fd` wins whenever the command line carries it, and otherwise the SDK falls back to `--api-addr`.
+At least one of the two has to resolve, or startup fails with `ErrNoListener`.
+`Serve` can also take a listener directly through `WithListener`, which outranks both flags.
+A shutdown gives in-flight requests a 30-second window to drain.
+
+## Scale-to-zero
+
+[Scale-to-zero](/features/scale-to-zero) puts an idle instance to sleep.
+A plugin request wakes the instance and keeps it up for the length of that request.
+Background work that outlives the request has to hold the instance awake on its own.
+
+The `scaletozero` sub-package keeps a counter for exactly that:
+
+```go
+import "unikraft.com/cloud/pluginsdk/scaletozero"
+
+// Hold the instance awake while the work runs.
+if err := scaletozero.Increment(); err != nil {
+  return err
+}
+defer scaletozero.Decrement()
+```
+
+A counter rather than a flag means many independent workers increment and decrement without coordinating.
+Scale-to-zero stays suspended while the count sits above zero and resumes at zero.
+`Set(n)`, `IncrementBy(n)`, and `DecrementBy(n)` cover the remaining cases.
+
+## Logging
+
+The SDK configures a structured logger from `--log-level` and `--log-type`, which default to `info` and `text`, and makes it available to your handlers through the request context.
+The logger comes from `unikraft.com/x/log`.
+Pass `--log-type json` in production.
+
+## Project layout
+
+A plugin keeps its API description and its image recipes next to the source:
+
+```
+plugins/<plugin_name>/
+├── api.tsp          # TypeSpec API description (optional)
+├── openapi.yaml     # generated from api.tsp
+├── main.go          # the entrypoint
+├── api/             # generated service: interface, models, register function
+├── Dockerfile       # builds the single `init` executable into a scratch image
+├── Kraftfile        # ROM image recipe
+└── go.mod
+```
+
+A small plugin needs no more than `main.go`, `go.mod`, a `Dockerfile`, and a `Kraftfile`.
+
+## Building the plugin image
+
+The deliverable is a ROM image with a single `init` executable at its root.
+The platform appends `--api_fd <n>` and pipes the `config` JSON to `STDIN` at launch, so `/init` has to be the SDK-based binary that understands both.
+
+A plugin runs as a process inside the host instance rather than as its own unikernel, so `init` has to stand on its own.
+A static Go build produces that.
+
+### Dockerfile
+
+A build stage produces `init`, and a `scratch` image carries it:
+
+```dockerfile title="Dockerfile"
+FROM golang:1.26-bookworm AS build
+
+WORKDIR /plugin
+COPY . .
+RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /plugin/dist/init .
+
+FROM scratch
+
+COPY --from=build /plugin/dist/init /init
+ENTRYPOINT ["/init"]
+```
+
+### Kraftfile
+
+A plugin ships as a ROM, which carries no kernel of its own.
+The platform mounts it at `/uk/plugins/<plugin_name>` inside the host instance and runs its `init`.
+Declare the image under `roms`:
+
+```yaml title="Kraftfile"
+spec: v0.7
+
+targets:
+- kraftcloud/x86_64
+
+roms:
+- ./Dockerfile
+```
+
+A ROM has no `runtime` to take an architecture from, so it names one under `targets`, or you pass `--arch` on the command line.
+A build that does neither fails, and each plugin needs the architecture of the instance that hosts it.
+
+:::caution
+Set no `runtime`.
+A `runtime` produces a bootable unikernel that the plugin loader can't mount, and the host instance then fails to boot.
+The platform runs the image's `init` and appends `--api_fd` on its own, so set no `cmd` and never hard-code `--api_fd`.
+:::
+
+Package and push the ROM image:
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft build . --output <my-org>/example:latest
+```
+
+```bash title="kraft"
+kraft pkg \
+  --plat kraftcloud \
+  --arch x86_64 \
+  --name index.unikraft.io/<my-org>/example:latest \
+  --rom-type erofs \
+  --push \
+  .
+```
+
+</CodeTabs>
+
+## Deploying
+
+Attach the plugin when you create the instance, naming the ROM image and an optional `config`:
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft api /v1/instances \
+  '{
+    "name": "my-instance",
+    "plugins": [
+      {
+        "name": "example",
+        "rom": "<my-org>/example:latest",
+        "config": {
+          "greeting": "Bonjour"
+        }
+      }
+    ]
+  }'
+```
+
+</CodeTabs>
+
+Then call the plugin through the instance's authenticated endpoint:
+
+```bash
+curl -H "Authorization: Bearer $UKC_TOKEN" \
+  https://api.fra.unikraft.cloud/v1/instances/<uuid>/plugins/example/hello
+```
+
+The [plugins](/features/plugins) page covers the platform side in full: authorization, adding a plugin to an existing instance, and the limits.
+
+## API reference
+
+### Entrypoints
+
+`Main` suits the common case of one plugin and one server.
+It parses the command line, reads `STDIN`, serves, blocks, and exits with a non-zero status on error.
+
+```go
+func Main[C any](p *Plugin[C])
+```
+
+`Serve` takes an already-resolved configuration, reads neither the command line nor `STDIN`, and returns an error instead of exiting.
+Cancelling `ctx` triggers the graceful shutdown.
+Reach for it in tests, when you embed a plugin in a larger program, or when you bring your own command grammar.
+
+```go
+func Serve[C any](ctx context.Context, cfg *C, register RegisterFunc[C], opts ...Option) error
+```
+
+### The plugin declaration
+
+```go
+type Plugin[C any] struct {
+  Name                     string
+  Version                  string
+  Register                 RegisterFunc[C]
+  Setup                    SetupFunc[C]
+  Middleware               []gin.HandlerFunc
+  DisableDefaultMiddleware bool
+}
+
+type RegisterFunc[C any] func(ctx context.Context, cfg *C, engine *gin.Engine) error
+type SetupFunc[C any]    func(ctx context.Context, cfg *C) error
+```
+
+| Field | Description |
+|-------|-------------|
+| `Name` | The plugin name, for logs and diagnostics only, since routing ignores it |
+| `Version` | An optional version string that the startup logs carry |
+| `Register` | Attaches the routes, and a non-nil error aborts startup (required) |
+| `Setup` | An optional hook that runs once after the SDK resolves the configuration and before the server accepts requests |
+| `Middleware` | Middleware to append to the default stack |
+| `DisableDefaultMiddleware` | Drops the built-in stack and leaves the plugin in control |
+
+### Options
+
+An `Option` customizes `Serve`.
+A later option overwrites an earlier one that sets the same field.
+`WithMiddleware` appends instead of overwriting, and the listener keeps a fixed priority whatever the order: `WithListener`, then `WithAPIFD`, then `WithAddr`.
+
+| Option | Effect |
+|--------|--------|
+| `WithOptions(o Options)` | Seeds the runtime from the parsed global flags |
+| `WithAPIFD(fd int)` | Forces the listener to adopt a file descriptor |
+| `WithAddr(addr string)` | Forces a TCP listen address |
+| `WithListener(ln net.Listener)` | Serves on a listener you supply |
+| `WithMiddleware(mw ...gin.HandlerFunc)` | Appends global middleware |
+| `WithoutDefaultMiddleware()` | Drops the default middleware stack |
+| `WithRawConfig(raw []byte)` | Supplies the raw `STDIN` config for `RawConfig` |
+
+`Options` itself holds the four global flags as an embeddable kong struct: `APIFd`, `APIAddr`, `LogLevel`, and `LogType`.
+Embed it in your own command grammar to keep the standard flags.
+
+### Context and config helpers
+
+Every request context descends from the base context, so these helpers work inside a handler through `g.Request.Context()`.
+
+| Symbol | Description |
+|--------|-------------|
+| `FromContext[C any](ctx) *C` | Retrieves the typed configuration from a request context |
+| `RawConfig(ctx) []byte` | The raw platform `config` bytes from `STDIN` |
+| `APIFD(ctx) (int, bool)` | The adopted file descriptor, and whether one exists |
+| `ReadConfig(stdin io.Reader) []byte` | Reads the `STDIN` config verbatim |
+| `NewConfigResolver[C any](raw []byte) (kong.Resolver, bool)` | Builds the kong resolver for a custom grammar |
+
+### Response helpers
+
+| Symbol | Description |
+|--------|-------------|
+| `OK[T any](data *T) (*platform.Response[T], int, error)` | A success envelope that wraps `data` |
+| `Error[T any](status int, msg string) (platform.Response[T], int, error)` | An error envelope |
+
+### Other exported symbols
+
+| Symbol | Description |
+|--------|-------------|
+| `ShutdownTimeout` | The graceful-drain bound, at 30 seconds |
+| `ReadHeaderTimeout` | The bound on waiting for request headers, at 30 seconds |
+| `ErrNoListener` | Neither `--api_fd` nor `--api-addr` resolved |
+| `ErrNoRegister` | A plugin reached `Serve` without a registration function |
+| `ErrInvalidAPIFD` | The `--api_fd` descriptor yielded no usable file |
+
+## Bring your own command grammar
+
+`Main` wires one command line for you.
+A plugin that needs subcommands or extra pre-serve work defines its own kong grammar and calls `Serve` from the subcommand:
+
+```go
+type CLI struct {
+  pluginsdk.Options // --api_fd, --api-addr, --log-level, --log-type
+
+  Config Config `embed:""`
+
+  Run RunCmd `cmd:"" help:"Fetch source, then serve."`
+}
+
+type RunCmd struct {
+  SourceURL string `name:"source-url" env:"SOURCE_URL" help:"Repository to clone."`
+}
+
+func (c *RunCmd) Run(ctx context.Context, cli *CLI, raw rawConfig) error {
+  if err := fetchSource(ctx, c.SourceURL); err != nil {
+    return err
+  }
+
+  return pluginsdk.Serve(ctx, &cli.Config, register,
+    pluginsdk.WithOptions(cli.Options),
+    pluginsdk.WithRawConfig(raw),
+  )
+}
+```
+
+Two exported building blocks tie it together in `main`.
+`ReadConfig` reads the platform config off `STDIN`, and `NewConfigResolver` turns those bytes into the kong resolver that gives you the standard precedence:
+
+```go
+type rawConfig []byte
+
+func main() {
+  ctx, cancel := signal.NotifyContext(context.Background(),
+    syscall.SIGINT, syscall.SIGTERM)
+  defer cancel()
+
+  raw := pluginsdk.ReadConfig(os.Stdin)
+
+  var cli CLI
+
+  opts := []kong.Option{
+    kong.Name("example"),
+    kong.UsageOnError(),
+    kong.BindTo(ctx, (*context.Context)(nil)),
+    kong.Bind(rawConfig(raw)),
+  }
+  if resolver, ok := pluginsdk.NewConfigResolver[Config](raw); ok {
+    opts = append(opts, kong.Resolvers(resolver))
+  }
+
+  k := kong.Parse(&cli, opts...)
+  k.FatalIfErrorf(k.Run())
+}
+```
+
+`pluginsdk.Options` contributes the standard global flags and `WithOptions` feeds them to `Serve`, so the listener selection and the logging match `Main` with your own command tree on top.
+Extra middleware alone calls for no custom grammar, since `Middleware` and `DisableDefaultMiddleware` on `Plugin` already cover that.
+
+## Source
+
+The SDK source lives at [github.com/unikraft-cloud/plugin-sdk](https://github.com/unikraft-cloud/plugin-sdk), and the API reference at [pkg.go.dev/unikraft.com/cloud/pluginsdk](https://pkg.go.dev/unikraft.com/cloud/pluginsdk).
+
+## Learn more
+
+* [Plugins](/features/plugins): the platform feature that this SDK targets.
+* [ROMs](/features/roms): the image format that a plugin ships as.
+* [Scale-to-zero](/features/scale-to-zero): how an idle instance wakes to serve a plugin request.
+* [Go SDK](/integrations/sdks/go): the client library for the platform API itself.
+* [JavaScript SDK](/integrations/sdks/js): the same platform API from JavaScript and TypeScript.
+* [Instances](/platform/instances): create and manage the instances that host plugins.

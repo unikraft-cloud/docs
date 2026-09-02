@@ -31,7 +31,8 @@ unikraft instance create \
   --metro fra \
   --image ... \
   --memory ... \
-  --tags production,customer_A
+  --tag production \
+  --tag customer_A
 ```
 ```bash title="API"
 curl -X POST \
@@ -47,12 +48,12 @@ curl -X POST \
   </CodeTabs>
   </TabsContent>
   <TabsContent value="instance-tpl">
+Converting an instance relabels it in place, so the template keeps the instance's tags.
+Tag the instance first, then convert it:
+
   <CodeTabs syncKey="cli">
 ```bash title="unikraft"
-unikraft instance template create \
-  --set image=... \
-  --set resources.memory=... \
-  --set tags=production,customer_A
+unikraft instance template create <instance-name>
 ```
 ```bash title="API"
 curl -X POST \
@@ -60,9 +61,7 @@ curl -X POST \
   -H "Content-Type: application/json" \
   "https://api.fra.unikraft.cloud/v1/instances/templates" \
   -d '{
-    "image": "...",
-    "memory_mb": ...,
-    "tags": ["production", "customer_A"]
+    "name": "<instance-name>"
   }'
 ```
   </CodeTabs>
@@ -73,7 +72,8 @@ curl -X POST \
 unikraft volume create \
   --metro fra \
   --size ... \
-  --tags production,customer_A
+  --tag production \
+  --tag customer_A
 ```
 ```bash title="API"
 curl -X POST \
@@ -88,11 +88,12 @@ curl -X POST \
   </CodeTabs>
   </TabsContent>
   <TabsContent value="volume-tpl">
+Converting a volume relabels it in place, so the template keeps the volume's tags.
+Tag the volume first, then convert it:
+
   <CodeTabs syncKey="cli">
 ```bash title="unikraft"
-unikraft volume template create \
-  --set size=... \
-  --set tags=production,customer_A
+unikraft volume template create <volume-name>
 ```
 ```bash title="API"
 curl -X POST \
@@ -100,8 +101,7 @@ curl -X POST \
   -H "Content-Type: application/json" \
   "https://api.fra.unikraft.cloud/v1/volumes/templates" \
   -d '{
-    "size_mb": ...,
-    "tags": ["production", "customer_A"]
+    "name": "<volume-name>"
   }'
 ```
   </CodeTabs>
@@ -121,7 +121,8 @@ Add tags to an existing resource (`"op": "set"` will replace all existing tags):
   <CodeTabs syncKey="cli">
 ```bash title="unikraft"
 unikraft instance edit <instance-name> \
-  --tags testsystem,customer_B
+  --tag testsystem \
+  --tag customer_B
 ```
 ```bash title="API"
 curl -X PATCH \
@@ -141,7 +142,8 @@ curl -X PATCH \
   <CodeTabs syncKey="cli">
 ```bash title="unikraft"
 unikraft instance template edit <instance-template-name> \
-  --tags testsystem,customer_B
+  --tag testsystem \
+  --tag customer_B
 ```
 ```bash title="API"
 curl -X PATCH \
@@ -161,7 +163,8 @@ curl -X PATCH \
   <CodeTabs syncKey="cli">
 ```bash title="unikraft"
 unikraft volume edit <volume-name> \
-  --tags testsystem,customer_B
+  --tag testsystem \
+  --tag customer_B
 ```
 ```bash title="API"
 curl -X PATCH \
@@ -181,7 +184,8 @@ curl -X PATCH \
   <CodeTabs syncKey="cli">
 ```bash title="unikraft"
 unikraft volume template edit <volume-template-name> \
-  --tags testsystem,customer_B
+  --tag testsystem \
+  --tag customer_B
 ```
 ```bash title="API"
 curl -X PATCH \
@@ -439,7 +443,8 @@ curl -H "Authorization: Bearer ${UKC_TOKEN}" \
   </TabsContent>
 </Tabs>
 
-Separate tags by commas (`,`).
+When filtering, separate tags by commas (`,`).
+Elsewhere, pass one tag per `--tag` flag—the CLI no longer splits a flag value on commas.
 
 ## Learn more
 

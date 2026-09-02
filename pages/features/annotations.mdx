@@ -6,7 +6,7 @@ navigation_icon: sticky-note
 {/* vale off */}
 :::caution[**Limited Access**]
 Instance annotations are available as part of enterprise plans.
-To enable them for your account, reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
+To try them out, reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
 :::
 {/* vale on */}
 
@@ -14,11 +14,12 @@ To enable them for your account, reach out to the [Unikraft Cloud Discord](https
 They use the same key syntax as [Kubernetes annotations](https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/), so you can reuse your existing keys and tooling.
 
 Unlike [tags](/platform/tagging), which act as controller-level labels that only the platform sees, annotations also reach the guest.
-You can use them for two things:
+You can use them for three things:
 
 {/* vale off */}
 1. **Custom metadata**—the instance's startdata includes its annotations, so the guest can read them at runtime.
-2. **Structured log output**—you select which annotations the platform injects into the VM's console log output.
+2. **Guest network configuration**—the guest applies the [CNI result](#guest-network-configuration-with-cni) in the `unikraft.com/cni` annotation to its network interfaces.
+3. **Structured log output**—you select which annotations the platform injects into the VM's console log output.
 {/* vale on */}
 
 {/* vale off */}
@@ -30,7 +31,9 @@ In the meantime, drive annotations through the [API](/api/platform/v1/instances)
 
 ## Annotation keys
 
-An annotation is a set of key-value pairs, and values can be any string.
+An annotation is a set of key-value pairs.
+A value is any string without ASCII control characters (`0x00`–`0x1f` and `0x7f`, which covers tab, newline and carriage return), and multi-byte UTF-8 goes through fine.
+The API rejects a value carrying an ASCII control character with `400 Bad Request`.
 Keys follow the [Kubernetes annotation key syntax](https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/#syntax-and-character-set):
 
 - A key can be a plain name (`my-key`) or carry an optional DNS prefix separated by a slash (`example.com/annotation2`).
@@ -58,7 +61,7 @@ Each entry is a key-value pair:
 
 ```bash title="unikraft"
 unikraft api /v1/instances -X POST --metro fra \
-  -d '{
+  '{
     "name": "annotations-demo",
     "image": "<my-org>/annotations-demo:latest",
     "annotations": {
@@ -98,6 +101,88 @@ cat /sys/class/uio/uio0/device/startdata
 
 Your app parses this JSON and reads the `annotations` object like any other startdata field.
 
+## Guest network configuration with CNI
+
+`unikraft.com/cni` is a reserved annotation.
+Its value is a [CNI Result](https://www.cni.dev/docs/spec/#section-5-result-types) document, and the guest applies the addresses it holds to its own network interfaces.
+
+This hands the addressing of an instance to an external [CNI](https://www.cni.dev/) plugin or IPAM system.
+The plugin decides the addresses, writes its result into the annotation, and the guest configures itself from it.
+Your image needs no agent for it and no boot script of its own.
+
+The annotation pairs with an [interface without an address](/features/custom-network-configuration#interfaces-without-an-address), which reaches the guest as a bare link on a TAP device of your own.
+See [Kubernetes](/integrations/kubernetes#custom-networking-with-cni) for the CNI integration that Kraftlet drives on the cluster side.
+
+The annotation value is the document as a JSON string, so the JSON inside it carries escapes:
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft api /v1/instances -X POST --metro fra \
+  '{
+    "name": "cni-demo",
+    "image": "<my-org>/cni-demo:latest",
+    "network_interfaces": [
+      {},
+      {
+        "name": "cni-demo-vpc",
+        "tap_name": "vpc0",
+        "mac": "0a:58:c0:a8:01:05",
+        "autoconfig": false
+      }
+    ],
+    "annotations": {
+      "unikraft.com/cni": "{\"cniVersion\":\"1.0.0\",\"interfaces\":[{\"name\":\"eth0\",\"mac\":\"0a:58:c0:a8:01:05\"}],\"ips\":[{\"interface\":0,\"address\":\"192.168.1.5/24\"}]}"
+    }
+  }'
+```
+
+</CodeTabs>
+
+That instance keeps a pool-allocated primary interface and adds a second one on the `vpc0` TAP device, with a MAC address you pick and no IP address.
+Unescaped, the annotation holds a standard CNI Result (`types/100`):
+
+```json
+{
+  "cniVersion": "1.0.0",
+  "interfaces": [
+    { "name": "eth0", "mac": "0a:58:c0:a8:01:05" }
+  ],
+  "ips": [
+    { "interface": 0, "address": "192.168.1.5/24" }
+  ]
+}
+```
+
+The guest gives `192.168.1.5/24` to the link whose MAC address is `0a:58:c0:a8:01:05`, and brings that link up.
+
+### Writing the document
+
+Give every address a MAC address to land on:
+
+- Each `ips[]` entry points through its `interface` index at an entry of the document's own `interfaces[]` array, not at the instance's `network_interfaces`.
+  An entry with no `interface` field uses index `0`.
+- That `interfaces[]` entry supplies the MAC address of the interface to configure, so `interfaces[].name` can say anything.
+  Without a MAC address to match, the index counts the instance's non-loopback interfaces from `0` instead.
+  The entry carries no `mac`, the document holds no `interfaces[]` array, or the index sits past the end of that array.
+- Set the MAC address yourself when you create the instance, or read it from the [instance status](/api/platform/v1/instances#get-instance-by-uuid).
+- Addresses take CIDR notation, IPv4 or IPv6, and the prefix length is mandatory.
+- The document needs a `cniVersion` of `0.3.1`, `0.4.0`, `1.0.0`, or `1.1.0`, and has to be a result rather than a network configuration.
+- Keep the document on one line, because annotation values reject control characters.
+
+Only `interfaces[].mac`, `ips[].interface`, and `ips[].address` have any effect.
+`routes`, `gateway`, `dns`, `mtu`, and `sandbox` do nothing, so you can pass a plugin's full result through untouched.
+Set the default gateway and the resolver with the instance's own `gateway` and `nameserver` fields.
+
+### Changing addresses
+
+Running instances pick up updates to their annotations, and reconcile them against what's currently configured, so an address change doesn't require a restart.
+
+### When nothing happens
+
+A single MAC address that matches no interface stops the whole document from applying, leaving every interface untouched.
+Check that each MAC address in the document matches one on the instance, then read the [instance logs](/platform/instances#instance-logs), which name any document that fails to parse or apply.
+
 ## Patching annotations
 
 Update the annotations on an existing instance with a [`PATCH /instances`](/api/platform/v1/instances) request.
@@ -116,7 +201,7 @@ If you patch a running instance, the platform accepts the request and queues the
 
 ```bash title="unikraft"
 unikraft api /v1/instances -X PATCH --metro fra \
-  -d '[{
+  '[{
     "name": "annotations-demo",
     "prop": "annotations",
     "op": "set",
@@ -138,7 +223,7 @@ It overwrites keys that already exist and leaves the other keys untouched:
 
 ```bash title="unikraft"
 unikraft api /v1/instances -X PATCH --metro fra \
-  -d '[{
+  '[{
     "name": "annotations-demo",
     "prop": "annotations",
     "op": "add",
@@ -159,7 +244,7 @@ The value is an array of key names (or a single key as a string):
 
 ```bash title="unikraft"
 unikraft api /v1/instances -X PATCH --metro fra \
-  -d '[{
+  '[{
     "name": "annotations-demo",
     "prop": "annotations",
     "op": "del",
@@ -204,16 +289,39 @@ When the guest writes to the app console (for example, `echo "blub" > /dev/vport
 }
 ```
 
+## Annotation events
+
+The platform's event log carries a `vm.annotate` event, which it emits whenever an instance's annotations change:
+
+```json
+{
+  "type": "vm.annotate",
+  "timestamp": "2026-08-19T10:04:11Z",
+  "data": {
+    "vm": "b495f451-0370-4d8e-8b94-a5b22d2212f9",
+    "annotations": { "env": "prod", "team": "search" }
+  }
+}
+```
+
+An external system consumes the event to keep track of the instance's annotation values, without polling the instance API.
+The event also gives log processing a way to map an instance UUID back to its annotations.
+
 ## Limitations
 
 - An instance holds at most 256 annotations.
-- Annotation keys must follow the [Kubernetes key syntax](#annotation-keys), and values are strings.
+- Annotation keys must follow the [Kubernetes key syntax](#annotation-keys), and values are strings with no ASCII control characters in them.
 - A [patched](#patching-annotations) annotation change applies once the instance reaches the `stopped` state.
+- A [`unikraft.com/cni`](#guest-network-configuration-with-cni) document holds at most eight interfaces and 16 addresses, and an `ips[].interface` index stays below eight.
+- The guest applies only `interfaces[].mac`, `ips[].interface` and `ips[].address` from that document, and needs a recent base-compat guest kernel to apply it at all.
 - Dedicated `unikraft` CLI subcommands aren't available yet, so drive annotations through the [API](/api/platform/v1/instances).
 - The platform sets up [log-output](#annotations-in-log-output) forwarding at the node level, not through the instances API.
+- The [`vm.annotate` event](#annotation-events) needs switching on in the node's event configuration.
 
 ## Learn more
 
 * [Tags](/platform/tagging): controller-level labels for organizing platform resources.
+* [Custom network configuration](/features/custom-network-configuration): bring your own interfaces, MAC addresses and TAP devices, including [interfaces without an address](/features/custom-network-configuration#interfaces-without-an-address) for a CNI plugin to fill in.
+* [Kubernetes](/integrations/kubernetes#custom-networking-with-cni): how Kraftlet runs the CNI plugins of your cluster for Unikraft Cloud instances.
 * [Instances](/platform/instances): create and manage instances.
 * Unikraft Cloud's [REST API reference](/api/platform/v1), in particular the section on [instances](/api/platform/v1/instances).

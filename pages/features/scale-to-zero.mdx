@@ -24,6 +24,11 @@ This differs from [autoscale](/features/autoscale), in which you *don't* specify
 The platform does this for you based on traffic load.
 :::
 
+:::note
+Scale-to-zero needs the default `micro` [instance type](/platform/instances#instance-types).
+QEMU-backed full VMs (`--type full`), which [GPU instances](/platform/instances#gpus) require, don't support it.
+:::
+
 
 ## Policies
 
