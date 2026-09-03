@@ -3,416 +3,71 @@ title: Game Servers
 navigation_icon: gamepad-2
 ---
 
-Running multiplayer game servers often means keeping long-lived VMs online, pre-warming for peak hours, and paying for idle time between sessions.
-On Unikraft Cloud, you can run game servers in microVMs with [stateful scale-to-zero](/features/scale-to-zero#stateful-scale-to-zero), so instances pause when idle and resume when players reconnect.
-
-Minecraft is a strong example of this pattern.
-JVM startup and world initialization are expensive, but template snapshots and stateful resume keep player experience smooth without running infrastructure every day.
-
-## Why use Unikraft Cloud for game servers
-
-### Fast restarts from template snapshots
-
-Game servers often have expensive startup paths: loading assets, initializing runtime state, and binding network services.
-Unikraft Cloud's [instance templates](/platform/instances#instance-templates) snapshot the server after initialization, so later starts resume from a warm state instead of repeating full initialization.
-For Minecraft specifically, this avoids repeated JVM warm-up and world initialization work.
-
-### Stateful scale-to-zero
-
-When all players disconnect, the instance enters standby and consumes no active resources.
-On the next connection it wakes from the same in-memory snapshot, preserving server state without a full restart.
-For Minecraft, this means your world and server process resume from snapshot instead of cold booting.
-
-### Isolation per server
-
-Each server runs in its own microVM: no shared kernel with other tenants, no container escape surface, and no noisy-neighbour risk.
-
-### Quick iteration with ROM
-
-Server settings can ship as auxiliary ROMs at instance creation time.
-You can run distinct game-server variants by swapping ROM configuration rather than rebuilding the base image.
-
-## Getting started
-
-This guide uses the [`minecraft`](https://github.com/unikraft-cloud/examples/tree/main/minecraft) example.
-The base image is built from [itzg/minecraft-server](https://hub.docker.com/r/itzg/minecraft-server) (Java 25) and includes:
-
-- A `wrapper.sh` entrypoint that starts SSH, loads ROM configuration, and disables scale-to-zero during initialization.
-- Patched startup scripts that snapshot the instance into a template before full server warm-up.
-
-### Prerequisites
-
-1. Install the CLI.
-   Use the [unikraft CLI](/docs/cli/unikraft) or the legacy [kraft CLI](https://unikraft.org/docs/cli/install).
-   You need a [BuildKit](https://github.com/moby/buildkit) builder. The easiest way to get one is via [Docker](https://docs.docker.com/engine/install/).
-   You can also set up and use BuildKit directly; see the [quick start](https://github.com/moby/buildkit#quick-start).
-
-   :::note
-   The unikraft CLI is the current standard, while kraft is the legacy version.
-   Choose one of the CLIs below and only run the commands associated with it for the rest of this guide.
-   :::
-
-2. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/minecraft/` directory:
-
-   ```bash
-   git clone https://github.com/unikraft-cloud/examples
-   cd examples/minecraft/
-   ```
-
-3. Review and adjust the base server settings in [`base/.env`](https://github.com/unikraft-cloud/examples/tree/main/minecraft/base/.env).
-   You can check out [this documentation](https://docker-minecraft-server.readthedocs.io/en/latest/) for available configuration options.
-   Make sure to also set your `PUBKEY` for SSH access, and optionally set `TEMPLATE_WITH_WORLD` if you want the template to include the world (see below).
-   Optionally, create per-config overrides in `<config>/.env`.
-   All `.env` files are packaged as [auxiliary ROMs](/features/roms) and mounted at `/rom/<config>`.
-
-Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
-This guide uses `fra` (Frankfurt, 🇩🇪):
-
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
-unikraft login
-```
-
-```bash title="kraft"
-# Set Unikraft Cloud access token
-export UKC_TOKEN=token
-export UKC_METRO=fra
-```
-
-</CodeTabs>
-
-### Step 1: Package and push the base image
-
-First, package and push the base Minecraft server image:
-
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
-unikraft build . --output <my-org>/minecraft:latest
-```
-
-```bash title="kraft"
-kraft pkg \
-  --name index.unikraft.io/<my-org>/minecraft:latest \
-  --plat kraftcloud \
-  --arch x86_64 \
-  --rootfs-type erofs \
-  --push \
-  .
-```
-
-</CodeTabs>
-
-The image contains the files from the Docker image [itzg/minecraft-server](https://hub.docker.com/r/itzg/minecraft-server) and includes a few tweaks:
-
-- The entrypoint uses a custom `wrapper.sh` script that:
-  - Starts an SSH server
-  - Loads the environment configuration from the attached ROMs
-  - Disables scale-to-zero before executing the original entrypoint
-- The server configuration scripts from the original image have patches to trigger the template snapshot before the full warm-up of the server, which allows faster instance creation from the template.
-  Scale-to-zero is then re-enabled after server initialization.
-
-### Step 2: Create a template from the base image
-
-Boot a short-lived instance from the base image.
-The startup script snapshots it into a template before world generation, then the instance exits.
-
-Pass your server settings as a ROM:
-
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
-unikraft run --metro fra \
-  --name minecraft-tpl \
-  -m 4096M \
-  --vcpus 4 \
-  --image <my-org>/minecraft:latest \
-  --rom dir=base,at=/rom/base
-```
-
-```bash title="kraft"
-# kraft does not support creating instances with attached ROMs
-# use unikraft CLI
-```
-
-</CodeTabs>
-
-The output shows the instance details:
-
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
-[1mmetro[22m:        fra
-[1mname[22m:         minecraft-tpl
-[1muuid[22m:         d9d7be54-5495-45d0-b5af-48be7f30d1d8
-[1mstate[22m:        [38;2;144;161;185mstarting[0m
-[1mimage[22m:        <my-org>/minecraft
-[1mresources[22m:
-[3m  memory[23m:     4GiB
-[3m  vcpus[23m:      4
-[1mroms[22m:
-[3m- name[23m:       rom
-[3m  image[23m:      c99125f6-6b8c-4f94-b94c-e2d9551b253b
-[3m  at[23m:         /rom
-[1mnetworks[22m:
-[3m- uuid[23m:       123b0ed0-9f2f-417c-9307-34424d80e4cb
-[3m  private-ip[23m: 10.0.0.29
-[3m  mac[23m:        12:b0:0a:00:00:1d
-[1mtimestamps[22m:
-[3m  created[23m:    just now
-```
-
-```bash title="kraft"
-# kraft does not support creating instances with attached ROMs
-# use unikraft CLI
-```
-
-</CodeTabs>
-
-If you also have per-config overrides (for example in `bingo/.env`), create the instance with more ROMs:
-
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
-unikraft run --metro fra \
-  --name minecraft-tpl \
-  -m 4096M \
-  --vcpus 4 \
-  --image <my-org>/minecraft:latest \
-  --rom dir=base,at=/rom/base \
-  --rom dir=bingo,at=/rom/bingo
-```
-
-```bash title="kraft"
-# kraft does not support creating instances with attached ROMs
-# use unikraft CLI
-```
-
-</CodeTabs>
-
-The instance runs until initialization completes, then the platform snapshots it as a template and immediately deletes it.
-You can configure the exact moment of snapshotting in [`patches/start-finalExec`](https://github.com/unikraft-cloud/examples/tree/main/minecraft/patches/start-finalExec) or with the following environment variable:
-
-- If `TEMPLATE_WITH_WORLD=true`, then the snapshot will trigger **after** world generation
-- Otherwise, the snapshot will trigger after extracting the jar files and writing configuration files, **before** world generation
-
-Follow the template instance logs until they stop:
-
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
-unikraft instances logs minecraft-tpl -f
-```
-
-```bash title="kraft"
-kraft cloud instance logs minecraft-tpl -f
-```
-
-</CodeTabs>
-
-Confirm the template is ready:
-
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
-unikraft instances templates list
-```
-
-```bash title="kraft"
-kraft cloud instance template list
-```
-
-</CodeTabs>
-
-<div style={{ marginTop: '0.8em' }} />
-
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
-[1mMETRO[0m  [1mNAME[0m           [1mSTATE[0m     [1mIMAGE[0m               [1mARGS[0m  [1mMEMORY[0m  [1mVCPUS[0m  [1mCREATED[0m
-fra    minecraft-tpl  [38;2;43;127;255mtemplate[0m  <my-org>/minecraft        4GiB    4      5 seconds ago
-```
-
-```ansi title="kraft"
-[1mNAME[0m           [1mIMAGE[0m                                                                                                         [1mARGS[0m  [1mCREATED AT[0m
-minecraft-tpl  oci://unikraft.io/<my-org>/minecraft@sha256:fdb4887e84362ebbaf54c713e0d85f547e8ee173fe63a6ab39e94b7e612a9892        5 seconds ago
-```
-
-</CodeTabs>
-
-### Step 3: Launch a server from the template
-
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
-unikraft run --metro fra \
-  --name minecraft \
-  -p 2222:2222/tls \
-  -p 25565:25565/tls \
-  --scale-to-zero policy=on,cooldown-time=5000,stateful=true \
-  --template minecraft-tpl
-```
-
-```bash title="kraft"
-# kraft does not support creating instances from templates
-# use unikraft CLI
-```
-
-</CodeTabs>
-
-The output includes the service address:
-
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
-[1mmetro[22m:         fra
-[1mname[22m:          minecraft
-[1muuid[22m:          56787b5d-14fb-4908-88d0-e9609d1ac1e0
-[1mstate[22m:         [38;2;0;188;125mrunning[0m
-[1mimage[22m:         <my-org>/minecraft
-[1mresources[22m:
-[3m  memory[23m:      4GiB
-[3m  vcpus[23m:       4
-[1mservice[22m:       hidden-water-ewr8l9sp
-[1mroms[22m:
-[3m- name[23m:        rom
-[3m  image[23m:       c99125f6-6b8c-4f94-b94c-e2d9551b253b
-[3m  at[23m:          /rom
-[1mnetworks[22m:
-[3m- uuid[23m:        b6c7d615-7e74-49d6-a8b6-14c39323233b
-[3m  private-ip[23m:  10.0.0.29
-[3m  mac[23m:         12:b0:0a:00:00:1d
-[1mtimestamps[22m:
-[3m  created[23m:     just now
-[1mscale-to-zero[22m: policy=on,stateful=true,cooldown-time=5s
-```
-
-```bash title="kraft"
-# kraft does not support creating instances from templates
-# use unikraft CLI
-```
-
-</CodeTabs>
-
-The instance address is `https://hidden-water-ewr8l9sp.fra.unikraft.app`.
-Follow the logs until the server is ready:
-
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
-unikraft instances logs minecraft -f
-```
-
-```bash title="kraft"
-kraft cloud instance logs minecraft -f
-```
-
-</CodeTabs>
-
-```ansi
-[12:59:45] [Server thread/INFO]: Preparing spawn area: 100%
-[12:59:45] [Server thread/INFO]: Time elapsed: 3641 ms
-[12:59:45] [Server thread/INFO]: Done (3.850s)! For help, type "help"
-[12:59:45] [Server thread/INFO]: Starting remote control listener
-[12:59:45] [Server thread/INFO]: Thread RCON Listener started
-[12:59:45] [Server thread/INFO]: RCON running on 0.0.0.0:25575
-[12:59:45] [Server thread/INFO]: Saving chunks for level 'ServerLevel[world]'/minecraft:overworld
-[12:59:45] [Server thread/INFO]: Saving chunks for level 'ServerLevel[world]'/minecraft:the_end
-[12:59:45] [Server thread/INFO]: Saving chunks for level 'ServerLevel[world]'/minecraft:the_nether
-[12:59:45] [Server thread/INFO]: ThreadedAnvilChunkStorage (world): All chunks are saved
-[12:59:45] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
-[12:59:45] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
-[12:59:45] [Server thread/INFO]: ThreadedAnvilChunkStorage: All dimensions are saved
-```
-
-## Connect to the server
-
-:::caution[**Limited Access**]
-At the moment, Unikraft Cloud exposes services over TLS.
-Minecraft and SSH clients speak plain TCP, so use `socat` to end TLS locally.
-:::
-
-### Minecraft
-
-```bash
-socat TCP-LISTEN:25565,reuseaddr,fork OPENSSL:hidden-water-ewr8l9sp.fra.unikraft.app:25565,verify=0
-```
-
-Connect your Minecraft client to `localhost:25565`.
-
-### SSH
-
-```bash
-socat TCP-LISTEN:2222,reuseaddr,fork OPENSSL:hidden-water-ewr8l9sp.fra.unikraft.app:2222,verify=0
-```
-
-Connect to `localhost:2222` with username `root` and the SSH key set in `.env`.
-
-## Administration
-
-### Remote console
-
-SSH into the instance, then:
-
-```bash
-rcon-cli --host 127.0.0.1
-```
-
-Example commands:
-
-```text title=""
-say Hello from Unikraft Cloud!
-/op <username>
-```
-
-### Whitelist in offline mode
-
-Offline mode generates UUIDs that differ from online UUIDs.
-Compute the correct UUID per username and add it to `/data/whitelist.json`:
-
-```python
-import hashlib, uuid; h = hashlib.md5(b'OfflinePlayer:<username>').digest(); u = uuid.UUID(bytes=h); print(u)
-```
-
-## Cleanup
-
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
-unikraft instances delete minecraft
-unikraft instances template delete minecraft-tpl
-```
-
-```bash title="kraft"
-kraft cloud instance remove minecraft
-kraft cloud instance template remove minecraft-tpl
-```
-
-</CodeTabs>
-
-## Learn more
-
-Use the `--help` option for detailed information on using Unikraft Cloud:
-
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
-unikraft --help
-```
-
-```bash title="kraft"
-kraft cloud --help
-```
-
-</CodeTabs>
-
-Or visit the [CLI Reference](/docs/cli/unikraft) or the [legacy CLI reference](/docs/cli/kraft/overview).
-
-For more information on the features used in this use case and how to use them, check out the following documentation:
-
-* [Instance templates](/platform/instances#instance-templates)
-* [Scale-to-zero](/features/scale-to-zero)
-* [ROMs](/features/roms)
-* [`minecraft` example](https://github.com/unikraft-cloud/examples/tree/main/minecraft)
-* [itzg/minecraft-server documentation](https://docker-minecraft-server.readthedocs.io/en/latest/)
+{/* vale off */}
+
+Start heavy gaming workloads in milliseconds, and [scale them to zero](/features/scale-to-zero#stateful-scale-to-zero) when the session is empty.
+
+<ValueCards>
+  <ValueCard title="Empty session, no server" metric="restart in < 10 ms">
+    Shut the server down when the last player leaves and bring it back in milliseconds when someone joins.
+  </ValueCard>
+  <ValueCard title="Inject configuration with ease" metric="change config without rebuilding image">
+    Per-world config and mods are mounted onto the instance rather than baked into a new image each time.
+  </ValueCard>
+  <ValueCard title="Run as many as you like" metric="100K+ microVMs / server">
+    One instance per world or match, isolated as a VM; the platform is built for that scale.
+  </ValueCard>
+</ValueCards>
+
+<FlowDiagram caption="One image, one template, one instance per world: asleep between sessions, back in milliseconds when a player connects.">
+  <FlowBox title="Server image">
+    Game binary, assets, mod loader
+  </FlowBox>
+  <FlowArrow label="snapshot once" />
+  <FlowBox accent title="Template">
+    World loaded and warm, snapshotted once
+  </FlowBox>
+  <FlowArrow accent label="< 10 ms each" sublabel="+ config per world" />
+  <FlowStack more="...empty worlds scaled to zero, volumes kept">
+    <FlowStackItem label="world" chip="eu-survival" />
+    <FlowStackItem label="world" chip="creative" />
+    <FlowStackItem label="match" chip="ranked-2f9" />
+  </FlowStack>
+</FlowDiagram>
+
+Watch the video to see ten Minecraft worlds kept ready at once, with only the world in play actually running.
+
+<UseCaseVideo src="minecraft-c.webm" captions="minecraft-c.vtt" />
+
+---
+
+## Under the hood
+
+The platform features this use case is built on.
+
+<FeatureTable>
+  <FeatureRow
+    links={[
+      { label: "Stateful scale-to-zero", href: "/features/scale-to-zero#stateful-scale-to-zero" },
+      { label: "templates", href: "/platform/instances#instance-templates" },
+    ]}
+  >
+    Snapshot memory and volume state after the heavy load stage so a world resumes in milliseconds.
+  </FeatureRow>
+  <FeatureRow title="Volumes" href="/platform/volumes">
+    Persist world state between scale-to-zero cycles.
+  </FeatureRow>
+  <FeatureRow title="Network shield" href="/features/network-shield">
+    Restrict what the server can reach and inject the secrets it needs.
+  </FeatureRow>
+</FeatureTable>
+
+<UseCaseCta
+  title="Run your first game server now"
+  guideHref="/guides/minecraft"
+  guideLabel="Game servers guide"
+>
+  Sign up to Unikraft Cloud and follow the guide to run your first game server
+</UseCaseCta>
+
+{/* vale on */}

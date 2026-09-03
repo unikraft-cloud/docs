@@ -3,323 +3,69 @@ title: API Gateways
 navigation_icon: door-open
 ---
 
-API Gateways are the critical entry point to your services.
-They manage authentication, routing, rate-limiting, observability, and security at the edge of your infrastructure.
-In modern architectures—especially microservices and serverless platforms—the API Gateway is the first line of defence and performance optimisation.
-
-With **Unikraft Cloud**, API Gateways gain advantage from a microVM-based, scale-to-zero infrastructure that delivers the performance of specialised systems with the flexibility of serverless deployment.
-
-## Why run an API gateway on Unikraft Cloud
-
-### ⚡ Ultra-low latency
-
-MicroVMs remove the overhead of general-purpose operating systems by compiling only the required OS components alongside the API Gateway app.
-This results in:
-
-* Single-digit-millisecond cold-start times (perfect for bursty API traffic).
-* Minimal memory footprint, allowing more requests per node.
-* Consistent, predictable response latency at scale.
-
-### 🛡️ Secure by design
-
-The open internet exposes API Gateways, making them often the most attacked component.
-Unikraft Cloud isolates each instance at the virtual machine level while keeping footprint minimal:
-
-* Immutable, single-purpose microVM images reduce attack surface.
-* Strong VM-level isolation without container overhead.
-* Built-in memory safety and image signing to ensure trust at deployment.
-
-### 💸 Scale-to-zero economics
-
-Traffic to APIs often fluctuates—peaking during business hours, quiet overnight, and spiking during product launches.
-Traditional gateway clusters waste resources when idle.
-With Unikraft Cloud:
-
-* API Gateways scale-to-zero when not in use, reducing idle costs to **zero**.
-* Instant cold-starts ensure gateways are ready in milliseconds when traffic resumes.
-* Fine-grained billing: pay only for requests and runtime, not for idle VMs.
-
-### 🔄 Serverless-ready
-
-API Gateways are a natural control point for serverless workloads.
-Running them on Unikraft Cloud enables:
-
-* On-demand routing to serverless functions.
-* Dynamic policy enforcement per request without worrying about idle nodes.
-* Lightweight integration with edge compute for global distribution.
-
-
-## Getting started
-
-API Gateways on Unikraft Cloud combine VM-grade security with serverless agility.
-Ultra-fast, cost-efficient, and scale-to-zero—so your API edge is always ready, never idle.
-
-This guide shows you how to use [Tyk](https://tyk.io/), a universal API management tool for Representational State Transfer (REST), GraphQL, gRPC and async APIs.
-It offers open standards, scalability, governance, and AI-ready features for API development, security, and performance.
-Often, you deploy Tyk alongside a caching layer like Redis to store API tokens and OAuth clients.
-
-To run it, follow these steps:
-
-1. Install the CLI.
-   Use the [unikraft CLI](/docs/cli/unikraft) or the legacy [kraft CLI](https://unikraft.org/docs/cli/install).
-   You need a [BuildKit](https://github.com/moby/buildkit) builder. The easiest way to get one is via [Docker](https://docs.docker.com/engine/install/).
-   You can also set up and use BuildKit directly; see the [quick start](https://github.com/moby/buildkit#quick-start).
-
-   :::note
-   The unikraft CLI is the current standard, while kraft is the legacy version.
-   Choose one of the CLIs below and only run the commands associated with it for the rest of this guide.
-   :::
-
-2. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/tyk/` directory:
-
-   ```bash title=""
-   git clone https://github.com/unikraft-cloud/examples
-   cd examples/tyk/
-   ```
-
-Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
-This guide uses `fra` (Frankfurt, 🇩🇪):
-
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
-unikraft login
-```
-
-```bash title="kraft"
-# Set Unikraft Cloud access token
-export UKC_TOKEN=token
-# Set metro to Frankfurt, DE
-export UKC_METRO=fra
-```
-
-</CodeTabs>
-
-## Redis
-
-The `REDIS_PASSWORD` environment variable sets the Redis `requirepass` directive.
-If not provided, it defaults to `unikraft`.
-Build and deploy the Redis instance (used internally by Tyk):
-
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
-unikraft build ./redis --output <my-org>/redis:latest
-unikraft run --metro fra \
-  -m 256M \
-  --scale-to-zero policy=idle,cooldown-time=1000,stateful=true \
-  --domain tyk-redis.internal \
-  -e REDIS_PASSWORD=unikraft \
-  --image <my-org>/redis:latest
-```
-
-```bash title="kraft"
-kraft cloud deploy \
-  -M 256Mi \
-  --scale-to-zero idle \
-  --scale-to-zero-cooldown 1s \
-  --scale-to-zero-stateful \
-  --domain tyk-redis.internal \
-  -e REDIS_PASSWORD=unikraft \
-  ./redis/
-```
-
-</CodeTabs>
-
-The output shows the Redis instance details:
-
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
-[1mmetro[22m:           fra
-[1mname[22m:            redis-6vgvc
-[1muuid[22m:            63b86d17-06ca-4f95-b921-56e5b3245554
-[1mstate[22m:           [38;2;144;161;185mstarting[0m
-[1mimage[22m:           <my-org>/redis
-[1mresources[22m:
-[3m  memory[23m:        256MiB
-[3m  vcpus[23m:         1
-[1mservice[22m:
-[3m  name[23m:          snowy-water-wivk1i4r
-[3m  uuid[23m:          6612de91-d639-4b5a-95d1-b7ae6e91e3c1
-[3m  domains[23m:
-[3m  - fqdn[23m:        tyk-redis.internal
-[1mnetworks[22m:
-[3m- uuid[23m:          19e4b80a-9501-448d-99a6-ec3f7b90805e
-[3m  private-ip[23m:    10.0.0.29
-[3m  mac[23m:           12:b0:0a:00:01:49
-[1mtimestamps[22m:
-[3m  created[23m:       just now
-[1mscale-to-zero[22m:
-[3m  enabled[23m:       true
-[3m  policy[23m:        idle
-[3m  stateful[23m:      true
-[3m  cooldown-time[23m: 1s
-```
-
-```ansi title="kraft"
-[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
- [38;5;245m│[0m
- [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245mname[0m: redis-6vgvc
- [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245muuid[0m: 63b86d17-06ca-4f95-b921-56e5b3245554
- [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
- [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mstate[0m: [92mstarting[0m
- [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mdomain[0m: tyk-redis.internal
- [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/redis@sha256:933b8b7714924eb2de880e0f32792698b14a13c83d5aee0f52dddcab5c97099d
- [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mmemory[0m: 256 MiB
- [38;5;245m├[0m[38;5;245m──────[0m [38;5;245mservice[0m: snowy-water-wivk1i4r
- [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: redis-6vgvc.internal
- [38;5;245m└[0m[38;5;245m───[0m [38;5;245mprivate ip[0m: 10.0.0.29
-```
-
-</CodeTabs>
-
-## Tyk
-
-Build and deploy the Tyk instance:
-
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
-unikraft build ./tyk --output <my-org>/tyk:latest
-unikraft run --metro fra \
-  -m 256M \
-  -p 443:8080/tls+http \
-  --scale-to-zero policy=on,cooldown-time=1000 \
-  --image <my-org>/tyk:latest
-```
-
-```bash title="kraft"
-kraft cloud deploy \
-  -M 256Mi \
-  -p 443:8080/tls+http \
-  --scale-to-zero on \
-  --scale-to-zero-cooldown 1s \
-  ./tyk/
-```
-
-</CodeTabs>
-
-The output shows the Tyk instance details:
-
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
-[1mmetro[22m:        fra
-[1mname[22m:         tyk-s9ixd
-[1muuid[22m:         4e8a5e56-2d0b-4ca4-88b4-aa816129a66d
-[1mstate[22m:        [38;2;144;161;185mstarting[0m
-[1mimage[22m:        <my-org>/tyk
-[1mresources[22m:
-[3m  memory[23m:     256MiB
-[3m  vcpus[23m:      1
-[1mservice[22m:
-[3m  name[23m:       icy-haze-8ph4u8cz
-[3m  uuid[23m:       89079646-353a-4a19-99ac-5498c7d626ad
-[3m  domains[23m:
-[3m  - fqdn[23m:     icy-haze-8ph4u8cz.fra.unikraft.app
-[1mnetworks[22m:
-[3m- uuid[23m:       8085804f-0fe0-4847-ad6e-8518edba126e
-[3m  private-ip[23m: 10.0.0.1
-[3m  mac[23m:        12:b0:0a:00:0e:b1
-[1mtimestamps[22m:
-[3m  created[23m:    just now
-```
-
-```ansi title="kraft"
-[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
- [38;5;245m│[0m
- [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245mname[0m: tyk-s9ixd
- [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245muuid[0m: 4e8a5e56-2d0b-4ca4-88b4-aa816129a66d
- [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
- [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mstate[0m: [92mstarting[0m
- [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mdomain[0m: https://icy-haze-8ph4u8cz.fra.unikraft.app
- [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/tyk@sha256:4954033ada90f980f279e5d825dd7971111a429578ce38be764893ba0d1f358d
- [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mmemory[0m: 256 MiB
- [38;5;245m├[0m[38;5;245m──────[0m [38;5;245mservice[0m: icy-haze-8ph4u8cz
- [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: tyk-s9ixd.internal
- [38;5;245m└[0m[38;5;245m───[0m [38;5;245mprivate ip[0m: 10.0.0.1
-```
-
-</CodeTabs>
-
-In this case, the instance names are `redis-6vgvc` and `tyk-s9ixd`, and the Tyk address is `https://icy-haze-8ph4u8cz.fra.unikraft.app`.
-They're different for each run.
-
-Use `curl` to query the Tyk instance on Unikraft Cloud:
-
-```bash
-curl https://icy-haze-8ph4u8cz.fra.unikraft.app/hello
-```
-
-```text title=""
-{"status":"pass","version":"v5.3.0-dev","description":"Tyk GW","details":{"redis":{"status":"pass","componentType":"datastore","time":"2026-05-25T12:26:07Z"}}}
-```
-
-You can list information about the instances by running:
-
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
-unikraft instances list
-```
-
-```bash title="kraft"
-kraft cloud instance list
-```
-
-</CodeTabs>
-
-<div style={{ marginTop: '0.8em' }} />
-
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
-[1mMETRO[0m  [1mNAME[0m         [1mSTATE[0m    [1mIMAGE[0m           [1mMEMORY[0m  [1mVCPUS[0m  [1mFQDN[0m                                [1mCREATED[0m
-fra    tyk-s9ixd    [38;2;43;127;255mstandby[0m  <my-org>/tyk    256MiB  1      icy-haze-8ph4u8cz.fra.unikraft.app  just now
-fra    redis-6vgvc  [38;2;0;188;125mrunning[0m  <my-org>/redis  256MiB  1      tyk-redis.internal                  1 minute ago
-```
-
-```ansi title="kraft"
-[1mNAME[0m         [1mFQDN[0m                                [1mSTATE[0m    [1mSTATUS[0m      [1mIMAGE[0m                                             [1mMEMORY[0m   [1mVCPUS[0m  [1mARGS[0m  [1mBOOT TIME[0m
-tyk-s9ixd    icy-haze-8ph4u8cz.fra.unikraft.app  [0;36mstandby[0m  standby     oci://unikraft.io/<my-org>/tyk@sha256:4954033...  256 MiB  1            158.32 ms
-redis-6vgvc  tyk-redis.internal                  [0;32mrunning[0m  since 1min  oci://unikraft.io/<my-org>/redis@sha256:933b8...  256 MiB  1            1811.99 ms
-```
-
-</CodeTabs>
-
-When done, you can remove the instances:
-
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
-unikraft instances delete redis-6vgvc tyk-s9ixd
-```
-
-```bash title="kraft"
-kraft cloud instance remove redis-6vgvc tyk-s9ixd
-```
-
-</CodeTabs>
-
-## Learn more
-
-Use the `--help` option for detailed information on using Unikraft Cloud:
-
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
-unikraft --help
-```
-
-```bash title="kraft"
-kraft cloud --help
-```
-
-</CodeTabs>
-
-Or visit the [CLI Reference](/docs/cli/unikraft) or the [legacy CLI reference](/docs/cli/kraft/overview).
-For more references, check out also:
-
-* [Tyk](/guides/tyk) on Unikraft Cloud interactive guide.
-* [Redis](/guides/redis7.2) on Unikraft Cloud interactive guide.
+{/* vale off */}
+
+Deploy your API gateway on ultra low-latency microVMs that scale up when required and cost nothing when idle.
+
+<ValueCards>
+  <ValueCard title="Scale up in milliseconds during a spike" metric="scale up in < 10 ms">
+    [Autoscale](/features/autoscale) adds gateway instances as traffic climbs and removes them as it subsides, [down to zero](/features/scale-to-zero) when nothing is arriving.
+  </ValueCard>
+  <ValueCard title="VM-level isolation" metric="own kernel per instance">
+    Each gateway is a hardware-isolated microVM with its own kernel, not a process sharing a host runtime.
+  </ValueCard>
+  <ValueCard title="Low latency at the edge" metric="ultra-low latency">
+    Millisecond cold starts, minimal memory footprints and transparent [load balancing](/features/load-balancing) within a service group results in ultra-low latency.
+  </ValueCard>
+</ValueCards>
+
+<FlowDiagram caption="Requests land on the service group, which balances across instances it grows and shrinks on demand, and routes to your backends.">
+  <FlowBox title="Requests">
+    Clients, partners, your own apps
+  </FlowBox>
+  <FlowArrow accent label="balanced" lines={3} />
+  <FlowGroup
+    title="Autoscale group"
+    titleNote="gateway instances"
+    footnote="Balancing is built into the service group: no extra hop."
+  >
+    <FlowStackItem label="gateway" chip="serving" active dot />
+    <FlowStackItem label="gateway" chip="serving" active dot />
+    <FlowStackItem label="gateway" chip="added on spike" dot />
+  </FlowGroup>
+  <FlowArrow label="routes to" />
+  <FlowStack>
+    <FlowStackItem label="auth service" />
+    <FlowStackItem label="orders service" />
+    <FlowStackItem label="search service" />
+  </FlowStack>
+</FlowDiagram>
+
+---
+
+## Under the hood
+
+The platform features this use case is built on.
+
+<FeatureTable>
+  <FeatureRow title="Load balancing" href="/features/load-balancing">
+    Starts as soon as multiple instances are attached to a service group.
+    There's no separate load balancing instance to run.
+  </FeatureRow>
+  <FeatureRow title="Autoscale" href="/features/autoscale">
+    Scales up during traffic spikes in milliseconds and back down once they subside.
+  </FeatureRow>
+  <FeatureRow title="Scale-to-zero" href="/features/scale-to-zero">
+    An idle gateway isn't running, so you aren't paying for it between requests.
+  </FeatureRow>
+</FeatureTable>
+
+<UseCaseCta
+  title="Deploy your first API gateway"
+  guideHref="/guides/tyk"
+  guideLabel="API gateways guide"
+>
+  Sign up to Unikraft Cloud and follow the guide to deploy your first API gateway
+</UseCaseCta>
+
+{/* vale on */}

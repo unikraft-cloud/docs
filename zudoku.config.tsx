@@ -1,11 +1,22 @@
 import type { ZudokuConfig } from "zudoku";
 import {
+  CheckpointTimeline,
+  FeatureRow,
+  FeatureTable,
   FlowArrow,
   FlowBox,
   FlowDiagram,
+  FlowGroup,
+  FlowRow,
   FlowStack,
   FlowStackItem,
+  UseCaseCard,
+  UseCaseCta,
+  UseCaseGroup,
+  ValueCard,
+  ValueCards,
 } from "./src/DiagramComponents";
+import { UseCaseCast, UseCaseVideo } from "./src/UseCaseMedia";
 
 const config: ZudokuConfig = {
   metadata: {
@@ -47,11 +58,23 @@ const config: ZudokuConfig = {
   },
   mdx: {
     components: {
+      CheckpointTimeline,
+      FeatureRow,
+      FeatureTable,
       FlowArrow,
       FlowBox,
       FlowDiagram,
+      FlowGroup,
+      FlowRow,
       FlowStack,
       FlowStackItem,
+      UseCaseCard,
+      UseCaseCast,
+      UseCaseCta,
+      UseCaseGroup,
+      UseCaseVideo,
+      ValueCard,
+      ValueCards,
     },
   },
   syntaxHighlighting: {
@@ -139,6 +162,7 @@ const config: ZudokuConfig = {
           icon: "lightbulb",
           collapsed: false,
           items: [
+            "/use-cases/overview",
             "/use-cases/sandboxes",
             "/use-cases/headless-browsers",
             "/use-cases/mcp-servers",
@@ -176,8 +200,8 @@ const config: ZudokuConfig = {
         "/guides/overview", // Guides Overview
         "/guides/httpserver-dotnet10.0", // .NET HTTP Server
         "/guides/node18-agario", // Agar.io (Node)
-        "/guides/mcp-server-arxiv", // ArXiv MCP Server
-        "/guides/build-environments", // Build/Test Environments with ROMs
+        "/guides/tyk", // API Gateways: Tyk
+        "/guides/build-environments", // Build and Test Environments with ROMs
         "/guides/httpserver-bun", // Bun HTTP Server
         "/guides/httpserver-gcc13.2", // C HTTP Server
         "/guides/httpserver-boost1.74-gpp13.2", // C++ Boost HTTP Server
@@ -197,18 +221,19 @@ const config: ZudokuConfig = {
         "/guides/httpserver-python3.12-flask3.0-sqlite", // Flask and SQLite HTTP Server
         "/guides/httpserver-python3.12-flask3.0", // Flask HTTP Server
         "/guides/nginx-flask-mongo", // Flask with MongoDB
-        "/guides/github-webhook-node", // GitHub Webhook receiver
+        "/guides/minecraft", // Game Servers: Minecraft
         "/guides/httpserver-go1.22-redis", // Go and Redis HTTP Server
         "/guides/httpserver-go1.21", // Go HTTP Server
         "/guides/grafana", // Grafana
         "/guides/haproxy", // HAProxy
+        "/guides/httpserver-node-express-puppeteer", // Headless Browsers: Puppeteer HTTP Server
         "/guides/hugo0.122", // Hugo
         "/guides/imaginary", // Imaginary
         "/guides/httpserver-java21", // Java HTTP Server
         "/guides/httpserver-lua5.1", // Lua HTTP Server
         "/guides/mariadb", // MariaDB
+        "/guides/mcp-server-arxiv", // MCP Servers: ArXiv MCP Server
         "/guides/memcached1.6", // Memcached
-        "/guides/minecraft", // Minecraft
         "/guides/minio", // Minio
         "/guides/mongodb", // MongoDB
         "/guides/mysql", // MySQL
@@ -218,9 +243,6 @@ const config: ZudokuConfig = {
         "/guides/node24-karaoke", // Node AllKaraoke
         "/guides/httpserver-node26", // Node HTTP Server
         "/guides/node21-websocket", // Node WebSocket Server
-        "/guides/node-code-execution", // Node.js Code Execution with ROMs
-        "/guides/novnc-browser", // noVNC
-        "/guides/openclaw", // OpenClaw
         "/guides/opentelemetry-collector", // OpenTelemetry Collector
         "/guides/httpserver-perl5.42", // Perl HTTP Server
         "/guides/phoenix-postgres", // Phoenix with PostgreSQL
@@ -229,13 +251,13 @@ const config: ZudokuConfig = {
         "/guides/python-playwright-chromium", // Playwright (Chromium) with Python FastAPI
         "/guides/node-playwright-firefox", // Playwright (Firefox) with Node.js
         "/guides/node-playwright-webkit", // Playwright (WebKit) with Node.js
-        "/guides/postgres", // PostgreSQL
         "/guides/httpserver-prisma-expressjs4.19-node18", // Prisma HTTP Server
         "/guides/prometheus-grafana", // Prometheus and Grafana
-        "/guides/httpserver-node-express-puppeteer", // Puppeteer HTTP Server
         "/guides/httpserver-python3.12", // Python HTTP Server
         "/guides/httpserver-node22-react-router", // React Router HTTP Server
         "/guides/redis7.2", // Redis
+        "/guides/novnc-browser", // Remote Desktops: noVNC
+        "/guides/visual-studio-code-server", // Remote IDEs: Visual Studio Code Server
         "/guides/httpserver-ruby3.2", // Ruby HTTP Server
         "/guides/ruby3.2-rails", // Ruby on Rails
         "/guides/httpserver-rust1.88-actix-web4", // Rust (Actix Web) HTTP Server
@@ -243,6 +265,9 @@ const config: ZudokuConfig = {
         "/guides/httpserver-rust1.88-rocket0.5", // Rust (Rocket) HTTP Server
         "/guides/httpserver-rust1.75-tokio", // Rust (Tokio) HTTP Server
         "/guides/httpserver-rust1.91", // Rust HTTP Server
+        "/guides/openclaw", // Sandboxes: OpenClaw
+        "/guides/postgres", // Serverless Databases: PostgreSQL
+        "/guides/node-code-execution", // Serverless Functions: Node.js Code Execution with ROMs
         "/guides/mcp-server-simple", // Simple MCP Server
         "/guides/skipper0.18", // Skipper
         "/guides/httpserver-node21-solid-start", // SolidJS HTTP Server
@@ -252,13 +277,12 @@ const config: ZudokuConfig = {
         "/guides/httpserver-c-debug", // SSH and HTTP Server with C and Debugging Tools
         "/guides/httpserver-node22-sveltekit", // SvelteKit HTTP Server
         "/guides/traefik", // Traefik
-        "/guides/tyk", // Tyk
-        "/guides/visual-studio-code-server", // Visual Studio Code Server
         "/guides/httpserver-node-vite-vanilla", // Vite (vanilla)
         "/guides/httpserver-node-vite-ssr-vanilla", // Vite (vanilla) SSR
         "/guides/httpserver-nginx-vite-vanilla", // Vite HTTP Server
         "/guides/vsftpd", // vsftpd
         "/guides/wazero-import-go", // Wazero
+        "/guides/github-webhook-node", // Webhooks: GitHub Webhook Receiver
         "/guides/node18-wingsio", // Wings.io (Node)
         "/guides/wordpress-all-in-one", // Wordpress
         "/guides/wordpress", // Wordpress with Nginx and MariaDB
@@ -643,6 +667,7 @@ const config: ZudokuConfig = {
     { from: "/cli", to: "/cli/overview" },
     { from: "/kraftfile", to: "/kraftfile/v0.7" },
     { from: "/guides", to: "/guides/overview" },
+    { from: "/use-cases", to: "/use-cases/overview" },
     { from: "/releases", to: "/releases/index" },
   ],
   apis: [
@@ -656,6 +681,18 @@ const config: ZudokuConfig = {
     customCss: `
       .prose td code {
         white-space: normal;
+      }
+
+      .prose header h1 {
+        margin-bottom: 1rem;
+      }
+
+      .prose .not-prose h2 {
+        margin: 0;
+      }
+
+      .prose > .h-16 {
+        height: 1rem;
       }
     `,
     fonts: {

@@ -3,271 +3,67 @@ title: Remote IDEs
 navigation_icon: square-chevron-right
 ---
 
-Remote Integrated Development Environments (IDEs) have become essential for cloud-native development, collaboration, and education.
-But traditional setups often suffer from **slow startup times, high idle costs, and complex resource management**.
-With **Unikraft Cloud**, remote IDEs gain the advantages of **microVMs**, making them **fast, secure, and truly serverless**.
-
-## Why run remote IDEs on Unikraft Cloud
-
-### ⚡ Instant developer environments
-
-Unikraft microVMs boot in milliseconds, enabling **instant spin-up of full-featured IDEs** on demand.
-Developers start coding immediately without waiting for heavy VMs or containers to initialise.
-
-
-### 🔒 Secure, isolated workspaces
-
-Each IDE runs as a **dedicated microVM instance**, ensuring strong workload isolation and reducing the risk of cross-tenant data leaks.
-Sensitive code stays protected in a **minimal, hardened environment**.
-
-
-### 💰 Cost-effective scale-to-zero
-
-Idle IDE sessions automatically scale down to zero, eliminating wasteful spending on unused developer environments.
-Pay only for active usage, whether it's a classroom full of students or a globally distributed engineering team.
-
-
-### 🌍 Seamless collaboration
-
-Unikraft Cloud integrates with serverless backends, databases, and API gateways—so IDEs can connect effortlessly to the developer's toolchain.
-Perfect for **pair programming, CI/CD pipelines, or education platforms**.
-
-### 🚀 High performance with low overhead
-
-MicroVMs run closer to bare metal than containers, providing developers with
-**snappy, low-latency environments** that feel as fast as local coding—without
-sacrificing portability or scalability.
-
-
-## Getting started
-
-This guide will show you how to run [Visual Studio Code](https://code.visualstudio.com/) as a serverless app on Unikraft Cloud.
-The [Code Server](https://code.visualstudio.com/docs/remote/vscode-server) allows you to run Visual Studio Code on a remote server and access it through a web browser or a local VS Code client.
-When not in use, the instance will [scale-to-zero](/docs/features/scale-to-zero) and resume in milliseconds depending on usage.
-
-
-To run it, follow these steps:
-
-1. Install the CLI.
-   Use the [unikraft CLI](/docs/cli/unikraft) or the legacy [kraft CLI](https://unikraft.org/docs/cli/install).
-   You need a [BuildKit](https://github.com/moby/buildkit) builder. The easiest way to get one is via [Docker](https://docs.docker.com/engine/install/).
-   You can also set up and use BuildKit directly; see the [quick start](https://github.com/moby/buildkit#quick-start).
-
-   :::note
-   The unikraft CLI is the current standard, while kraft is the legacy version.
-   Choose one of the CLIs below and only run the commands associated with it for the rest of this guide.
-   :::
-
-1. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/visual-studio-code-server/` directory:
-
-   ```bash
-   git clone https://github.com/unikraft-cloud/examples
-   cd examples/visual-studio-code-server/
-   ```
-
-Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
-This guide uses `fra` (Frankfurt, 🇩🇪).
-
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
-unikraft login
-```
-
-```bash title="kraft"
-# Set Unikraft Cloud access token
-export UKC_TOKEN=token
-# Set metro to Frankfurt, DE
-export UKC_METRO=fra
-```
-
-</CodeTabs>
-
-The `UKC_TOKEN` and `UKC_METRO` environment variables are only supported by the legacy CLI.
-
-When done, invoke the following command to deploy this app on Unikraft Cloud:
-
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
-unikraft volumes create --metro fra \
-  --name code-workspace \
-  --size 1G
-unikraft build . --output <my-org>/visual-studio-code-server:latest
-unikraft run --metro fra \
-  -m 2G \
-  -p 443:8443/tls+http \
-  --volume code-workspace:/workspace \
-  --scale-to-zero policy=on,cooldown-time=4000,stateful=true \
-  -e PGUID=0 \
-  -e PGID=0 \
-  -e PASSWORD=unikraft \
-  -e SUDO_PASSWORD=unikraft \
-  -e DEFAULT_WORKSPACE="/workspace" \
-  --image <my-org>/visual-studio-code-server:latest
-```
-
-```bash title="kraft"
-kraft cloud volume create \
-  --name code-workspace \
-  --size 1Gi
-kraft cloud deploy \
-  -M 2Gi \
-  -p 443:8443 \
-  --scale-to-zero on \
-  --scale-to-zero-stateful \
-  --scale-to-zero-cooldown 4s \
-  -v code-workspace:/workspace \
-  -e PGUID=0 \
-  -e PGID=0 \
-  -e PASSWORD=unikraft \
-  -e SUDO_PASSWORD=unikraft \
-  -e DEFAULT_WORKSPACE="/workspace" \
-  .
-```
-
-</CodeTabs>
-
-The output shows the instance address and other details:
-
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
-[1mmetro[22m:        fra
-[1mname[22m:         code-server-6gxsp
-[1muuid[22m:         c1a619a0-e222-4042-94b8-ba4b39353417
-[1mstate[22m:        [38;2;144;161;185mstarting[0m
-[1mimage[22m:        <my-org>/visual-studio-code-server
-[1mresources[22m:
-[3m  memory[23m:     2048MiB
-[3m  vcpus[23m:      1
-[1mservice[22m:
-[3m  uuid[23m:       4a0866e4-3bec-3666-c4aa-61672de542e2
-[3m  name[23m:       blue-shape-chmxf1g4
-[3m  domains[23m:
-[3m  - fqdn[23m:     blue-shape-chmxf1g4.fra.unikraft.app
-[1mnetworks[22m:
-[3m- uuid[23m:       dcec209f-31a6-b355-a88e-f5ac3edfa20e
-[3m  private-ip[23m: 10.0.0.49
-[3m  mac[23m:        12:b0:ec:d2:df:1c
-[1mtimestamps[22m:
-[3m  created[23m:    just now
-```
-
-```ansi title="kraft"
-[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
- [38;5;245m│[0m
- [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245mname[0m: code-server-6gxsp
- [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245muuid[0m: c1a619a0-e222-4042-94b8-ba4b39353417
- [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
- [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mstate[0m: [92mstarting[0m
- [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mdomain[0m: https://blue-shape-chmxf1g4.fra.unikraft.app
- [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/visual-studio-code-server@sha256:633ec8a8dcb342b093c6f055f84fc056ee1abe40ff56e98bd612c4b9d4ddffcb
- [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mmemory[0m: 2048 MiB
- [38;5;245m├[0m[38;5;245m──────[0m [38;5;245mservice[0m: blue-shape-chmxf1g4
- [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: code-server-6gxsp.internal
- [38;5;245m└[0m[38;5;245m───[0m [38;5;245mprivate ip[0m: 10.0.0.49
-```
-
-</CodeTabs>
-
-This will create a volume for data persistence, and mount it at `/workspace` inside the VM.
-In this case, the instance name is `code-server-6gxsp` and the address is `https://blue-shape-chmxf1g4.fra.unikraft.app`.
-They're different for each run.
-Enter the provided address into your browser of choice to access the Code server instance.
-
-You can list information about your instance with:
-
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
-unikraft instances list
-```
-
-```bash title="kraft"
-kraft cloud instances list
-```
-
-</CodeTabs>
-
-<div style={{ marginTop: '0.8em' }} />
-
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
-[1mMETRO[22m  [1mNAME[22m               [1mSTATE[22m    [1mIMAGE[22m                               [1mARGS[22m  [1mMEMORY[22m  [1mVCPUS[22m  [1mFQDN[22m                                  [1mCREATED[22m
-fra    code-server-6gxsp  [38;2;43;127;255mstandby[0m  <my-org>/visual-studio-code-server        2.0GiB  1      blue-shape-chmxf1g4.fra.unikraft.app  2 minutes ago
-```
-
-```ansi title="kraft"
-[0;1;39mNAME[0m               [0;1;39mFQDN[0m                                  [0;1;39mSTATE[0m    [0;1;39mSTATUS[0m   [0;1;39mIMAGE[0m                                                            [0;1;39mMEMORY[0m   [0;1;39mVCPUS[0m  [0;1;39mARGS[0m  [0;1;39mBOOT TIME[0m
-code-server-6gxsp  blue-shape-chmxf1g4.fra.unikraft.app  [0;36mstandby[0m  standby  oci://unikraft.io/<my-org>/visual-studio-code-server@sha256:...  2.0 GiB  1            8.45 ms
-```
-
-</CodeTabs>
-
-## Volume
-
-This deployment creates a volume for data persistence: `code-workspace`.
-You can list information about the volume by running:
-
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
-unikraft volumes list
-```
-
-```bash title="kraft"
-kraft cloud volume list
-```
-
-</CodeTabs>
-
-<div style={{ marginTop: '0.8em' }} />
-
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
-[1mMETRO[22m  [1mNAME[22m            [1mSTATE[22m    [1mSIZE[22m    [1mCREATED[22m
-fra    code-workspace  [38;2;0;188;125mmounted[0m  1.0GiB  13 minutes ago
-```
-
-```ansi title="kraft"
-[0;1;39mNAME[0m            [0;1;39mCREATED AT[0m      [0;1;39mSIZE[0m     [0;1;39mATTACHED TO[0m        [0;1;39mMOUNTED BY[0m         [0;1;39mSTATE[0m    [0;1;39mPERSISTENT[0m
-code-workspace  13 minutes ago  1.0 GiB  code-server-6gxsp  code-server-6gxsp  mounted  true
-```
-
-</CodeTabs>
-
-Upon deleting the instance, this volume will persist, allowing you to create another instance without losing data.
-To remove the volume, you can use:
-
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
-unikraft volumes delete code-workspace
-```
-
-```bash title="kraft"
-kraft cloud volume rm code-workspace
-```
-
-</CodeTabs>
-
-## Learn more
-
-Use the `--help` option for detailed information on using Unikraft Cloud:
-
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
-unikraft --help
-```
-
-```bash title="kraft"
-kraft cloud --help
-```
-
-</CodeTabs>
-
-Or visit the [CLI Reference](/docs/cli/unikraft) or the [legacy CLI reference](/docs/cli/kraft/overview).
+{/* vale off */}
+
+Run full developer environments that [scale to zero](/features/scale-to-zero#stateful-scale-to-zero) when idle and start back up exactly as you left them, in milliseconds.
+
+<ValueCards>
+  <ValueCard title="Resumes in milliseconds, as you left it" metric="resume in < 10 ms">
+    Memory and disk are [snapshotted](/features/snapshots) when the developer stops typing, and restored on the next keystroke, processes still running.
+  </ValueCard>
+  <ValueCard title="A workspace that outlives the instance" metric="persistent volumes">
+    The workspace state is held in persistent [volumes](/platform/volumes), so [scale-to-zero](/features/scale-to-zero#stateful-scale-to-zero) cycles and restarts don't lose work.
+  </ValueCard>
+  <ValueCard title="Run as many as you need" metric="100K+ microVMs / server">
+    One environment per developer, per branch or per review, with idle ones costing nothing.
+  </ValueCard>
+</ValueCards>
+
+<FlowDiagram caption="One image, one template, one workspace per developer, each with a volume that survives every scale-to-zero cycle.">
+  <FlowBox title="Dev image">
+    Language toolchains, editor server, extensions
+  </FlowBox>
+  <FlowArrow label="snapshot once" />
+  <FlowBox accent title="Template">
+    Environment booted and warm, snapshotted once
+  </FlowBox>
+  <FlowArrow accent label="< 10 ms each" sublabel="+ volume each" />
+  <FlowStack more="...idle workspaces scaled to zero, volumes kept">
+    <FlowStackItem label="workspace" chip="vol: alice" />
+    <FlowStackItem label="workspace" chip="vol: bob" />
+    <FlowStackItem label="workspace" chip="vol: review-482" />
+  </FlowStack>
+</FlowDiagram>
+
+---
+
+## Under the hood
+
+The platform features this use case is built on.
+
+<FeatureTable>
+  <FeatureRow
+    links={[
+      { label: "Stateful scale-to-zero", href: "/features/scale-to-zero#stateful-scale-to-zero" },
+      { label: "templates", href: "/platform/instances#instance-templates" },
+    ]}
+  >
+    Snapshot memory and volume state after the heavy initialisation stage so the environment starts in milliseconds.
+  </FeatureRow>
+  <FeatureRow title="Volumes" href="/platform/volumes">
+    Persist changes between scale-to-zero cycles, so the workspace outlives any single instance.
+  </FeatureRow>
+  <FeatureRow title="Network shield" href="/features/network-shield">
+    Restrict what the environment can reach and inject the secrets it needs.
+  </FeatureRow>
+</FeatureTable>
+
+<UseCaseCta
+  title="Deploy your first remote IDE now"
+  guideHref="/guides/visual-studio-code-server"
+  guideLabel="Remote IDEs guide"
+>
+  Sign up to Unikraft Cloud and follow the guide to deploy your first remote IDE
+</UseCaseCta>
+
+{/* vale on */}

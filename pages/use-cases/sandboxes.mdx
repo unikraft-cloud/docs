@@ -3,329 +3,83 @@ title: Sandboxes
 navigation_icon: box
 ---
 
-Sandboxes give you on-demand, isolated execution environments for any workload.
-Spin up a microVM in milliseconds to run short-lived tasks such as executing code, processing data, or responding to an event.
-Then let it vanish automatically.
-
-Or keep a sandbox running in the background for as long as a job requires.
-Either way, every sandbox runs in its own dedicated microVM: hardware-isolated, minimal, and ready for the job.
-
-With **Unikraft Cloud**, you get the instant startup speed of containers together with the strong isolation guarantees of hardware virtualization—not one or the other.
-
-## Why run sandboxes on Unikraft Cloud
-
-### ⚡ Instant startup, every time
-
-Sandboxes need to be ready the moment a task arrives.
-Unikraft Cloud instances boot in milliseconds:
-
-* Ephemeral sandboxes spin up and complete tasks before cold starts are even noticeable.
-* Long-running sandboxes resume instantly from stateful scale-to-zero snapshots.
-* No pre-warming pools or reserved capacity needed.
-
-### 🔒 True hardware isolation
-
 {/* vale off */}
 
-Running arbitrary or untrusted workloads such as user-submitted code, AI agent tool calls, third-party plugins, test payloads, etc. demands more than container-level isolation.
+Securely run untrusted sandboxes in milliseconds; [scale them to zero](/features/scale-to-zero#stateful-scale-to-zero), [branch](/features/branching) or [checkpoint](/features/checkpoints) them as needed.
+
+<ValueCards>
+  <ValueCard title="Start heavy sandboxes in milliseconds" metric="cold start & scale-to-zero < 10 ms">
+    Snapshot a fully initialised environment (runtime, deps, warm caches) into a [template](/platform/instances#instance-templates) and boot each sandbox from it.
+    Idle ones cost nothing. [Scale to zero](/features/scale-to-zero#stateful-scale-to-zero) and restore statefully in ms.
+  </ValueCard>
+  <ValueCard title="Genuinely secure sandboxes" metric="own kernel · secrets never enter the sandbox">
+    Every sandbox is a hardware-isolated microVM with its own kernel, not a container sharing the host's.
+    Its traffic leaves through a [shield](/features/network-shield) microVM that filters egress and holds your credentials, so untrusted code can use an API without ever seeing the key.
+  </ValueCard>
+  <ValueCard title="Branch, checkpoint, run as many as you need" metric="branch & restore in < 10 ms · platform is built for scale">
+    One hardware-isolated microVM per task: [branch](/features/branching) a live sandbox to launch sub-agents from its exact state, or [checkpoint](/features/checkpoints) it and rewind when a path goes wrong.
+  </ValueCard>
+</ValueCards>
+
+<FlowDiagram caption="Nothing reaches the internet directly: the shield sits in the path, filters it, and adds the credentials the sandbox never holds.">
+  <FlowStack more="...as many as the workload needs">
+    <FlowStackItem label="sandbox" chip="shell" />
+    <FlowStackItem label="sandbox" chip="filesystem" />
+    <FlowStackItem label="sandbox" chip="shell + fs" />
+  </FlowStack>
+  <FlowArrow accent bidirectional label="all traffic" />
+  <FlowBox accent title="Network shield" chip="API keys · tokens">
+    A (scale to zero) microVM every packet must pass through: filters traffic, injects secrets
+  </FlowBox>
+  <FlowArrow bidirectional />
+  <FlowBox title="Public internet">
+    Third-party APIs, package registries
+  </FlowBox>
+</FlowDiagram>
+
+Watch the video to see a sandbox boot in under 10 ms, scale to zero while idle, and resume with its state intact.
+
+<UseCaseVideo src="openclaw.webm" captions="openclaw.vtt" />
+
+---
+
+## Under the hood
+
+The platform features this use case is built on.
+
+<FeatureTable>
+  <FeatureRow title="Network shield" href="/features/network-shield">
+    A separate microVM that all network traffic is routed through.
+    It can filter traffic and inject secrets.
+  </FeatureRow>
+  <FeatureRow title="Plugin API" href="/features/plugins">
+    An authenticated channel over which command execution and filesystem access services are provided.
+  </FeatureRow>
+  <FeatureRow title="Branching" href="/features/branching">
+    Clones a running sandbox, memory and volume state included, in milliseconds, so a sub-agent can start from the parent's exact state instead of setting itself up again.
+  </FeatureRow>
+  <FeatureRow title="Checkpoints" href="/features/checkpoints">
+    Capture the full state of a sandbox and keep a history, so you can rewind to the last good point when a run goes wrong.
+  </FeatureRow>
+  <FeatureRow title="Autokill" href="/features/autokill">
+    Optionally terminates long-running sandboxes so a stuck or hostile workload can't run indefinitely.
+  </FeatureRow>
+  <FeatureRow
+    links={[
+      { label: "Stateful scale-to-zero", href: "/features/scale-to-zero#stateful-scale-to-zero" },
+      { label: "templates", href: "/platform/instances#instance-templates" },
+    ]}
+  >
+    Give large, heavy sandbox environments millisecond startup, and cost nothing while idle.
+  </FeatureRow>
+</FeatureTable>
+
+<UseCaseCta
+  title="Create your first sandbox now"
+  guideHref="/guides/openclaw"
+  guideLabel="Sandboxes guide"
+>
+  Sign up to Unikraft Cloud, then follow the guide on creating your first sandbox
+</UseCaseCta>
 
 {/* vale on */}
-
-Every sandbox on Unikraft Cloud runs in its own microVM:
-
-* No shared kernel between tenants. Each sandbox has its own.
-* Hardware-enforced boundaries reduce the risk of container escape.
-* A minimal OS footprint reduces the attack surface for every run.
-
-### 💸 Pay only for execution
-
-Sandboxes are inherently bursty.
-Some complete in milliseconds while others run for hours.
-Unikraft Cloud's pricing model fits:
-
-* You pay only for the actual execution time of ephemeral sandboxes.
-* Long-running sandboxes scale-to-zero when idle and resume instantly when needed.
-* No idle infrastructure, no wasted capacity between runs.
-
-## Getting started
-
-{/* vale off */}
-
-A great example of sandboxes in action is [OpenClaw](https://openclaw.ai/), an autonomous AI agent framework that runs in an isolated microVM on Unikraft Cloud.
-
-{/* vale on */}
-
-This guide explains how to create and deploy your own OpenClaw gateway on Unikraft Cloud.
-To run this example, follow these steps:
-
-1. Install the CLI.
-   Use the [unikraft CLI](/docs/cli/unikraft) or the legacy [kraft CLI](https://unikraft.org/docs/cli/install).
-   You need a [BuildKit](https://github.com/moby/buildkit) builder. The easiest way to get one is via [Docker](https://docs.docker.com/engine/install/).
-   You can also set up and use BuildKit directly; see the [quick start](https://github.com/moby/buildkit#quick-start).
-
-   :::note
-   The unikraft CLI is the current standard, while kraft is the legacy version.
-   Choose one of the CLIs below and only run the commands associated with it for the rest of this guide.
-   :::
-
-1. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/openclaw` directory:
-
-   ```bash
-   git clone https://github.com/unikraft-cloud/examples
-   cd examples/openclaw/
-   ```
-
-Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
-This guide uses `fra` (Frankfurt, 🇩🇪):
-
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
-unikraft login
-```
-
-```bash title="kraft"
-# Set Unikraft Cloud access token
-export UKC_TOKEN=token
-# Set metro to Frankfurt, DE
-export UKC_METRO=fra
-```
-
-</CodeTabs>
-
-The `UKC_TOKEN` and `UKC_METRO` environment variables are only supported by the legacy CLI.
-
-When done, you may create the OpenClaw Unikraft Cloud image and deploy an instance from it like so:
-
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
-unikraft build . --output <my-org>/openclaw:latest
-unikraft run --metro fra \
-  -m 4G \
-  -p 18789:18789/tls \
-  -p 2222:2222/tls \
-  --scale-to-zero policy=on,cooldown-time=10000,stateful=true \
-  -e PUBKEY="...." \
-  --image <my-org>/openclaw:latest
-```
-
-```bash title="kraft"
-kraft cloud deploy \
-  -M 4Gi \
-  -p 18789:18789/tls \
-  -p 2222:2222/tls \
-  --scale-to-zero on \
-  --scale-to-zero-cooldown 10s \
-  --scale-to-zero-stateful \
-  -e PUBKEY="..." \
-  .
-```
-
-</CodeTabs>
-
-Make sure to replace `<my-org>` with your username / org-name and to set your SSH public key as the `PUBKEY` environment variable above.
-
-The output shows the instance address and other details:
-
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
-[1mmetro[22m:        fra
-[1mname[22m:         openclaw-8tosm
-[1muuid[22m:         e2a6183a-721b-4145-bfaf-37a5f859bbc1
-[1mstate[22m:        [38;2;144;161;185mstarting[0m
-[1mimage[22m:        <my-org>/openclaw
-[1mruntime[22m:
-[3m  env[23m:
-    PUBKEY:   *
-[1mresources[22m:
-[3m  memory[23m:     4GiB
-[3m  vcpus[23m:      1
-[1mservice[22m:
-[3m  uuid[23m:       7ab20338-b04d-4869-947b-9433e21677b1
-[3m  name[23m:       divine-flower-bxsaapup
-[3m  domains[23m:
-[3m  - fqdn[23m:     divine-flower-bxsaapup.fra.unikraft.app
-[1mnetworks[22m:
-[3m- uuid[23m:       2b0b120b-6ce5-4b19-ac4c-04ee8f11526e
-[3m  private-ip[23m: 10.0.12.97
-[3m  mac[23m:        12:b0:0a:00:0c:61
-[1mtimestamps[22m:
-[3m  created[23m:    just now
-```
-
-```ansi title="kraft"
-[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
- [38;5;245m│[0m
- [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245mname[0m: openclaw-8tosm
- [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245muuid[0m: e2a6183a-721b-4145-bfaf-37a5f859bbc1
- [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
- [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mstate[0m: [92mstarting[0m
- [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mdomain[0m: https://divine-flower-bxsaapup.fra.unikraft.app
- [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/openclaw@sha256:7a3d9f2b5e8c1a4d7f0e3b6c9a2d5f8b1e4a7d0c3f6b9e2a5d8c1f4b7e0a3d6c9
- [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mmemory[0m: 4096 MiB
- [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: openclaw-8tosm.internal
- [38;5;245m└[0m[38;5;245m───[0m [38;5;245mprivate ip[0m: 10.0.12.97
-```
-
-</CodeTabs>
-
-In this case, the instance name is `openclaw-8tosm` and the address is `divine-flower-bxsaapup.fra.unikraft.app`.
-These will be different for each run.
-
-You can now SSH into this instance and run the OpenClaw onboarding process.
-
-To SSH, you need to set up a tunnel that handles the TLS connection to the Unikraft Cloud instance.
-This way, you have a non-TLS port that your SSH client can connect to:
-
-```bash
-socat TCP-LISTEN:2222,reuseaddr,fork OPENSSL:divine-flower-bxsaapup.fra.unikraft.app:2222,verify=0
-```
-
-Then connect to the instance via SSH using:
-
-```bash
-ssh -l root localhost -p 2222
-```
-
-You can list information about the instance by running:
-
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
-unikraft instances list
-```
-
-```bash title="kraft"
-kraft cloud instance list
-```
-
-</CodeTabs>
-
-<div style={{ marginTop: '0.8em' }} />
-
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
-[1mMETRO[22m  [1mNAME[22m            [1mSTATE[22m    [1mIMAGE[22m              [1mARGS[22m  [1mMEMORY[22m  [1mVCPUS[22m  [1mFQDN[22m                                     [1mCREATED[22m
-fra    openclaw-8tosm  [38;2;43;127;255mstandby[0m  <my-org>/openclaw        4.0GiB  1      divine-flower-bxsaapup.fra.unikraft.app  2 minutes ago
-```
-
-```ansi title="kraft"
-[0;1;39mNAME[0m            [0;1;39mFQDN[0m                                     [0;1;39mSTATE[0m    [0;1;39mSTATUS[0m   [0;1;39mIMAGE[0m                                                 [0;1;39mMEMORY[0m   [0;1;39mVCPUS[0m  [0;1;39mARGS[0m  [0;1;39mBOOT TIME[0m
-openclaw-8tosm  divine-flower-bxsaapup.fra.unikraft.app  [0;36mstandby[0m  standby  oci://unikraft.io/<my-org>/openclaw@sha256:7a3d9f...  4.0 GiB  1            8.45 ms
-```
-
-</CodeTabs>
-
-When done, you can remove the instance using:
-
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
-unikraft instances delete openclaw-8tosm
-```
-
-```bash title="kraft"
-kraft cloud instance remove openclaw-8tosm
-```
-
-</CodeTabs>
-
-{/* vale off */}
-
-## OpenClaw Setup
-
-{/* vale on */}
-
-Once you have SSH'd into your instance, you may run:
-
-```bash
-openclaw onboard
-```
-
-This will set up your OpenClaw gateway on the instance.
-You will have to provide your LLM's API key here.
-
-Once done, make note of your `gateway.auth.token` (henceforth referenced as `<token>`) from `~/.openclaw/openclaw.json`
-
-```bash
-cat ~/.openclaw/openclaw.json
-```
-
-Set `gateway.controlUi.allowedOrigins` in `~/.openclaw/openclaw.json`:
-
-```json title="openclaw.json"
-...
-  "gateway": {
-    ...
-    "controlUi": {
-      "allowedOrigins": [
-        "https://proud-smoke-cjf0wro8.fra.unikraft.app:18789"
-      ]
-    },
-    ...
-  },
-...
-```
-
-Replace the address above with the address of your instance (noted earlier).
-
-Run the gateway:
-
-```bash
-openclaw gateway run --bind lan
-```
-
-You may now access the web dashboard at the following address:
-
-```text title=""
-https://<address>:18789?token=<token>
-```
-
-Where `<address>` is your above noted address and `<token>` is your above noted token.
-
-For security reasons, you will have to manually approve your web "device" to start using the web dashboard.
-Create a new SSH connection to your OpenClaw instance:
-
-```bash
-ssh -l root localhost -p 2222
-```
-
-First, find your device ID:
-
-```bash
-openclaw devices list
-```
-
-Look under the `Request` column.
-Device IDs look like `cabd915e-137a-4bc4-b640-d0e507684d65`
-
-Finally, approve your device with:
-
-```bash
-openclaw devices approve <device-id>
-```
-
-Once you approve your device, refresh your OpenClaw web dashboard.
-
-You now have full access to your own OpenClaw deployment on Unikraft Cloud!
-
-## Learn more
-
-Use the `--help` option for detailed information on using Unikraft Cloud:
-
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
-unikraft --help
-```
-
-```bash title="kraft"
-kraft cloud --help
-```
-
-</CodeTabs>
-
-Or visit the [CLI Reference](/docs/cli/unikraft) or the [legacy CLI reference](/docs/cli/overview).

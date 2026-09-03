@@ -1,0 +1,145 @@
+---
+title: What people build on Unikraft
+navigation_label: Overview
+navigation_icon: lightbulb
+---
+
+{/* vale off */}
+
+A sample of some of the common use cases Unikraft is used for in production.
+Follow the links below to learn more.
+
+<UseCaseGroup title="AI agent infrastructure" note="the runtime an agent acts through">
+  <UseCaseCard
+    title="Sandboxes"
+    href="/use-cases/sandboxes"
+    tags={[
+      { label: "shield", href: "/features/network-shield" },
+      { label: "branching", href: "/features/branching" },
+      { label: "checkpointing", href: "/features/checkpoints" },
+    ]}
+  >
+    Securely run untrusted sandboxes in milliseconds; scale them to zero, branch or checkpoint them as needed.
+  </UseCaseCard>
+  <UseCaseCard
+    title="MCP Servers"
+    href="/use-cases/mcp-servers"
+    tags={[
+      { label: "templates", href: "/platform/instances#instance-templates" },
+      { label: "shield", href: "/features/network-shield" },
+      { label: "scale-to-zero", href: "/features/scale-to-zero" },
+    ]}
+  >
+    Run MCP servers as microVMs that wake in milliseconds when an agent calls them, and cost nothing between calls.
+  </UseCaseCard>
+  <UseCaseCard
+    title="Headless & Headful Browsers"
+    href="/use-cases/headless-browsers"
+    tags={[
+      { label: "templates", href: "/platform/instances#instance-templates" },
+      { label: "checkpointing", href: "/features/checkpoints" },
+      { label: "branching", href: "/features/branching" },
+    ]}
+  >
+    Give every session, scrape or screenshot its own disposable browser microVM (headless or with a full display) that starts in milliseconds.
+  </UseCaseCard>
+</UseCaseGroup>
+
+<UseCaseGroup title="Developer infrastructure" note="environments for writing, building and testing code">
+  <UseCaseCard
+    title="Build and Test Environments"
+    href="/use-cases/build-test-environments"
+    tags={[
+      { label: "templates", href: "/platform/instances#instance-templates" },
+      { label: "ROMs", href: "/features/roms" },
+      { label: "scale-to-zero", href: "/features/scale-to-zero" },
+    ]}
+  >
+    Give every build or test job its own microVM. Start your full toolchain from a snapshot in milliseconds, and inject that job's code at boot time.
+  </UseCaseCard>
+  <UseCaseCard
+    title="Remote IDEs"
+    href="/use-cases/remote-ides"
+    tags={[
+      { label: "templates", href: "/platform/instances#instance-templates" },
+      { label: "volumes", href: "/platform/volumes" },
+      { label: "snapshots", href: "/features/snapshots" },
+    ]}
+  >
+    Run full developer environments that scale to zero when idle and start back up exactly as you left them, in milliseconds.
+  </UseCaseCard>
+</UseCaseGroup>
+
+<UseCaseGroup title="Backend services" note="the request-serving parts of an application">
+  <UseCaseCard
+    title="Serverless Functions"
+    href="/use-cases/serverless-functions"
+    tags={[
+      { label: "templates", href: "/platform/instances#instance-templates" },
+      { label: "ROMs", href: "/features/roms" },
+      { label: "autoscale", href: "/features/autoscale" },
+    ]}
+  >
+    Deploy hardware-isolated serverless functions that boot and respond in milliseconds, and cost nothing between calls.
+  </UseCaseCard>
+  <UseCaseCard
+    title="API Gateways"
+    href="/use-cases/api-gateways"
+    tags={[
+      { label: "load balancing", href: "/features/load-balancing" },
+      { label: "autoscale", href: "/features/autoscale" },
+      { label: "scale-to-zero", href: "/features/scale-to-zero" },
+    ]}
+  >
+    Deploy your API gateway on ultra low-latency microVMs that scale up when required and cost nothing when idle.
+  </UseCaseCard>
+  <UseCaseCard
+    title="Webhooks"
+    href="/use-cases/webhooks"
+    tags={[
+      { label: "scale-to-zero", href: "/features/scale-to-zero" },
+      { label: "autoscale", href: "/features/autoscale" },
+      { label: "load balancing", href: "/features/load-balancing" },
+    ]}
+  >
+    Send events to a microVM that wakes and responds in milliseconds, then shuts down until the next event.
+  </UseCaseCard>
+  <UseCaseCard
+    title="Serverless Databases"
+    href="/use-cases/serverless-databases"
+    tags={[
+      { label: "branching", href: "/features/branching" },
+      { label: "checkpointing", href: "/features/checkpoints" },
+      { label: "volumes", href: "/platform/volumes" },
+    ]}
+  >
+    Run whichever database you already use, and start, clone and restore it in milliseconds.
+  </UseCaseCard>
+</UseCaseGroup>
+
+<UseCaseGroup title="Long-lived interactive sessions" note="one instance per user or per session">
+  <UseCaseCard
+    title="Game Servers"
+    href="/use-cases/game-servers"
+    tags={[
+      { label: "templates", href: "/platform/instances#instance-templates" },
+      { label: "volumes", href: "/platform/volumes" },
+      { label: "scale-to-zero", href: "/features/scale-to-zero" },
+    ]}
+  >
+    Start heavy gaming workloads in milliseconds, and scale them to zero when the session is empty.
+  </UseCaseCard>
+  <UseCaseCard
+    title="Remote Desktops"
+    href="/use-cases/remote-desktops"
+    tags={[
+      { label: "templates", href: "/platform/instances#instance-templates" },
+      { label: "scale-to-zero", href: "/features/scale-to-zero" },
+      { label: "checkpointing", href: "/features/checkpoints" },
+    ]}
+  >
+    Provide a full cloud desktop environment that starts in milliseconds.
+  </UseCaseCard>
+</UseCaseGroup>
+
+{/* vale on */}

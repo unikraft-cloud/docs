@@ -3,249 +3,65 @@ title: MCP Servers
 navigation_icon: tool-case
 ---
 
-[MCP (Model Context Protocol)](https://modelcontextprotocol.io/docs/getting-started/intro) servers enable AI assistants and LLMs to access external tools, data sources, and capabilities in a standardized way.
-They act as bridges between AI models and real-world resources—file systems, databases, APIs, search engines, and custom business logic.
-As AI assistants become more capable, MCP servers are becoming critical infrastructure for grounding AI in reality.
-
-With **Unikraft Cloud**, you are enhancing your MCP servers with instant deployment, scale-to-zero economics, and millisecond-level cold starts—perfect for the on-demand nature of AI interactions.
-
-## Why run MCP servers on Unikraft Cloud
-
-### ⚡ Zero-latency context injection
-
-AI assistants need instant access to tools and data.
-Every millisecond of latency impacts the user experience.
-Unikraft Cloud's microVM architecture reduces OS overhead:
-
-* Single-digit-millisecond cold starts mean MCP servers are ready instantly.
-* Minimal memory footprint allows dense packing of specialized servers.
-
-### 🔒 Isolated execution
-
-MCP servers often access sensitive data—file systems, databases, proprietary APIs.
-Unikraft Cloud provides VM-level isolation for each server instance:
-
-* Strong isolation prevents cross-contamination between different MCP contexts.
-* Minimal attack surface with only essential components included.
-
-### 💸 Pay-per-query economics
-
-AI interactions are inherently bursty—periods of intense activity followed by silence.
-Traditional server architectures waste resources during idle periods.
-With Unikraft Cloud:
-
-* MCP servers scale-to-zero when not in use, costing nothing.
-* Instant wake-up ensures your queries have no noticeable delay.
-* Fine-grained billing means you only pay for actual AI interactions.
-
-### 🌍 Edge-ready deployment
-
-Unikraft Cloud help you reduce the latency of your applications:
-
-* Choose to deploy to your closest [metro](/platform/metros).
-* Lightweight footprint enables cost-effective multi-region deployment.
-* Fast startup times ensure consistent performance across all locations.
-
-
-## Getting started
-
-MCP servers on Unikraft Cloud provide the perfect runtime for AI tool integration, being fast, secure, and cost-efficient.
-Scale-to-zero economics meet instant availability, ensuring your AI assistants always have the tools they need, exactly when they need them.
-
-This guide shows you how to deploy two types of MCP servers:
-
-### Example 1: ArXiv MCP server
-
-The [arXiv MCP Server](https://github.com/blazickjp/arxiv-mcp-server) is a community-made MCP server that connects AI tools directly to the [arXiv](https://arxiv.org/) archive of scientific articles and publications.
-It allows MCP clients to browse and analyze papers.
-
-To run an example based on it, follow these steps:
-
-1. Install the CLI.
-   Use the [unikraft CLI](/docs/cli/unikraft) or the legacy [kraft CLI](https://unikraft.org/docs/cli/install).
-   You need a [BuildKit](https://github.com/moby/buildkit) builder. The easiest way to get one is via [Docker](https://docs.docker.com/engine/install/).
-   You can also set up and use BuildKit directly; see the [quick start](https://github.com/moby/buildkit#quick-start).
-
-   :::note
-   The unikraft CLI is the current standard, while kraft is the legacy version.
-   Choose one of the CLIs below and only run the commands associated with it for the rest of this guide.
-   :::
-
-1. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/mcp-server-arxiv/` directory:
-
-   ```bash
-   git clone https://github.com/unikraft-cloud/examples
-   cd examples/mcp-server-arxiv/
-   ```
-
-Make sure to log into Unikraft Cloud and set your token and a [metro](/platform/metros) close to you.
-This guide uses `fra` (Frankfurt, 🇩🇪):
-
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
-unikraft login
-```
-
-```bash title="kraft"
-# Set Unikraft Cloud access token
-export UKC_TOKEN=token
-# Set metro to Frankfurt, DE
-export UKC_METRO=fra
-```
-
-</CodeTabs>
-
-Follow the instructions in the example's README to set it up and grab the server's FQDN.
-
-You can use the included example client to test the server, or connect to it using your favourite MCP client.
-For example, using [Visual Studio Code](https://code.visualstudio.com/docs/copilot/customization/mcp-servers#_add-an-mcp-server), you can add the following to your `.vscode/mcp.json` file:
-
-```json
-{
-    "servers": {
-        "arxiv-mcp": {
-            "type": "http",
-            "url": "https://<FQDN>/mcp"
-        }
-    }
-}
-```
-
-The tool will then show up in Copilot Chat.
-You can find similar instructions for [Claude Code](https://code.claude.com/docs/en/mcp#option-1:-add-a-remote-http-server) and other MCP-compatible clients.
-
-Example query that will trigger a tool call:
-
 {/* vale off */}
 
-> **Q:** *Could you download the original Unikraft paper for me?*
->
-> **A:** The original Unikraft paper (“Unikraft: Fast, Specialized Unikernels the Easy Way”) is being downloaded and converted. I will notify you as soon as it is ready for reading or further actions.
+Run MCP servers as microVMs that wake in milliseconds when an agent calls them, and cost nothing between calls.
 
-> **Q:** *Dump the whole first section of the paper here.*
+<ValueCards>
+  <ValueCard title="Start bulky tools in milliseconds" metric="wakes in < 10 ms">
+    Tools with expensive initialisation (indexes, model loads, browsers) are [snapshotted](/features/snapshots) warm and resumed on the call.
+  </ValueCard>
+  <ValueCard title="Costs nothing between calls" metric="zero idle cost">
+    Agent traffic is bursty and mostly idle.
+    A server that isn't being called isn't running, and isn't billed.
+  </ValueCard>
+  <ValueCard title="Run as many as you need" metric="100K+ microVMs / server">
+    One isolated server per agent, per tool or per tenant, rather than one shared process handling everyone.
+  </ValueCard>
+</ValueCards>
+
+<FlowDiagram caption="The agent calls; a standby MCP server wakes in milliseconds; its outbound call leaves through the shield, which supplies the credentials.">
+  <FlowBox title="LLM client">
+    Calls a tool when the agent needs it
+  </FlowBox>
+  <FlowArrow accent label="wakes in < 10 ms" lines={3} />
+  <FlowStack>
+    <FlowStackItem label="mcp server" chip="mid-request" active dot />
+    <FlowStackItem label="mcp server" chip="standby" dot />
+    <FlowStackItem label="mcp server" chip="standby" dot />
+  </FlowStack>
+  <FlowArrow label="outbound" />
+  <FlowBox accent title="Network shield" chip="third-party API">
+    Filters traffic, injects the secrets; servers never hold them
+  </FlowBox>
+</FlowDiagram>
+
+---
+
+## Under the hood
+
+The platform features this use case is built on.
+
+<FeatureTable>
+  <FeatureRow
+    links={[
+      { label: "Stateful scale-to-zero", href: "/features/scale-to-zero#stateful-scale-to-zero" },
+      { label: "templates", href: "/platform/instances#instance-templates" },
+    ]}
+  >
+    Bulky tools start and resume in milliseconds, and consume nothing between tool calls.
+  </FeatureRow>
+  <FeatureRow title="Network shield" href="/features/network-shield">
+    Injects secrets so the MCP server itself never has access to them, and filters its outbound traffic.
+  </FeatureRow>
+</FeatureTable>
+
+<UseCaseCta
+  title="Run your first MCP server"
+  guideHref="/guides/mcp-server-arxiv"
+  guideLabel="MCP servers guide"
 >
-> **A:** Here is the full first section (“Introduction”) from the Unikraft paper:
->
-> **1 Introduction**
->
-> Specialization is arguably the most effective way to achieve outstanding performance, whether it is for achieving high throughput in network-bound applications, making language runtime environments more efficient, or providing efficient container environments, to give some examples.
-> Even in the hardware domain, and especially with the demise of Moore’s law, manufacturers are increasingly leaning towards hardware specialization to achieve ever better performance; the machine learning field is a primary exponent of this.
-> ...
+  Sign up to Unikraft Cloud and follow the guide to run your first MCP server
+</UseCaseCta>
 
 {/* vale on */}
-
-### Example 2: Custom MCP server
-
-This example demonstrates how to build a minimal custom MCP server from scratch.
-It provides weather information and time utilities.
-This shows the core patterns for building your own MCP tools.
-
-To run it, follow these steps:
-
-1. Install the CLI.
-   Use the [unikraft CLI](/docs/cli/unikraft) or the legacy [kraft CLI](https://unikraft.org/docs/cli/install).
-   You need a [BuildKit](https://github.com/moby/buildkit) builder. The easiest way to get one is via [Docker](https://docs.docker.com/engine/install/).
-   You can also set up and use BuildKit directly; see the [quick start](https://github.com/moby/buildkit#quick-start).
-
-   :::note
-   The unikraft CLI is the current standard, while kraft is the legacy version.
-   Choose one of the CLIs below and only run the commands associated with it for the rest of this guide.
-   :::
-
-1. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/mcp-server-simple/` directory:
-
-   ```bash
-   git clone https://github.com/unikraft-cloud/examples
-   cd examples/mcp-server-simple/
-   ```
-
-Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
-This guide uses `fra` (Frankfurt, 🇩🇪).
-
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
-unikraft login
-```
-
-```bash title="kraft"
-# Set Unikraft Cloud access token
-export UKC_TOKEN=token
-# Set metro to Frankfurt, DE
-export UKC_METRO=fra
-```
-
-</CodeTabs>
-
-Follow the instructions in the example's README to set it up and grab the server's FQDN.
-
-You can use the included example client to test the server, or connect to it using your favourite MCP client.
-For example, using [Visual Studio Code](https://code.visualstudio.com/docs/copilot/customization/mcp-servers#_add-an-mcp-server), you can add the following to your `.vscode/mcp.json` file:
-
-```json
-{
-    "servers": {
-        "custom-mcp": {
-            "type": "http",
-            "url": "https://<FQDN>/mcp"
-        }
-    }
-}
-```
-
-The tool will then show up in Copilot Chat.
-You can find similar instructions for [Claude Code](https://code.claude.com/docs/en/mcp#option-1:-add-a-remote-http-server) and other MCP-compatible clients.
-
-Example query that will trigger a tool call:
-
-{/* vale off */}
-
-> **Q**: What is the current weather in Paris, and what time is it there?
->
-> **A**: The current weather in Paris is 21°C, partly cloudy, with 62% humidity.
-> The local time in Paris is 23:21 (11:21 PM), Tuesday, December 2, 2025 (UTC+1).
-
-{/* vale on */}
-
-## Building your own MCP server
-
-MCP servers follow a simple pattern:
-
-1. **Define tools**: Specify what capabilities your server provides (functions, APIs, data sources).
-1. **Handle requests**: Process MCP protocol requests from AI assistants.
-1. **Return results**: Format responses in the MCP protocol format.
-
-Common use cases for custom MCP servers:
-
-* **Database access**: Query internal databases, data warehouses, or analytics platforms.
-* **API integration**: Connect AI assistants to third-party services (customer relationship management, ticketing, monitoring).
-* **Custom business logic**: Integrate company-specific calculations, validations, or workflows.
-* **Document retrieval**: Search and retrieve from internal knowledge bases or document stores.
-
-Unikraft Cloud's instant deployment and scale-to-zero model makes it ideal for hosting dozens of specialized MCP servers.
-
-## Learn more
-
-Use the `--help` option for detailed information on using Unikraft Cloud:
-
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
-unikraft --help
-```
-
-```bash title="kraft"
-kraft cloud --help
-```
-
-</CodeTabs>
-
-Or visit the [CLI Reference](/docs/cli/unikraft) or the [legacy CLI reference](/docs/cli/kraft/overview).
-
-For more information about the Model Context Protocol:
-
-* [MCP Documentation](https://modelcontextprotocol.io/).
-* [Reference MCP Servers](https://github.com/modelcontextprotocol/servers).
-* [Building MCP Servers](https://modelcontextprotocol.io/docs/develop/build-server).
-* [Building MCP Clients](https://modelcontextprotocol.io/docs/develop/build-client).

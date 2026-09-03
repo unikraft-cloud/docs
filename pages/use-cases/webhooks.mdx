@@ -3,129 +3,69 @@ title: Webhooks
 navigation_icon: plug
 ---
 
-Webhooks, also known as reverse APIs, enable real-time, event-driven communication between services.
-Instead of constantly polling for updates, webhooks allow services to push data to your app the moment something happens.
-This could be when someone pushes a commit, processes a payment, or creates an issue.
-This makes webhooks essential for building reactive, event-driven architectures.
+{/* vale off */}
 
-With **Unikraft Cloud**, you can deploy webhook receivers that combine instant availability with scale-to-zero economics—paying only when events arrive, while maintaining millisecond-level response times.
+Send events to a microVM that wakes and responds in milliseconds, then shuts down until the next event.
 
-## Why run webhook receivers on Unikraft Cloud
+<ValueCards>
+  <ValueCard title="Cold boots and responds in milliseconds" metric="cold start < 10 ms">
+    No warm instance waiting for a delivery that may not come; the event itself is what starts the handler.
+  </ValueCard>
+  <ValueCard title="Costs nothing between events" metric="zero idle cost">
+    Between deliveries the handler isn't running.
+    Endpoints that fire a few times a day stop being a standing bill.
+  </ValueCard>
+  <ValueCard title="Absorb event storms" metric="autoscale in < 10 ms">
+    When a provider replays a backlog, the service group [adds instances](/features/autoscale) in milliseconds and [balances](/features/load-balancing) across them.
+  </ValueCard>
+</ValueCards>
 
-### ⚡ Instant wake-up for bursty events
+<FlowDiagram caption="Events arrive, sleeping handlers wake in milliseconds to write to your backends, then shut down until the next one.">
+  <FlowBox title="Event sources">
+    Stripe, GitHub, your own services
+  </FlowBox>
+  <FlowArrow accent label="balanced" lines={3} />
+  <FlowGroup
+    title="Service group"
+    titleNote="webhook handlers"
+    footnote="Instances appear on the event and disappear after it."
+  >
+    <FlowStackItem label="handler" chip="handling event" active dot />
+    <FlowStackItem label="handler" chip="handling event" active dot />
+    <FlowStackItem label="handler" chip="scaled to zero" dot />
+  </FlowGroup>
+  <FlowArrow label="routes to" />
+  <FlowStack>
+    <FlowStackItem label="database" />
+    <FlowStackItem label="queue" />
+    <FlowStackItem label="object storage" />
+  </FlowStack>
+</FlowDiagram>
 
-Webhooks are inherently sporadic—events can arrive in bursts or be silent for hours.
-Traditional servers waste resources running every day, waiting for events.
-Unikraft Cloud's microVM architecture provides:
+---
 
-* Single-digit-millisecond cold starts ensure instant response when events arrive.
-* No noticeable delay for webhook senders, maintaining reliable integrations.
-* Minimal memory footprint allows running many specialized webhook receivers.
+## Under the hood
 
-### 🔒 Isolated and secure
+The platform features this use case is built on.
 
-Webhook receivers often process sensitive data from external services.
-Unikraft Cloud provides VM-level isolation for each instance:
+<FeatureTable>
+  <FeatureRow title="Scale-to-zero" href="/features/scale-to-zero">
+    The VM only runs while it is actively serving a request.
+  </FeatureRow>
+  <FeatureRow title="Autoscale" href="/features/autoscale">
+    The service group can add instances in milliseconds to deal with event storms.
+  </FeatureRow>
+  <FeatureRow title="Load balancing" href="/features/load-balancing">
+    Distributes incoming events across the instances in the service group.
+  </FeatureRow>
+</FeatureTable>
 
-* Strong isolation prevents cross-contamination between different webhook handlers.
-* Built-in HTTPS endpoints with automatic TLS certificate management.
+<UseCaseCta
+  title="Deploy your first webhook now"
+  guideHref="/guides/github-webhook-node"
+  guideLabel="Webhooks guide"
+>
+  Sign up to Unikraft Cloud and follow the guide to deploy your first webhook
+</UseCaseCta>
 
-### 💸 Pay only for events
-
-Why pay for idle servers when webhooks only fire occasionally?
-With Unikraft Cloud:
-
-* Webhook receivers scale-to-zero when not processing events, costing nothing.
-* Instant wake-up ensures the system processes events immediately upon arrival.
-* Fine-grained billing means you only pay for actual event processing.
-
-
-## Getting started
-
-This guide shows you how to deploy a GitHub webhook receiver that listens for repository events.
-The example uses Node.js with Express and the official [Octokit webhooks library](https://www.npmjs.com/package/@octokit/webhooks).
-To run it, follow these steps:
-
-1. Install the CLI.
-   Use the [unikraft CLI](/docs/cli/unikraft) or the legacy [kraft CLI](https://unikraft.org/docs/cli/install).
-   You need a [BuildKit](https://github.com/moby/buildkit) builder. The easiest way to get one is via [Docker](https://docs.docker.com/engine/install/).
-   You can also set up and use BuildKit directly; see the [quick start](https://github.com/moby/buildkit#quick-start).
-
-   :::note
-   The unikraft CLI is the current standard, while kraft is the legacy version.
-   Choose one of the CLIs below and only run the commands associated with it for the rest of this guide.
-   :::
-
-1. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/github-webhook-node/` directory:
-
-   ```bash
-   git clone https://github.com/unikraft-cloud/examples
-   cd examples/github-webhook-node/
-   ```
-
-Make sure to log into Unikraft Cloud and set your token and a [metro](/platform/metros) close to you.
-This guide uses `fra` (Frankfurt, 🇩🇪):
-
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
-unikraft login
-```
-
-```bash title="kraft"
-# Set Unikraft Cloud access token
-export UKC_TOKEN=token
-# Set metro to Frankfurt, DE
-export UKC_METRO=fra
-```
-
-</CodeTabs>
-
-Follow the instructions in the example's README to set it up and grab the server's FQDN.
-After that, check that the service is up:
-
-```bash
-curl https://<your-server-fqdn>/health
-```
-
-```text title=""
-{"status":"healthy","timestamp":"2025-12-17T14:55:20.953Z","uptime":0.063799807}
-```
-
-To create a webhook in GitHub, follow the [official documentation](https://docs.github.com/en/webhooks/using-webhooks/creating-webhooks) and the indications in the example's README.
-
-The example includes:
-
-* **Signature validation** using GitHub's webhook secret (via Octokit library).
-* **Event logging** with timestamps for debugging and auditing.
-* **Health check** endpoint for monitoring and load balancer integration.
-* **Scale-to-zero configuration** in the `Kraftfile`.
-
-To customize for other webhook sources ([Stripe](https://docs.stripe.com/webhooks), [Slack](https://docs.slack.dev/tools/node-slack-sdk/webhook/), [GitLab](https://docs.gitlab.com/user/project/integrations/webhooks/), etc.), it's best to refer to their specific libraries and signature validation methods.
-Webhooks aren't a standardized protocol, so each service has its own conventions.
-Also follow [Webhooks.fyi](https://webhooks.fyi/) for best practices.
-
-## Learn more
-
-Use the `--help` option for detailed information on using Unikraft Cloud:
-
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
-unikraft --help
-```
-
-```bash title="kraft"
-kraft cloud --help
-```
-
-</CodeTabs>
-
-Or visit the [CLI Reference](/docs/cli/unikraft) or the [legacy CLI reference](/docs/cli/kraft/overview).
-
-For more information, check out these resources:
-
-* [Express Documentation](https://expressjs.com/).
-* [GitHub Webhooks Documentation](https://docs.github.com/en/webhooks).
-* [Securing GitHub Webhooks](https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries).
-* [Webhook Best Practices](https://webhooks.fyi/).
+{/* vale on */}
