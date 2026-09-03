@@ -1,0 +1,30 @@
+name: promote
+
+on:
+  push:
+    branches:
+    - prod-staging
+
+permissions:
+  contents: read
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: prod-stable
+
+    - name: Reset promotion branch
+      run: |
+        git fetch origin prod-staging:prod-staging
+        git reset --hard prod-staging
+
+    - name: Create pull request
+      uses: peter-evans/create-pull-request@v6
+      with:
+        token: ${{ secrets.GH_PAT }}
+        base: prod-stable
+        title: "release: Merge latest prod-staging changes to prod-stable"
+        branch: prod-staging
