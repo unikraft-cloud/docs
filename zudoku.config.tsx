@@ -158,6 +158,7 @@ const config: ZudokuConfig = {
           icon: "blocks",
           collapsed: false,
           items: [
+            "/integrations/grafana",
             "/integrations/kubernetes",
             "/integrations/karpenter",
             "/integrations/sdks/go",
