@@ -21,12 +21,10 @@ Send events to a microVM that wakes and responds in milliseconds, then shuts dow
 </ValueCards>
 
 <FlowDiagram caption="Events arrive, sleeping handlers wake in milliseconds to write to your backends, then shut down until the next one.">
-  <FlowStack>
-    <FlowStackItem label="database" />
-    <FlowStackItem label="queue" />
-    <FlowStackItem label="object storage" />
-  </FlowStack>
-  <FlowArrow reverse label="routes to" />
+  <FlowBox title="Event sources">
+    Stripe, GitHub, your own services
+  </FlowBox>
+  <FlowArrow accent label="balanced" lines={3} />
   <FlowGroup
     title="Service group"
     titleNote="webhook handlers"
@@ -36,10 +34,12 @@ Send events to a microVM that wakes and responds in milliseconds, then shuts dow
     <FlowStackItem label="handler" chip="handling event" active dot />
     <FlowStackItem label="handler" chip="scaled to zero" dot />
   </FlowGroup>
-  <FlowArrow reverse accent label="balanced" lines={3} />
-  <FlowBox title="Event sources">
-    Stripe, GitHub, your own services
-  </FlowBox>
+  <FlowArrow label="routes to" />
+  <FlowStack>
+    <FlowStackItem label="database" />
+    <FlowStackItem label="queue" />
+    <FlowStackItem label="object storage" />
+  </FlowStack>
 </FlowDiagram>
 
 ---
