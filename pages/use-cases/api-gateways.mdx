@@ -20,12 +20,10 @@ Deploy your API gateway on ultra low-latency microVMs that scale up when require
 </ValueCards>
 
 <FlowDiagram caption="Requests land on the service group, which balances across instances it grows and shrinks on demand, and routes to your backends.">
-  <FlowStack>
-    <FlowStackItem label="auth service" />
-    <FlowStackItem label="orders service" />
-    <FlowStackItem label="search service" />
-  </FlowStack>
-  <FlowArrow reverse label="routes to" />
+  <FlowBox title="Requests">
+    Clients, partners, your own apps
+  </FlowBox>
+  <FlowArrow accent label="balanced" lines={3} />
   <FlowGroup
     title="Autoscale group"
     titleNote="gateway instances"
@@ -35,10 +33,12 @@ Deploy your API gateway on ultra low-latency microVMs that scale up when require
     <FlowStackItem label="gateway" chip="serving" active dot />
     <FlowStackItem label="gateway" chip="added on spike" dot />
   </FlowGroup>
-  <FlowArrow reverse accent label="balanced" lines={3} />
-  <FlowBox title="Requests">
-    Clients, partners, your own apps
-  </FlowBox>
+  <FlowArrow label="routes to" />
+  <FlowStack>
+    <FlowStackItem label="auth service" />
+    <FlowStackItem label="orders service" />
+    <FlowStackItem label="search service" />
+  </FlowStack>
 </FlowDiagram>
 
 ---

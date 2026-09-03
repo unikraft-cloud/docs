@@ -64,7 +64,7 @@ export const FlowDiagram = ({
 );
 
 export const FlowRow = ({ children }: { children: ReactNode }) => (
-  <div className="flex flex-col items-stretch gap-4 @min-[44rem]:flex-row @min-[44rem]:items-center">
+  <div className="flex flex-col items-stretch gap-4 @min-[44rem]:flex-row @min-[44rem]:flex-wrap @min-[44rem]:items-center">
     {children}
   </div>
 );
@@ -180,6 +180,13 @@ export const FlowArrow = ({
   </div>
 );
 
+/* The items of a stack or a group are the one part of a diagram that runs
+   against the grain: they sit side by side while the diagram is a column, and
+   turn into a column themselves once the diagram becomes a row. Three items
+   stacked inside a band that is already stacked makes the narrow layout far
+   taller than it needs to be. */
+const STACK_ITEMS = "flex gap-2 @min-[44rem]:flex-col";
+
 export const FlowStack = ({
   more,
   children,
@@ -188,7 +195,7 @@ export const FlowStack = ({
   children: ReactNode;
 }) => (
   <div className="flex flex-1 flex-col gap-2">
-    {children}
+    <div className={STACK_ITEMS}>{children}</div>
     {more && (
       <div className="rounded-lg border border-dashed border-border px-4 py-2.5 text-center text-xs text-muted-foreground">
         {more}
@@ -219,7 +226,7 @@ export const FlowGroup = ({
         </div>
       )}
     </div>
-    {children}
+    <div className={STACK_ITEMS}>{children}</div>
     {footnote && (
       <div className="text-xs leading-snug text-muted-foreground">
         {footnote}
@@ -243,11 +250,11 @@ export const FlowStackItem = ({
   dot?: boolean;
 }) => (
   <div
-    className={`flex items-center justify-between gap-3 rounded-lg border bg-card px-4 py-2.5 ${
+    className={`flex min-w-0 flex-1 flex-col items-start gap-1.5 rounded-lg border bg-card px-2 py-2 @min-[44rem]:flex-none @min-[44rem]:flex-row @min-[44rem]:items-center @min-[44rem]:justify-between @min-[44rem]:gap-3 @min-[44rem]:px-4 @min-[44rem]:py-2.5 ${
       active ? "border-primary/40" : "border-border"
     }`}
   >
-    <div className="flex items-center gap-2">
+    <div className="flex min-w-0 items-center gap-2 @min-[44rem]:min-w-min">
       {dot && (
         <span
           className={`size-2 shrink-0 rounded-full ${
@@ -256,11 +263,13 @@ export const FlowStackItem = ({
           aria-hidden="true"
         />
       )}
-      <div className="text-sm font-semibold text-card-foreground">{label}</div>
+      <div className="break-words text-xs font-semibold text-card-foreground @min-[44rem]:text-sm">
+        {label}
+      </div>
     </div>
     {chip && (
       <div
-        className={`rounded px-2 py-1 font-mono text-xs ${
+        className={`max-w-full break-words rounded px-2 py-1 font-mono text-xs ${
           active ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
         }`}
       >
@@ -281,15 +290,19 @@ export const CheckpointTimeline = ({
   points,
   restoreTitle,
   restoreNote,
+  className,
 }: {
   label?: string;
   points: { label: string; marked?: boolean }[];
   restoreTitle?: string;
   restoreNote?: string;
+  className?: string;
 }) => {
   const markedIndex = points.findIndex((point) => point.marked);
   return (
-    <div className="rounded-lg border border-border bg-muted/30 p-4">
+    <div
+      className={`rounded-lg border border-border bg-muted/30 p-4 ${className ?? ""}`}
+    >
       <div className="flex flex-wrap items-center gap-4">
         {label && (
           <div className="shrink-0 font-mono text-xs text-muted-foreground">

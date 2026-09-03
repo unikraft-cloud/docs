@@ -32,22 +32,27 @@ Run whichever database you already use, and start, clone and restore it in milli
     <FlowBox accent title="Primary database">
       Whichever database engine you run: memory and volume state, live
     </FlowBox>
+    {/* The checkpoints belong to the primary, so the band sits under it while
+        the diagram is a column. Once the diagram is a row it wraps onto a line
+        of its own below the whole flow, which is why it is ordered last and
+        given a full line to sit on. */}
+    <CheckpointTimeline
+      className="@min-[44rem]:order-last @min-[44rem]:basis-full"
+      label="checkpoints"
+      points={[
+        { label: "09:00" },
+        { label: "known good", marked: true },
+        { label: "12:00" },
+        { label: "now" },
+      ]}
+      restoreTitle="Restore to known good"
+      restoreNote="full state back in < 10 ms"
+    />
     <FlowArrow label="branch" sublabel="few ms downtime" />
     <FlowBox dashed title="Branch: migration test">
       A full clone, memory included; run the risky change here
     </FlowBox>
   </FlowRow>
-  <CheckpointTimeline
-    label="checkpoints"
-    points={[
-      { label: "09:00" },
-      { label: "known good", marked: true },
-      { label: "12:00" },
-      { label: "now" },
-    ]}
-    restoreTitle="Restore to known good"
-    restoreNote="full state back in < 10 ms"
-  />
 </FlowDiagram>
 
 Watch the recording to see a running Postgres branched in 40 ms, written to without touching the original, and either copy woken in about 16 ms.
