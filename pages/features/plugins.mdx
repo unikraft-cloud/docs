@@ -172,6 +172,15 @@ Two consequences follow from `bearer` consulting no user account:
 - Your platform token stops working on that plugin, so the plugin's token becomes the only way in.
 - Changing the token takes the same [PATCH path](#adding-plugins-to-an-existing-instance) as adding a plugin, so it lands the next time the instance stops.
 
+{/* vale off */}
+:::warning
+[Internal communication](/platform/networking#internal-communication) is always enabled on the hosted platform, and operators can enable it on BYOC or on-prem installations.
+Where it's enabled, instances of the same user reach each other directly at the network level, which includes each other's plugin ports.
+That path doesn't pass through the platform, so nothing checks a plugin authorization token on it: any instance can drive the plugin API of every other instance of the same user.
+Treat one account as one trust domain where internal communication is enabled and plugins are running, such as on the hosted platform.
+:::
+{/* vale on */}
+
 ## Plugin names
 
 A plugin name has a maximum length of 63 characters and contains only these characters:
