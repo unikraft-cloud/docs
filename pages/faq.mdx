@@ -361,3 +361,105 @@ The system loads files on demand and maps them directly from disk, ensuring lowe
 If you have files that you know are never used, it's better to remove them from the image to slim it down.
 Thus, in theory, EROFS uses only the allocated pages, but it's also highly dependent on the workload.
 An instance with a 3GB image might use 128MB of RAM at one point, whilst an instance with a 300MB image might use 1GB of RAM at some point.
+
+- Q10: We would like to have a path-based demultiplexing of instances, such as.
+    
+    https://agents.allai.digital/osf/my-agent-001
+    
+    https://agents.allai.digital/osf/my-agent-002
+    
+    where osf is the tenant, i.e., the org "name".
+    
+    We could use:
+    
+    https://my-agent-001.osf.agents.allai.digital/
+    
+    but that looks weird and a bit cumbersome for the use case.
+    
+    What is the best approach here?
+    
+    A: Deploy an instance as a dedicated proxy and, that instance would forward requests to the actual instances based on the path.
+
+- Q12: In the interest of billing, is there a way a user / client can extract the precise times when an instance goes up and down? Or only the total run time?
+    
+    Only start time while it is running and stopped time while it is stopped plus a total CPU time counter are available as metrics. `kraft cloud info` shows you the total running time and stopped time:
+
+
+- Q16: Is there any way we can lock an instance so it doesn't get accidentally deleted? It seems very easy now to delete a website which may be hard to restore later from a backup.
+Something like - mark this instance as locked and you can only delete if you confirm twice and provide a password
+    
+    Not yet. We added it to our roadmap.
+
+Q18: Can we deploy a Docker image from our own registry?
+
+Yes, you have two options. Create a `Kraftfile` and use it:
+
+```jsx
+spec: v0.6
+
+runtime: base-compat:latest
+
+rootfs: ghcr.io/livekit/my-app:latest
+
+cmd: ["..."]
+```
+
+Or, run the command:
+
+```jsx
+kraft cloud deploy \
+  -p 443:8080/tls \
+  --as rootfs \
+  --rootfs ghcr.io/livekit/my-app:latest \
+  --runtime index.unikraft.io/official/base-compat:latest
+```
+
+- Q20: How do I create a Unikraft Cloud image without creating an instance from it (this is what happens with `kraft cloud deploy`)?
+    
+    Use:
+    
+    ```jsx
+    kraft pkg \
+      --push \
+      --name index.unikraft.io/<ukc_username>/<image_name>:latest \
+      --plat kraftcloud \
+      --arch x86_64 \
+      .
+    ```
+    
+    You may be required to update the `Kraftfile` to use `index.unikraft.io/official` as a runtime prefix, e.g. `runtime: [index.unikraft.io/official/base-compat:latest](http://index.unikraft.io/official/base-compat:latest)` insted of `runtime: base-compat:latest`.
+
+
+- Q21: If there is hot spotting that happens on a specific machine due to the number of sleeping pods, is there a mechanism to reschedule things to other machines? If an app is suspended can it be moved to another machine seamlessly, or once it's on a specific machine does it need to stay there?
+    
+    Yes, it's a feature we call multi-node, aimed to be delivered in first part of 2026. Multi-nove v2 would allow migrating suspended instances. Because we do snapshots, that allows us to move snapshots from one machine to another and then wake the instance back up (with state) on the other machine. Clearly this assumes the cluster would have CPUs with similar archs/specs.
+
+- Q22: For coordination of multi-node, is the control plane configurable? E.g. Can we use nats to run this or do you only support specific message bus or proprietary-only methods?
+    
+    The control plane uses custom communication for efficiency/performance reasons.
+
+- Q23: Is there any private networking available, e.g. if we need two different workloads to communicate -- some service backed by redis or a db, can these services communicate via private/encrypted channel?
+    
+    We have the concept of private instances, where a public, user-facing instance (eg, a web front-end) can connect to a private instance (eg, a backend DB), and the communication between the two is private (and nothing from the outside world or any other instance can connect to/talk to the private one)
+
+- Q24: Does the system handle machine autoscaling as well as pod autoscaling? either through some sort of autoscaling group, etc?
+    
+    Within a single server, the system provides autoscaling, meaning the ability to spawn additional instances based on load. Across multiple servers (with multi-node), the same would apply. Beyond that, as in the ability to dynamically add more servers to the cluster: this would require a bit of work on the tooling side, but would be possible too.
+
+- Q26: Is there a mechanism for the control plane to export cpu/mem/network usage for us to both present to our users and capture for billing purposes?
+    
+    Those are exported as Prometheus metrics. Though note we haven't yet had someone use them directly for billing purposes, so we'd have to put in some work to ensure that these are granular enough and that they're exported at regular enough intervals
+
+- Q28: Is there an OpenAPI spec for Unikraft Cloud?
+    
+    Yes, it’s in draft format here: https://github.com/unikraft-cloud/openapi
+
+- Q29: Can we have a form of snapshotting of volumes and keep chain of cookies in persistent storage in an efficient manner?
+    
+    There are a few challenges when combining persistent storage and with templates. The snapshot of the template would store the runtime state of the system including potentially modified cached file contents. Replicating these instances is problematic is becomes unclear which instances holds the actual ownership of the file and should be allowed to flush contents (which could have been further modified by now).
+    So a potential way to go would be to create the template from an instance which has the browser loaded and is ready to go, but the folder with the cookies is not mounted yet. Then, when the instance is resumed the volume is mounted in shared read/write mode. So file ownership and synchronization works as usual, with shared read/write volumes. When one of these instances is deleted, it is shut down properly and flushes file contents as usual.
+    We currently have support for delay mounting auxiliary ROMs (read-only binary blobs which can contain a file system) when resuming from a template. To support your use case, we would extend the functionality to also delay mount volumes.
+
+- Q33: Is UDP supported by Unikraft Cloud? Can I deploy a service that uses UDP to communicate with client apps?
+    
+    Not at the moment. We currently only have shared IP addresses. Therefore, we are limited to things we can route (more concrete: HTTP host or TLS SNI based).We plan to have private IPv6 addresses in the future which can be used for this.
