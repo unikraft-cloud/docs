@@ -3,7 +3,7 @@
 ################################################################################
 # Build kraft docs
 ################################################################################
-FROM golang:1.26 AS build-kraft-docs
+FROM golang:1.27 AS build-kraft-docs
 
 ARG CHANNEL=staging
 
@@ -15,7 +15,7 @@ RUN make docs
 ################################################################################
 # Build unikraft docs
 ################################################################################
-FROM golang:1.26 AS build-cli-docs
+FROM golang:1.27 AS build-cli-docs
 
 ARG CHANNEL=staging
 
