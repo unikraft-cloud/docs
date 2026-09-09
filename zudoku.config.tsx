@@ -16,6 +16,7 @@ import {
   ValueCard,
   ValueCards,
 } from "./src/DiagramComponents";
+import { PersonalizedCodeTabs } from "./src/personalization/PersonalizedCodeTabs";
 import { UseCaseCast, UseCaseVideo } from "./src/UseCaseMedia";
 
 const config: ZudokuConfig = {
@@ -59,6 +60,8 @@ const config: ZudokuConfig = {
   mdx: {
     components: {
       CheckpointTimeline,
+      // Personalizes `<my-org>` in `unikraft` code tabs for signed-in users.
+      CodeTabs: PersonalizedCodeTabs,
       FeatureRow,
       FeatureTable,
       FlowArrow,
