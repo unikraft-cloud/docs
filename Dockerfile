@@ -20,7 +20,7 @@ FROM golang:1.27 AS build-cli-docs
 ARG CHANNEL=staging
 
 WORKDIR /cli
-ADD https://github.com/unikraft-cloud/cli.git#prod-${CHANNEL} /cli
+ADD https://github.com/unikraft-cloud/cli.git#danielvallance/unikraft_api_docs_render /cli
 
 RUN make docs
 
