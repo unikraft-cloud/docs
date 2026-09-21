@@ -119,7 +119,7 @@ When creating or updating an instance, you can specify the number of millisecond
 ```bash title="unikraft"
 unikraft run --metro fra \
   -p 443:8080/http+tls \
-  --scale-to-zero policy=on,cooldown-time=1000,notify-time=2000 \
+  --scale-to-zero policy=on,cooldown-time=2000,notify-time=1000 \
   ...
 ```
 
@@ -143,8 +143,8 @@ curl -X POST \
     },
     "scale_to_zero": {
       "policy": "on",
-      "cooldown_time_ms": 1000,
-      "notify_time_ms": 2000
+      "cooldown_time_ms": 2000,
+      "notify_time_ms": 1000
     },
     ...
   }'
@@ -152,7 +152,7 @@ curl -X POST \
 
 </CodeTabs>
 
-This sends the notification 2 seconds before the cooldown expires and suspension begins.
+This sends the notification 1 second before the cooldown expires and suspension begins.
 
 :::note
 `notify_time_ms` must be less than `cooldown_time_ms`.
@@ -375,18 +375,18 @@ which outputs:
                 stopped: 2026-06-05T12:16:13Z
             start count: 1
           restart count: 0
-       restart attempts: 
-           next restart: 
+       restart attempts:
+           next restart:
          restart policy: never
-            stop origin: 
-            stop reason: 
+            stop origin:
+            stop reason:
           app exit code: 0
                   image: oci://unikraft.io/<my-org>/nginx@sha256:f51ecc121c9ca34abb88a2bc6a69765501304f7893f7e85af15fbec3dc86e2bd
                  memory: 256 MiB
                   vcpus: 1
-                   args: 
-                    env: 
-                volumes: 
+                   args:
+                    env:
+                volumes:
                 service: nameless-fog-0tvh1uov
           scale to zero: on
  scale to zero cooldown: 1000
