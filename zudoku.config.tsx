@@ -304,6 +304,7 @@ const config: ZudokuConfig = {
       label: "SDKs",
       icon: "code",
       items: [
+        "/sdks/overview",
         {
           type: "category",
           label: "Client libraries",

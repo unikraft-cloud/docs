@@ -1,0 +1,65 @@
+---
+title: Unikraft Cloud SDKs
+description: Client libraries and extension SDKs for the Unikraft Cloud platform
+navigation_label: Overview
+navigation_icon: code
+---
+
+{/* vale off */}
+
+Everything the [CLI](/cli/overview) and the [console](https://console.unikraft.cloud) do goes through two APIs: the per-metro [platform API](/api/platform/v1) for instances, volumes, services and certificates, and the global control-plane API for accounts, metro discovery, images and self-hosted nodes.
+The SDKs on this page put those same APIs in your own programs, so instances, volumes, services and certificates are things your code creates and drives directly.
+
+## Client libraries
+
+<FeatureTable>
+  <FeatureRow title="JavaScript SDK" href="/sdks/js">
+    `@unikraft/cloud` for Node.js and TypeScript.
+    Fully typed, with chainable handles and multi-metro fan-out.
+  </FeatureRow>
+  <FeatureRow title="Go SDK" href="/sdks/go">
+    `unikraft.com/cloud/sdk`, generated from the OpenAPI specification.
+    The same client the `unikraft` CLI is built on.
+  </FeatureRow>
+</FeatureTable>
+
+## Extending the platform
+
+<FeatureTable>
+  <FeatureRow title="Plugin SDK" href="/sdks/plugin">
+    Build a [plugin](/features/plugins) in Go: the in-instance agent that adds services such as command execution and filesystem access to an instance, without hand-rolling the platform contract.
+  </FeatureRow>
+</FeatureTable>
+
+## Which layer to write against
+
+The JavaScript and Python client libraries are two layers each, and you pick per call:
+
+| Layer | What you get | When to reach for it |
+| --- | --- | --- |
+| Idiomatic | Envelope-free results, automatic pagination, chainable references, metro fan-out | Almost always |
+| Plumbing | The OpenAPI specification as written: one method per `operationId`, raw response envelope, one metro per call | Anything the idiomatic layer does not cover yet |
+
+The idiomatic layer holds a plumbing client rather than replacing it, so the raw API stays one property away.
+The Go SDK is the plumbing layer alone: the generated OpenAPI client, with no idiomatic layer on top.
+
+## Authentication
+
+Every client library reads a bearer token from the `UKC_TOKEN` environment variable, and takes one explicitly as well.
+The plugin SDK runs inside an instance and needs no platform token.
+Create a token in the [Unikraft Cloud console](https://console.unikraft.cloud).
+
+```bash
+export UKC_TOKEN=...   # the token
+export UKC_METRO=fra   # optional: pin to one metro
+```
+
+Left unset, `UKC_METRO` leaves the JavaScript and Python clients account-wide: reads ask every [metro](/platform/metros) the account can reach and merge the answers, each result tagged with the metro it came from.
+The Go client targets one metro per client, and defaults to `fra`.
+
+## Beyond the SDKs
+
+Nothing here is a prerequisite for the others.
+The [`unikraft` CLI](/cli/overview) covers the same ground from a shell, and the [REST API](/api/platform/v1) is available directly for any language without an SDK.
+
+{/* vale on */}
