@@ -357,6 +357,7 @@ await ukc.instances.stop([{ name: "web" }, { uuid: "550e8400-e29b-41d4-a716-4466
 | `ukc.services`     | `create`, `get`, `each`, `list`, `update`, `edit`, `delete`                                      |
 | `ukc.certificates` | `create`, `get`, `each`, `list`, `update`, `delete`                                             |
 | `ukc.users`        | `quotas`, `quotasByUuid`, `add`                                                                 |
+| `ukc.sandboxes`    | `create`, `connect`, `list`                                                                     |
 
 Handles add the per-resource operations: `refresh`, `start`, `stop`, `suspend`, `delete`, `update`, `edit`, `wait`, `logs`, `metrics`, `history` on an instance; `attach`, `detach`, `update`, `edit`, `delete` on a volume; `update`, `edit` and `delete` on a service group.
 
@@ -368,6 +369,114 @@ await ukc.api.platform.images.getImages({});
 ```
 
 See [`examples/`](https://github.com/unikraft-cloud/js-sdk/tree/HEAD/examples) for complete programs.
+
+## Sandboxes
+
+A **sandbox** is an instance running the [sandbox plugin](/features/plugins#sandbox-plugin): a microVM you hand commands to and move files in and out of, over the instance's own authenticated endpoint.
+`Sandbox` wraps that plugin, so none of it is written by hand.
+
+```ts
+import { Sandbox } from "@unikraft/cloud";
+
+// Nothing is named, so the token comes from `UKC_TOKEN`, the image from
+// `UKC_SANDBOX_IMAGE` or the default, and the metro from `UKC_METRO` or the
+// default. `await using` deletes the sandbox at the end of this scope,
+// however the scope ends.
+await using sandbox = await Sandbox.create();
+
+const { stdout } = await sandbox.exec("echo hello");
+console.log(stdout); // hello
+```
+
+`await using` needs TypeScript 5.2 or newer and a runtime with explicit resource management.
+Without it, call `sandbox.delete()` yourself.
+
+### Configuring a sandbox
+
+`Sandbox.create` takes two arguments: the sandbox itself, then the client that reaches it.
+The first accepts every field `POST /instances` accepts, plus `rom` and `pluginName` for the plugin underneath.
+
+```ts
+const sandbox = await Sandbox.create(
+  {
+    image: "nginx:latest",
+    memory_mb: 1024,
+    env: { LOG_LEVEL: "debug" },
+    rom: "your_org/your_plugin:latest",   // your own plugin ROM
+  },
+  {
+    token: process.env.UKC_TOKEN,
+    metro: "fra",
+    bootTimeoutSeconds: 60,
+    ready: { timeoutMs: 30_000 },
+  },
+);
+
+// The instance underneath stays reachable, so its whole surface still works.
+const { name, state, memory_mb } = await sandbox.instance;
+console.log(`${name} in ${sandbox.metro}: ${state}, ${memory_mb} MiB`);
+```
+
+### Running commands
+
+`exec` runs a command to completion and hands back what it wrote.
+Each command takes its own working directory and environment:
+
+```ts
+const build = await sandbox.exec("ls -la", { cwd: "/tmp", env: { CI: "1" } });
+console.log(`exit ${build.exitcode}: ${build.stdout}${build.stderr}`);
+```
+
+`start` does not wait, so a long-running command stays under your control: write to its standard input, wait for it, then read its logs.
+`signal("TERM")` ends one that does not stop on its own.
+
+```ts
+const server = await sandbox.start("cat", { cwd: "/work" });
+await server.stdin("first line\n");
+await server.stdin("last line\n", { eof: true });
+await server.wait({ timeoutSeconds: 10 });
+const logs = await server.logs();
+console.log(logs.stdout);
+await server.delete();
+```
+
+### Moving files
+
+```ts
+await sandbox.mkdir("/work/input");
+await sandbox.writeFile("/work/input/a.txt", "hello\n");
+await sandbox.upload("/work/input", "data.csv", "id,name\n1,fra\n");
+const bytes = await sandbox.readFile("/work/input/a.txt");
+console.log(new TextDecoder().decode(bytes));
+```
+
+### Reconnecting, and going through a client
+
+A sandbox outlives the process that created it, so the UUID and the metro are all a later process needs to attach again:
+
+```ts
+const again = await Sandbox.connect(
+  { uuid: sandbox.uuid, metro: sandbox.metro },
+  { token: process.env.UKC_TOKEN },
+);
+```
+
+A client you already have opens the same door, and spends no second token:
+
+```ts
+const ukc = new UnikraftCloud({ token: process.env.UKC_TOKEN });
+const sandbox = await ukc.metro("fra").sandboxes.create({ memory_mb: 512 });
+console.log((await sandbox.exec("uname -a")).stdout);
+
+// Every sandbox in the metro, which is the instance list filtered by plugin.
+for await (const each of ukc.metro("fra").sandboxes.list()) {
+  console.log(`- ${each.uuid}`);
+}
+
+await sandbox.delete();
+```
+
+See [`examples/sandbox.ts`](https://github.com/unikraft-cloud/js-sdk/blob/HEAD/examples/sandbox.ts) for the whole program, and [sandboxes](/use-cases/sandboxes) for what the platform underneath gives them.
 
 ## Errors
 
