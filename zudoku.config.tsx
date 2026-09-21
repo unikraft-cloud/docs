@@ -312,6 +312,7 @@ const config: ZudokuConfig = {
           collapsed: false,
           items: [
             "/sdks/js",
+            "/sdks/python",
             "/sdks/go",
           ],
         },
