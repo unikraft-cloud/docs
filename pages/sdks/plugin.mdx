@@ -241,7 +241,7 @@ A handler that calls `OK` produces the same shape as the rest of the API:
 ```
 
 The `status` field holds `success`, `partial_success`, or `error`.
-In Go the envelope type is `platform.Response[T]` from `unikraft.com/cloud/sdk/platform`, which the [Go SDK](/integrations/sdks/go) uses as well.
+In Go the envelope type is `platform.Response[T]` from `unikraft.com/cloud/sdk/platform`, which the [Go SDK](/sdks/go) uses as well.
 
 :::note
 `Error` derives the HTTP status from its `status` argument.
@@ -594,6 +594,6 @@ The SDK source lives at [github.com/unikraft-cloud/plugin-sdk](https://github.co
 * [Plugins](/features/plugins): the platform feature that this SDK targets.
 * [ROMs](/features/roms): the image format that a plugin ships as.
 * [Scale-to-zero](/features/scale-to-zero): how an idle instance wakes to serve a plugin request.
-* [Go SDK](/integrations/sdks/go): the client library for the platform API itself.
-* [JavaScript SDK](/integrations/sdks/js): the same platform API from JavaScript and TypeScript.
+* [Go SDK](/sdks/go): the client library for the platform API itself.
+* [JavaScript SDK](/sdks/js): the same platform API from JavaScript and TypeScript.
 * [Instances](/platform/instances): create and manage the instances that host plugins.

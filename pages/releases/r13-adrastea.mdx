@@ -585,7 +585,7 @@ This makes Unikraft capacity elastic from inside Kubernetes, driven by the autos
 
 ### Plugin SDK for Go
 
-The [Go plugin SDK](/integrations/sdks/go) wraps the instance plugin system.
+The [Go plugin SDK](/sdks/plugin) wraps the instance plugin system.
 A plugin is a sidecar HTTP server that the platform loads next to your main app, from its own ROM image, and reaches over a per-instance, authenticated endpoint.
 
 Writing a plugin by hand means re-implementing the same boilerplate every time.
@@ -648,7 +648,7 @@ Handing that to an SDK reduces a plugin to the twenty lines that are specific to
 
 ### Sandbox plugin
 
-Sandboxes now ship as a ready-made [plugin](/features/plugins#sandbox-plugin), alongside the [JavaScript SDK](/integrations/sdks/js).
+Sandboxes now ship as a ready-made [plugin](/features/plugins#sandbox-plugin), alongside the [JavaScript SDK](/sdks/js).
 
 **Breaking changes:** None.
 This is a new component.
