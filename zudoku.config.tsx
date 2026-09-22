@@ -710,10 +710,6 @@ const config: ZudokuConfig = {
   ],
   theme: {
     customCss: `
-      .prose td code {
-        white-space: normal;
-      }
-
       .prose header h1 {
         margin-bottom: 1rem;
       }
