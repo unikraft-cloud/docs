@@ -246,13 +246,6 @@ No need to specify it for all other actions.
 
 ## Scheduled checkpoints
 
-{/* vale off */}
-:::caution[**Limited Access**]
-Checkpointing is a new feature which is available to enterprise customers, and is coming soon to the hosted platform.
-If you would like to try it out now, please reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
-:::
-{/* vale on */}
-
 The `checkpoint` action periodically creates restore points for an instance.
 Every occurrence creates a [checkpoint](/features/checkpoints) of the instance, the same way a call to [`POST /instances/checkpoints`](/api/platform/v1/instances) does.
 This builds a history of restore points without an external scheduler, but it doesn't rotate older checkpoints - they persist until explicitly deleted.

@@ -4,11 +4,6 @@ navigation_icon: puzzle
 ---
 
 {/* vale off */}
-:::caution[**Limited Access**]
-Plugin API is a new feature which is available to enterprise customers, and is coming soon to the hosted platform.
-If you would like to try it out now, please reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
-:::
-
 :::caution
 Dedicated `unikraft` CLI subcommands for plugin API are coming soon.
 In the meantime, configure plugin API through the [API](/api/platform/v1/instances#create-instance), which you can invoke with `curl` or the [`unikraft api`](/cli/unikraft/api) command.
@@ -235,7 +230,7 @@ Plugins fit other patterns too. A few ideas:
 
 ## Limitations
 
-- Plugins require a license that includes the feature (see the note at the top of this page).
+- On BYOC and on-prem installations, plugins require a license that includes the feature.
 - You can attach at most 8 plugins to an instance.
 - Adding plugins works today, and unloading a plugin from an instance is coming in a future release.
 - A plugin name has a maximum length of 63 characters and uses only letters, digits, `-`, and `_`.
