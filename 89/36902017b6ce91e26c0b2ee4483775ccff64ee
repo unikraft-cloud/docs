@@ -1,0 +1,23 @@
+pages/features/plugins.mdx
+  s_4933e94e6f1d51::t_449a6cb26332cf 233
+pages/features/checkpoints.mdx
+  s_4933e94e6f1d51::t_449a6cb26332cf 261
+pages/features/branching.mdx
+  s_4933e94e6f1d51::t_449a6cb26332cf 84
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8936902017b6ce91e26c0b2ee4483775ccff64ee",
+  "prompts": {},
+  "sessions": {
+    "s_4933e94e6f1d51": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "faa0f193-ff1b-423f-a80b-c5ac9722fae8",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "aabedraba <abdallah@unikraft.com>"
+    }
+  }
+}
