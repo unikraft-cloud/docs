@@ -10,7 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "zudoku/ui/Tabs"
 Unikraft Cloud exposes runtime metrics for each instance: CPU time, memory usage, network I/O, connection counts, and scale-to-zero wakeup latencies.
 
 :::caution
-You can currently only view metrics via the [API](/api/platform/v1/instances#get-instances-metrics) or [`unikraft api`](/cli/unikraft/api).
+The Unikraft Cloud dashboard doesn't show metrics yet.
+Read them through the [API](/api/platform/v1/instances#get-instances-metrics) or [`unikraft api`](/cli/unikraft/api), or scrape them into your own stack with the [Grafana integration](/integrations/grafana).
 :::
 
 ## Endpoints
@@ -32,6 +33,9 @@ Set the `Accept` header to control the response format:
 |-----------------|--------|
 | `application/json` | JSON object with an `instances` array. |
 | Any other value (or omitted) | Prometheus text exposition format. |
+
+The Prometheus format lets you scrape this endpoint into a monitoring stack.
+See the [Grafana integration](/integrations/grafana) for a scrape config and a ready-made dashboard.
 
 ## Response fields
 
@@ -335,5 +339,6 @@ instance_wakeup_latency_seconds_count{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2d
 ## Learn more
 
 * Unikraft Cloud's [REST API reference](/api/platform/v1).
+* [Grafana integration](/integrations/grafana): scrape these metrics and chart them.
 * [Instance states](/platform/instances#instance-states).
 * [Scale-to-zero](/features/scale-to-zero) feature.

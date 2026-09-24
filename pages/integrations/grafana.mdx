@@ -1,0 +1,389 @@
+---
+title: Grafana
+navigation_icon: gauge
+description: |
+  Scrape Unikraft Cloud instance metrics with Prometheus and chart them in Grafana.
+---
+
+Unikraft Cloud serves [instance metrics](/platform/metrics) in the Prometheus text exposition format.
+Point a Prometheus server at the metrics endpoint, then import the dashboard below to chart your fleet in Grafana.
+
+:::note
+This dashboard is a sample to help you get started, not a supported product surface.
+Treat it as a starting point: rename panels, drop rows you don't need, and tune the thresholds to your workload.
+:::
+
+## Handle your API token with care
+
+The scrape config below authenticates with a Unikraft Cloud API token.
+Read this section before you paste a real token anywhere.
+
+:::caution[Your API token is a full-privilege credential]
+An API token isn't read-only.
+The same token that reads metrics can also create, stop, and **delete** instances and volumes in your account.
+Anyone who can read your Prometheus config, or reach the host it runs on, holds that power.
+:::
+
+Take these precautions:
+
+* **Keep the token out of the config file.**
+  Use `authorization.credentials_file` pointing at a `0600` file, rather than inlining `credentials:`.
+  Scrape configs get committed to git far more often than anyone intends.
+* **Never commit a filled-in config.**
+  Keep a placeholder version in version control and supply the real token at deploy time.
+* **Treat the metrics themselves as sensitive.**
+  Instance UUIDs, traffic volumes, and request rates describe your production estate.
+  Anyone who reaches your Grafana can read them.
+* **Rotate the token** if it lands somewhere unexpected, such as a shell history file, a CI log, or a chat message.
+
+## Before you start
+
+You need:
+
+* Grafana 11.4 or newer.
+* Prometheus, or a compatible server such as VictoriaMetrics or Grafana Mimir, that can reach `api.<metro>.unikraft.cloud` over HTTPS.
+* A Unikraft Cloud API token.
+* A [metro](/platform/metros) to watch.
+  This page uses `fra` (Frankfurt, 🇩🇪).
+
+## Scrape the metrics endpoint
+
+Called without any instance identifiers, `GET /v1/instances/metrics` returns metrics for every instance in your account.
+The endpoint answers with the Prometheus text format unless the request asks for `application/json`, so Prometheus needs no extra `Accept` header.
+
+Write your token to a file that only Prometheus can read:
+
+```bash
+install -m 600 /dev/null /etc/prometheus/ukc-token
+printf '%s' "${UKC_TOKEN}" > /etc/prometheus/ukc-token
+```
+
+Then create `prometheus.yml`:
+
+```yaml title="prometheus.yml"
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+
+scrape_configs:
+  - job_name: instances
+    scheme: https
+    metrics_path: /v1/instances/metrics
+    authorization:
+      type: Bearer
+      credentials_file: /etc/prometheus/ukc-token
+    static_configs:
+      - targets: ["api.fra.unikraft.cloud"]
+        labels:
+          region: fra
+```
+
+:::caution[Keep the job name as `instances`]
+The dashboard queries carry a hard-coded `job="instances"` selector.
+Renaming the job leaves every panel reading "No data" until you update the queries to match.
+:::
+
+To watch more than one metro, add a `static_configs` entry per metro, each with its own `region` label:
+
+```yaml title="prometheus.yml"
+    static_configs:
+      - targets: ["api.fra.unikraft.cloud"]
+        labels:
+          region: fra
+      - targets: ["api.dal.unikraft.cloud"]
+        labels:
+          region: dal
+```
+
+Reload Prometheus and confirm the target reports as `UP` on the **Status → Target health** page.
+You can also check the endpoint directly:
+
+<CodeTabs syncKey="cli">
+
+```bash title="unikraft"
+unikraft api /v1/instances/metrics -X GET --metro fra -H "Accept: text/plain"
+```
+
+```bash title="API"
+curl -X GET \
+  -H "Authorization: Bearer ${UKC_TOKEN}" \
+  -H "Accept: text/plain" \
+  "https://api.fra.unikraft.cloud/v1/instances/metrics"
+```
+
+</CodeTabs>
+
+## Import the dashboard
+
+Download the dashboard:
+
+```bash
+curl -O https://unikraft.com/docs/grafana/vm-instances.json
+```
+
+You can also grab it straight from [`vm-instances.json`](https://unikraft.com/docs/grafana/vm-instances.json).
+
+In Grafana, go to **Dashboards → New → Import**, upload the file or paste its contents, then choose **Load** followed by **Import**.
+
+The dashboard carries no hard-coded data source.
+It reads from a **Data source** variable instead, so Grafana prompts for nothing at import time, and you can switch between Prometheus servers from the dropdown at the top.
+
+To provision it automatically rather than importing by hand, drop the JSON into a directory and point a file provider at it:
+
+```yaml title="provisioning/dashboards/dashboards.yml"
+apiVersion: 1
+
+providers:
+  - name: Unikraft Cloud
+    orgId: 1
+    folder: Unikraft Cloud
+    type: file
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false
+```
+
+## What the dashboard shows
+
+The dashboard holds 24 panels across five rows, all driven by the metrics that the [instance metrics](/platform/metrics) reference documents:
+
+| Row | Panels | Metrics |
+|:----|:-------|:--------|
+| Fleet overview | Instance counts by state, total resident memory, active connections, and a per-instance state table | `instance_state`, `instance_uptime_s`, `instance_rss_bytes`, `instance_nconns` |
+| Resource usage | CPU time rate in cores, resident memory, uptime, and restarts per hour | `instance_cpu_time_s`, `instance_rss_bytes`, `instance_uptime_s`, `instance_restart_count` |
+| Network | Inbound and outbound throughput, plus packet rates | `instance_rx_bytes`, `instance_tx_bytes`, `instance_rx_packets`, `instance_tx_packets` |
+| Requests and connections | Active, queued, and processed connections or requests | `instance_nconns`, `instance_nreqs`, `instance_nqueued`, `instance_ntotal` |
+| Boot and wakeup latency | Boot, network setup, and template creation times, with wakeup latency percentiles and a heatmap | `instance_boot_time_s`, `instance_net_time_s`, `instance_template_time_s`, `instance_wakeup_latency_seconds` |
+
+Two variables sit at the top:
+
+| Variable | Purpose |
+|:---------|:--------|
+| Data source | Which Prometheus server to query. |
+| Instance | Which instance UUIDs to chart. Multi-select, and defaults to **All**. |
+
+The state table maps the numeric `instance_state` values onto the names that [instance states](/platform/instances#instance-states) describes, such as `running` and `standby`.
+
+Data appears after the first couple of scrapes.
+The `rate()`-based panels need one to two minutes of history before they render anything.
+
+## What to watch out for
+
+A few behaviours surprise people the first time:
+
+**The endpoint reports only live instances.**
+An instance appears only while a live virtual machine backs it, so the endpoint emits nothing at all for a fully stopped instance.
+Expect to see running, standby, and short-lived transitional states.
+Don't build a "stopped instances" count on this endpoint, because it would always read zero.
+
+**Counts read `0`, not "No data."**
+The count panels wrap their queries in `or vector(0)`, so an empty fleet shows a clean zero.
+
+**Per-instance identity lives in `instance_uuid`.**
+Prometheus injects its own `instance` label holding the API host it scraped, such as `api.fra.unikraft.cloud:443`, which is identical for every instance.
+Group and join on `instance_uuid` instead.
+In table panels, join per-instance queries with `joinByField` on `instance_uuid`, not `merge`, which aligns on time and yields one row per timestamp.
+
+**Panels label each series by UUID.**
+The Prometheus exposition carries no instance name, so legends show raw UUIDs.
+
+**Counters restart from zero.**
+Unikraft Cloud reports `instance_cpu_time_s`, the byte and packet counters, and `instance_ntotal` since the last start of the instance.
+A restart resets them.
+The `rate()`-based panels handle the reset, but any raw counter graph you add steps back down.
+
+**The wakeup latency panels stay empty without scale-to-zero.**
+Only instances with [scale-to-zero](/features/scale-to-zero) enabled record the histogram.
+
+## Add alert rules
+
+A dashboard needs someone watching it.
+These four rules cover the failure modes the metrics express well.
+Save them as `alerts.yml` and reference the file from `rule_files` in `prometheus.yml`:
+
+```yaml title="alerts.yml"
+groups:
+  - name: instances
+    rules:
+      - alert: InstanceQueueSaturation
+        expr: instance_nqueued{job="instances"} > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Instance {{ $labels.instance_uuid }} has a persistent request queue"
+          description: "Queued connections or requests for 10m — the instance is saturated."
+
+      - alert: InstanceFrequentRestarts
+        expr: increase(instance_restart_count{job="instances"}[1h]) > 3
+        labels:
+          severity: warning
+        annotations:
+          summary: "Instance {{ $labels.instance_uuid }} restarting frequently"
+          description: "More than 3 restarts in the last hour."
+
+      - alert: InstanceHighWakeupLatency
+        expr: histogram_quantile(0.99, sum by (instance_uuid, le) (rate(instance_wakeup_latency_seconds_bucket{job="instances"}[5m]))) > 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Instance {{ $labels.instance_uuid }} slow to wake"
+          description: "p99 wakeup latency above 1s for 10m."
+
+      - alert: InstanceStuckDraining
+        expr: instance_state{job="instances"} == 3
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Instance {{ $labels.instance_uuid }} stuck draining"
+          description: "Instance has been draining for over 30 minutes."
+```
+
+The thresholds are conservative defaults, so tune them to your workload.
+Rules run without an Alertmanager, and firing alerts show up in the Prometheus UI under the **Alerts** tab.
+To route notifications to Slack, email, or PagerDuty, run an Alertmanager, and add an `alerting:` block to `prometheus.yml`.
+
+## Run the stack on Unikraft Cloud
+
+To run both on Unikraft Cloud, deploy them as two instances on the same private network.
+
+Define each image with a `Dockerfile` and a `Kraftfile`.
+For Prometheus:
+
+```dockerfile title="prometheus/Dockerfile"
+FROM prom/prometheus:v3.1.0
+```
+
+```yaml title="prometheus/Kraftfile"
+spec: v0.7
+
+runtime: base-compat:latest
+
+rootfs:
+  source: ./Dockerfile
+  format: erofs
+
+cmd: ["/bin/prometheus", "--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus", "--storage.tsdb.retention.time=15d", "--web.enable-lifecycle"]
+```
+
+Put `prometheus.yml` and `alerts.yml` in a `rom/` directory, then build, create a volume for the time-series database, and deploy:
+
+```bash
+unikraft build . --output <my-org>/prometheus:latest
+
+unikraft volume create --metro fra \
+  --name prometheus-data \
+  --size 1G
+
+unikraft run --metro fra \
+  --name prometheus \
+  -m 1024M \
+  --domain prometheus-internal.internal. \
+  --rom dir=./rom,at=/etc/prometheus \
+  --volume prometheus-data:/prometheus \
+  --image <my-org>/prometheus:latest
+```
+
+:::caution[Give Prometheus no public port]
+The command above publishes no port and assigns a [private FQDN](/platform/networking) ending in `.internal`, so only instances on your private network reach it.
+Prometheus has no authentication of its own.
+Exposing it publicly would hand your metrics, and the alert rules describing your estate, to anyone who finds the address.
+:::
+
+:::caution[ROM contents freeze at deploy time]
+Unikraft Cloud uploads [ROMs](/features/roms) as read-only images when the instance starts.
+A token written into `prometheus.yml` thus lives in the deployed ROM, and rotating it means redeploying with a new ROM rather than editing a file in place.
+:::
+
+Then deploy Grafana, which does get a public port:
+
+```dockerfile title="grafana/Dockerfile"
+FROM grafana/grafana:11.4.0
+```
+
+```yaml title="grafana/Kraftfile"
+spec: v0.7
+
+runtime: base-compat:latest
+
+rootfs:
+  source: ./Dockerfile
+  format: erofs
+
+cmd: ["/run.sh"]
+```
+
+Point the provisioned data source at the internal domain you gave Prometheus:
+
+```yaml title="grafana/provisioning/datasources/datasource.yml"
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    uid: prometheus
+    access: proxy
+    url: http://prometheus-internal.internal:9090
+    isDefault: true
+    editable: true
+    jsonData:
+      # match the Prometheus scrape_interval so rate() windows behave
+      timeInterval: 15s
+```
+
+Place `vm-instances.json` in a `dashboards/` directory alongside the provider config from earlier, then deploy:
+
+```bash
+unikraft build . --output <my-org>/grafana:latest
+
+unikraft run --metro fra \
+  --name grafana \
+  --domain grafana \
+  -p 443:3000/tls+http \
+  -m 1024M \
+  --scale-to-zero policy=on,cooldown-time=1000,stateful=true \
+  -e GF_SECURITY_ADMIN_USER=admin \
+  -e GF_SECURITY_ADMIN_PASSWORD=<password> \
+  -e GF_USERS_ALLOW_SIGN_UP=false \
+  -e GF_ANALYTICS_REPORTING_ENABLED=false \
+  -e GF_ANALYTICS_CHECK_FOR_UPDATES=false \
+  --rom dir=./provisioning,at=/etc/grafana/provisioning \
+  --rom dir=./dashboards,at=/var/lib/grafana/dashboards \
+  --image <my-org>/grafana:latest
+```
+
+:::caution[This publishes Grafana to the internet]
+Port 443 makes the instance reachable by anyone who knows its address, with only the Grafana login in front of your metrics.
+Choose a strong, unique `<password>` rather than the placeholder, and keep `GF_USERS_ALLOW_SIGN_UP=false` so visitors can't create their own accounts.
+Consider restricting access further before pointing this at production data.
+:::
+
+Note the FQDN that `unikraft run` prints for the Grafana instance, and use it to log in.
+
+## Troubleshooting
+
+**Every panel reads "No data."**
+Check that the Prometheus target reports as `UP`, and that a query such as `instance_state` returns series in Grafana's **Explore** view.
+A failing target most often points at the token or the metro hostname.
+If the target is healthy but panels stay empty, confirm the scrape job still carries the name `instances`.
+
+**The fleet count looks too low.**
+Stopped instances produce no metrics at all, so the endpoint reports only live ones.
+
+**The boot and wakeup latency row stays empty.**
+Only instances with [scale-to-zero](/features/scale-to-zero) enabled record the wakeup latency histogram.
+Boot and template timings appear once an instance reports a non-zero value.
+
+## Learn more
+
+* [Instance metrics](/platform/metrics) reference.
+* [Instance states](/platform/instances#instance-states).
+* [Scale-to-zero](/features/scale-to-zero) feature.
+* [ROMs](/features/roms) for read-only configuration mounts.
+* [Running Grafana itself on Unikraft Cloud](/guides/grafana).
+
+Ready to try it? [Sign up for Unikraft Cloud](https://console.unikraft.cloud/auth/signin) and chart your first fleet.
