@@ -1,9 +1,15 @@
 #!/usr/bin/env python3
 """
-Rewrite the guides list in zudoku.config.tsx based on the MDX files in pages/guides/.
+Rewrite the example apps list in zudoku.config.tsx based on the MDX files in pages/guides/.
+
+It replaces everything between two sentinel comments in zudoku.config.tsx:
+
+    // AUTO-GENERATED:GUIDES-START
+    ...
+    // AUTO-GENERATED:GUIDES-END
 
 For each MDX file (except overview.mdx) the title is read from the YAML front-matter.
-Entries are sorted alphabetically by title.  The overview entry is always first.
+Entries are sorted alphabetically by title.
 
 Usage: update_zudoku_guides.py GUIDES_DIR ZUDOKU_CONFIG
 """
@@ -16,12 +22,10 @@ from pathlib import Path
 
 FRONT_MATTER_TITLE = re.compile(r'^title:\s*["\']?(.+?)["\']?\s*$', re.MULTILINE)
 
-# Matches the entire items array inside the "Guides" navigation category.
-# Captures the indentation of the first item so we can reproduce it.
-GUIDES_ITEMS_PATTERN = re.compile(
-    r'(label:\s*"Guides"[^[]*items:\s*\[)'  # up to and including "items: ["
-    r'(.*?)'                                  # the current list content (group 2)
-    r'(\s*\])',                               # closing "]" with optional whitespace
+SENTINEL_PATTERN = re.compile(
+    r'([ \t]*)// AUTO-GENERATED:GUIDES-START\n'
+    r'.*?'
+    r'([ \t]*)// AUTO-GENERATED:GUIDES-END',
     re.DOTALL,
 )
 
@@ -46,41 +50,36 @@ def build_items_block(guides_dir: Path, indent: str) -> str:
 
     entries.sort(key=lambda t: t[0].casefold())
 
-    lines: list[str] = []
-    lines.append(f'{indent}//TODO: Please keep this list sorted by titles, not filenames !!')
-    lines.append(f'{indent}"/guides/overview", // Guides Overview')
-    for title, slug in entries:
-        lines.append(f'{indent}"/guides/{slug}", // {title}')
-
-    return "\n".join(lines) + "\n"
+    lines = [f'{indent}"/guides/{slug}", // {title}' for title, slug in entries]
+    return "\n".join(lines)
 
 
 def update_config(guides_dir: Path, config_path: Path) -> None:
     content = config_path.read_text(encoding="utf-8")
 
-    match = GUIDES_ITEMS_PATTERN.search(content)
+    match = SENTINEL_PATTERN.search(content)
     if not match:
-        print("❌  Could not locate the Guides items list in zudoku.config.tsx", file=sys.stderr)
+        print(
+            "❌  Could not locate AUTO-GENERATED:GUIDES-START/END sentinels "
+            f"in {config_path}",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
-    # Detect indentation from the first non-empty line inside the current block
-    current_block = match.group(2)
-    indent_match = re.search(r'\n(\s+)"/', current_block)
-    indent = indent_match.group(1) if indent_match else "        "
-
+    indent = match.group(1)
     new_block = build_items_block(guides_dir, indent)
 
     new_content = (
-        content[: match.start(2)]
-        + "\n"
-        + new_block
-        + "      ]"  # closing "]" with fixed indentation, replacing the captured \s*\]
-        + content[match.end(3):]
+        content[: match.start()]
+        + f'{indent}// AUTO-GENERATED:GUIDES-START\n'
+        + new_block + "\n"
+        + f'{indent}// AUTO-GENERATED:GUIDES-END'
+        + content[match.end():]
     )
 
     config_path.write_text(new_content, encoding="utf-8")
     print(f"  ✅ Updated guides list in {config_path.name} "
-          f"({len(new_block.splitlines()) - 2} guide entries)")
+          f"({len(new_block.splitlines())} guide entries)")
 
 
 def main() -> None:
