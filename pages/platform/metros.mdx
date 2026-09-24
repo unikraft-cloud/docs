@@ -27,6 +27,22 @@ kraft cloud metro ls
 
 </CodeTabs>
 
+{/* vale off */}
+:::tip[One client, every metro]
+The [SDKs](/sdks/overview) treat the metros in scope as one namespace: reads
+ask each of them at once and merge the answers, tagged with where they came
+from, so no list of endpoints is kept in your code.
+
+```ts
+for await (const inst of ukc.instances.list()) console.log(inst.metro, inst.name);
+```
+
+Name a metro — `ukc.metro("fra")`, or `UKC_METRO` — to pin a client to one.
+See the [JavaScript](/sdks/js) and [Python](/sdks/python) SDKs.
+The [Go SDK](/sdks/go) targets one metro per client, so group results across metros yourself.
+:::
+{/* vale on */}
+
 Old metros such as `fra0` are nearing end of life, and aren't available for new deployments.
 
 Unikraft Cloud continues to add new locations worldwide so you can provision services close to your users.

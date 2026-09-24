@@ -41,6 +41,23 @@ Watch the video to see a sandbox boot in under 10 ms, scale to zero while idle, 
 
 <UseCaseVideo src="openclaw.webm" captions="openclaw.vtt" />
 
+:::tip[Create a sandbox from your own code]
+The [JavaScript SDK](/sdks/js#sandboxes) wraps the [sandbox plugin](/features/plugins#sandbox-plugin) in a `Sandbox` class, so a microVM is a few lines:
+
+```ts
+import { Sandbox } from "@unikraft/cloud";
+
+// `await using` deletes the sandbox when this scope ends, however it ends.
+await using sandbox = await Sandbox.create();
+
+const { stdout } = await sandbox.exec("echo hello");
+await sandbox.writeFile("/work/input.txt", "...");
+```
+
+Commands, standard input, signals and the filesystem are all covered.
+The [Python](/sdks/python) and [Go](/sdks/go) SDKs drive the instances themselves.
+:::
+
 ---
 
 ## Under the hood

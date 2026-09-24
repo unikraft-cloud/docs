@@ -3,13 +3,6 @@ title: Checkpoints
 navigation_icon: save
 ---
 
-{/* vale off */}
-:::caution[**Limited Access**]
-Checkpointing is a new feature which is available to enterprise customers, and is coming soon to the hosted platform.
-If you would like to try it out now, please reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
-:::
-{/* vale on */}
-
 A **checkpoint** captures the full state of an instance—its memory and volume state—at any moment, so you can later start new instances that resume from exactly that state.
 Unlike a [branch](/features/branching), which creates a single independent copy right away, a checkpoint is a reusable, named restore point that you can load as many times as you like.
 
@@ -265,7 +258,7 @@ Otherwise, a checkpoint request can fail for the following reasons:
   QEMU-backed full VMs (`type: full`), which [GPU instances](/platform/instances#gpus) require, don't support checkpointing, and a create request can't combine `type` with a checkpoint source.
 - Checkpointing builds on [branching](/features/branching), so it only works with block-based volumes (for example, `ext4`).
   The checkpoint clones the source's volume state consistently with its memory snapshot, which isn't supported for other volume types.
-- Checkpointing requires a license that includes the feature (see the note at the top of this page).
+- On BYOC and on-prem installations, checkpointing requires a license that includes the feature.
 
 ## Learn more
 

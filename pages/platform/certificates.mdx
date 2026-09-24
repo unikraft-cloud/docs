@@ -6,6 +6,19 @@ navigation_icon: shield-check
 When attaching a [service](/platform/services) to an instance, Unikraft Cloud exposes the instance on a subdomain of `unikraft.app` by default.
 It automatically issues a certificate for the domain from a public certificate authority.
 
+{/* vale off */}
+:::tip[Drive certificates from your own code]
+The [SDKs](/sdks/overview) wrap the certificate API, so renewals are a job
+your own code can run:
+
+```python
+await ukc.certificates.get(name="tls").update(chain=chain_pem, pkey=key_pem)
+```
+
+See the [JavaScript](/sdks/js), [Python](/sdks/python) and [Go](/sdks/go) SDKs.
+:::
+{/* vale on */}
+
 ## Custom certificates
 
 You can upload your own certificate to use with your services:

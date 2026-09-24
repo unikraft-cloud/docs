@@ -3,13 +3,6 @@ title: Branching
 navigation_icon: git-branch
 ---
 
-{/* vale off */}
-:::caution[**Limited Access**]
-Branching is a new feature which is available to enterprise customers, and is coming soon to the hosted platform.
-If you would like to try it out now, please reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
-:::
-{/* vale on */}
-
 Branching lets you create a clone (a **branch**) of an existing instance, including its memory and volume state.
 The branch is an identical but independent copy of the source.
 It starts from the same memory state instead of going through a cold boot, and from then on runs on its own without affecting the source.
@@ -88,7 +81,7 @@ Otherwise, a branch request can fail for the following reasons:
   QEMU-backed full VMs (`type: full`), which [GPU instances](/platform/instances#gpus) require, don't support branching, and a create request can't combine `type` with a branch source.
 - Branching only works with block-based volumes (for example, `ext4`).
   The branch clones the source's volume state consistently with its memory snapshot, which isn't supported for other volume types.
-- Branching requires a license that includes the feature (see the note at the top of this page).
+- On BYOC and on-prem installations, branching requires a license that includes the feature.
 
 ## Learn more
 

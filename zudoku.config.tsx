@@ -184,9 +184,6 @@ const config: ZudokuConfig = {
           items: [
             "/integrations/kubernetes",
             "/integrations/karpenter",
-            "/integrations/sdks/go",
-            "/integrations/sdks/js",
-            "/integrations/sdks/plugin",
           ],
         },
       ],
@@ -301,6 +298,34 @@ const config: ZudokuConfig = {
         "/tutorials/rootfs-volumes-roms",
         "/tutorials/scale-to-zero-triggers",
       ]
+    },
+    {
+      type: "category",
+      label: "SDKs",
+      icon: "code",
+      items: [
+        "/sdks/overview",
+        {
+          type: "category",
+          label: "Client libraries",
+          icon: "library",
+          collapsed: false,
+          items: [
+            "/sdks/js",
+            "/sdks/python",
+            "/sdks/go",
+          ],
+        },
+        {
+          type: "category",
+          label: "Extending the platform",
+          icon: "puzzle",
+          collapsed: false,
+          items: [
+            "/sdks/plugin",
+          ],
+        },
+      ],
     },
     {
       type: "category",
@@ -669,6 +694,12 @@ const config: ZudokuConfig = {
     { from: "/guides", to: "/guides/overview" },
     { from: "/use-cases", to: "/use-cases/overview" },
     { from: "/releases", to: "/releases/index" },
+    { from: "/sdks", to: "/sdks/overview" },
+    // The SDKs used to live under Integrations.
+    { from: "/integrations/sdks", to: "/sdks/overview" },
+    { from: "/integrations/sdks/go", to: "/sdks/go" },
+    { from: "/integrations/sdks/js", to: "/sdks/js" },
+    { from: "/integrations/sdks/plugin", to: "/sdks/plugin" },
   ],
   apis: [
     {
