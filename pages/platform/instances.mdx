@@ -8,6 +8,21 @@ description: |
 This document describes the Unikraft Cloud Instances API (v1) for managing Unikraft instances.
 An *instance* is a MicroVM running a single instance of your app.
 
+{/* vale off */}
+:::tip[Drive instances from your own code]
+Everything on this page is in the [SDKs](/sdks/overview), so instances are
+something your program creates and drives directly:
+
+```ts
+const inst = await ukc.metro("fra").instances
+  .create({ image: "nginx:latest", memory_mb: 256, autostart: true })
+  .wait({ state: "running" });
+```
+
+See the [JavaScript](/sdks/js), [Python](/sdks/python) and [Go](/sdks/go) SDKs.
+:::
+{/* vale on */}
+
 ## Instance states
 
 An instance can be in one of the following states:

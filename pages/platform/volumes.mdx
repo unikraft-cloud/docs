@@ -5,6 +5,18 @@ navigation_icon: cylinder
 
 A volume is a persistent storage device that keeps data across restarts and even redeployments.
 
+{/* vale off */}
+:::tip[Drive volumes from your own code]
+The [SDKs](/sdks/overview) wrap the volume API, including attaching and detaching volumes:
+
+```python
+await ukc.volumes.get(name="data").attach(to="web", at="/data")
+```
+
+See the [JavaScript](/sdks/js), [Python](/sdks/python) and [Go](/sdks/go) SDKs.
+:::
+{/* vale on */}
+
 ## Typical workflow
 
 ### Creating a persistent volume

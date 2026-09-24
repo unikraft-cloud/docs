@@ -16,6 +16,21 @@ The platform [load balances](/features/load-balancing) incoming connections acro
 Avoid placing apps that expose different ports in the same service.
 :::
 
+{/* vale off */}
+:::tip[Drive services from your own code]
+The [SDKs](/sdks/overview) wrap the service API, so a service group is
+declared where the instances that sit behind it are:
+
+```ts
+await ukc.metro("fra").services.create({
+  services: [{ port: 443, handlers: ["tls", "http"], destination_port: 8080 }],
+});
+```
+
+See the [JavaScript](/sdks/js), [Python](/sdks/python) and [Go](/sdks/go) SDKs.
+:::
+{/* vale on */}
+
 ## Instance service groups
 
 If you specify a port mapping in the CLI deployment commands, the platform creates a service for you and attaches the instance to it:
