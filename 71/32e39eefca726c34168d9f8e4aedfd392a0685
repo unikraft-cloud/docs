@@ -1,0 +1,30 @@
+zudoku.config.tsx
+  s_64a27301948700::t_089c0acb117c2b 196-310
+scripts/update_zudoku_guides.py
+  s_64a27301948700::t_f0da7d3d6c0485 3-9,12,25-28,53-54,60,62-66,69,73-77,82
+pages/guides/overview.mdx
+  s_64a27301948700::t_cf2230e0f2e8ae 8-9
+  s_64a27301948700::t_c8132ef760cf55 29
+  s_64a27301948700::t_8fe5ed159bd48f 5-7,10-11,18-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7132e39eefca726c34168d9f8e4aedfd392a0685",
+  "prompts": {},
+  "humans": {
+    "h_3a8cdd8dbdd7a3": {
+      "author": "aabedraba <abdallah@unikraft.com>"
+    }
+  },
+  "sessions": {
+    "s_64a27301948700": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e1ec90b3-a45b-4c57-b3e9-f67beff1dbe3",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "aabedraba <abdallah@unikraft.com>"
+    }
+  }
+}
