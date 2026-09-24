@@ -193,111 +193,121 @@ const config: ZudokuConfig = {
       label: "Guides",
       icon: "graduation-cap",
       items: [
-        //TODO: Please keep this list sorted by titles, not filenames !!
-        "/guides/overview", // Guides Overview
-        "/guides/httpserver-dotnet10.0", // .NET HTTP Server
-        "/guides/node18-agario", // Agar.io (Node)
-        "/guides/tyk", // API Gateways: Tyk
-        "/guides/build-environments", // Build and Test Environments with ROMs
-        "/guides/httpserver-bun", // Bun HTTP Server
-        "/guides/httpserver-gcc13.2", // C HTTP Server
-        "/guides/httpserver-boost1.74-gpp13.2", // C++ Boost HTTP Server
-        "/guides/httpserver-gpp13.2", // C++ HTTP Server
-        "/guides/caddy2.7-go1.21", // Caddy
-        "/guides/chromium-cdp", // Chromium CDP
-        "/guides/chromium-cdp-auth", // Chromium CDP with Token Authentication
-        "/guides/debian-ssh", // Debian SSH server
-        "/guides/httpserver-python3.12-django5.0", // Django HTTP Server
-        "/guides/dragonflydb", // DragonflyDB
-        "/guides/duckdb-go1.21", // DuckDB with Go
-        "/guides/httpserver-elixir1.16", // Elixir HTTP Server
-        "/guides/httpserver-erlang26.2", // Erlang HTTP Server
-        "/guides/httpserver-expressjs4.18-node21", // Express HTTP Server
-        "/guides/httpserver-python3.12-fastapi-0.121.3", // FastAPI HTTP Server
-        "/guides/httpserver-flask-redis", // Flask + Redis HTTP Server
-        "/guides/httpserver-python3.12-flask3.0-sqlite", // Flask and SQLite HTTP Server
-        "/guides/httpserver-python3.12-flask3.0", // Flask HTTP Server
-        "/guides/nginx-flask-mongo", // Flask with MongoDB
-        "/guides/minecraft", // Game Servers: Minecraft
-        "/guides/httpserver-go1.22-redis", // Go and Redis HTTP Server
-        "/guides/httpserver-go1.21", // Go HTTP Server
-        "/guides/grafana", // Grafana
-        "/guides/haproxy", // HAProxy
-        "/guides/httpserver-node-express-puppeteer", // Headless Browsers: Puppeteer HTTP Server
-        "/guides/hugo0.122", // Hugo
-        "/guides/imaginary", // Imaginary
-        "/guides/httpserver-java21", // Java HTTP Server
-        "/guides/httpserver-lua5.1", // Lua HTTP Server
-        "/guides/mariadb", // MariaDB
-        "/guides/mcp-server-arxiv", // MCP Servers: ArXiv MCP Server
-        "/guides/memcached1.6", // Memcached
-        "/guides/minio", // Minio
-        "/guides/mongodb", // MongoDB
-        "/guides/mysql", // MySQL
-        "/guides/neo4j", // Neo4j
-        "/guides/httpserver-node21-nextjs", // Next.js HTTP Server
-        "/guides/nginx", // Nginx
-        "/guides/node24-karaoke", // Node AllKaraoke
-        "/guides/httpserver-node26", // Node HTTP Server
-        "/guides/node21-websocket", // Node WebSocket Server
-        "/guides/opentelemetry-collector", // OpenTelemetry Collector
-        "/guides/httpserver-perl5.42", // Perl HTTP Server
-        "/guides/phoenix-postgres", // Phoenix with PostgreSQL
-        "/guides/httpserver-php8.2", // PHP HTTP Server
-        "/guides/node-playwright-chromium", // Playwright (Chromium) with Node.js
-        "/guides/python-playwright-chromium", // Playwright (Chromium) with Python FastAPI
-        "/guides/node-playwright-firefox", // Playwright (Firefox) with Node.js
-        "/guides/node-playwright-webkit", // Playwright (WebKit) with Node.js
-        "/guides/httpserver-prisma-expressjs4.19-node18", // Prisma HTTP Server
-        "/guides/prometheus-grafana", // Prometheus and Grafana
-        "/guides/httpserver-python3.12", // Python HTTP Server
-        "/guides/httpserver-node22-react-router", // React Router HTTP Server
-        "/guides/redis7.2", // Redis
-        "/guides/novnc-browser", // Remote Desktops: noVNC
-        "/guides/visual-studio-code-server", // Remote IDEs: Visual Studio Code Server
-        "/guides/httpserver-ruby3.2", // Ruby HTTP Server
-        "/guides/ruby3.2-rails", // Ruby on Rails
-        "/guides/httpserver-rust1.88-actix-web4", // Rust (Actix Web) HTTP Server
-        "/guides/httpserver-rust-trunkrs-leptos", // Rust (Leptos + Trunk) HTTP Server
-        "/guides/httpserver-rust1.88-rocket0.5", // Rust (Rocket) HTTP Server
-        "/guides/httpserver-rust1.75-tokio", // Rust (Tokio) HTTP Server
-        "/guides/httpserver-rust1.91", // Rust HTTP Server
-        "/guides/openclaw", // Sandboxes: OpenClaw
-        "/guides/postgres", // Serverless Databases: PostgreSQL
-        "/guides/node-code-execution", // Serverless Functions: Node.js Code Execution with ROMs
-        "/guides/mcp-server-simple", // Simple MCP Server
-        "/guides/skipper0.18", // Skipper
-        "/guides/httpserver-node21-solid-start", // SolidJS HTTP Server
-        "/guides/spin-wagi-http", // Spin
-        "/guides/httpserver-java17-springboot", // Spring Boot HTTP Server
-        "/guides/httpserver-java17-spring-petclinic", // Spring PetClinic
-        "/guides/httpserver-c-debug", // SSH and HTTP Server with C and Debugging Tools
-        "/guides/httpserver-node22-sveltekit", // SvelteKit HTTP Server
-        "/guides/traefik", // Traefik
-        "/guides/httpserver-node-vite-vanilla", // Vite (vanilla)
-        "/guides/httpserver-node-vite-ssr-vanilla", // Vite (vanilla) SSR
-        "/guides/httpserver-nginx-vite-vanilla", // Vite HTTP Server
-        "/guides/vsftpd", // vsftpd
-        "/guides/wazero-import-go", // Wazero
-        "/guides/github-webhook-node", // Webhooks: GitHub Webhook Receiver
-        "/guides/node18-wingsio", // Wings.io (Node)
-        "/guides/wordpress-all-in-one", // Wordpress
-        "/guides/wordpress", // Wordpress with Nginx and MariaDB
-      ]
-    },
-    {
-      type: "category",
-      label: "Tutorials",
-      icon: "book",
-      items: [
-        "/tutorials/docker-to-ukc",
-        "/tutorials/kraftkit-to-unikraft",
-        "/tutorials/environment-variables",
-        "/tutorials/rootfs-formats",
-        "/tutorials/rootfs-compression",
-        "/tutorials/rootfs-volumes-roms",
-        "/tutorials/scale-to-zero-triggers",
-      ]
+        "/guides/overview",
+        {
+          type: "category",
+          label: "Tutorials",
+          icon: "book",
+          collapsed: false,
+          items: [
+            "/tutorials/docker-to-ukc",
+            "/tutorials/kraftkit-to-unikraft",
+            "/tutorials/environment-variables",
+            "/tutorials/rootfs-formats",
+            "/tutorials/rootfs-compression",
+            "/tutorials/rootfs-volumes-roms",
+            "/tutorials/scale-to-zero-triggers",
+          ],
+        },
+        {
+          type: "category",
+          label: "Example apps",
+          icon: "boxes",
+          collapsed: false,
+          items: [
+            // AUTO-GENERATED:GUIDES-START
+            "/guides/httpserver-dotnet10.0", // .NET HTTP Server
+            "/guides/node18-agario", // Agar.io (Node)
+            "/guides/tyk", // API Gateways: Tyk
+            "/guides/build-environments", // Build and Test Environments with ROMs
+            "/guides/httpserver-bun", // Bun HTTP Server
+            "/guides/httpserver-gcc13.2", // C HTTP Server
+            "/guides/httpserver-boost1.74-gpp13.2", // C++ Boost HTTP Server
+            "/guides/httpserver-gpp13.2", // C++ HTTP Server
+            "/guides/caddy2.7-go1.21", // Caddy
+            "/guides/chromium-cdp", // Chromium CDP
+            "/guides/chromium-cdp-auth", // Chromium CDP with Token Authentication
+            "/guides/debian-ssh", // Debian SSH server
+            "/guides/httpserver-python3.12-django5.0", // Django HTTP Server
+            "/guides/dragonflydb", // DragonflyDB
+            "/guides/duckdb-go1.21", // DuckDB with Go
+            "/guides/httpserver-elixir1.16", // Elixir HTTP Server
+            "/guides/httpserver-erlang26.2", // Erlang HTTP Server
+            "/guides/httpserver-expressjs4.18-node21", // Express HTTP Server
+            "/guides/httpserver-python3.12-fastapi-0.121.3", // FastAPI HTTP Server
+            "/guides/httpserver-flask-redis", // Flask + Redis HTTP Server
+            "/guides/httpserver-python3.12-flask3.0-sqlite", // Flask and SQLite HTTP Server
+            "/guides/httpserver-python3.12-flask3.0", // Flask HTTP Server
+            "/guides/nginx-flask-mongo", // Flask with MongoDB
+            "/guides/minecraft", // Game Servers: Minecraft
+            "/guides/httpserver-go1.22-redis", // Go and Redis HTTP Server
+            "/guides/httpserver-go1.21", // Go HTTP Server
+            "/guides/grafana", // Grafana
+            "/guides/haproxy", // HAProxy
+            "/guides/httpserver-node-express-puppeteer", // Headless Browsers: Puppeteer HTTP Server
+            "/guides/hugo0.122", // Hugo
+            "/guides/imaginary", // Imaginary
+            "/guides/httpserver-java21", // Java HTTP Server
+            "/guides/httpserver-lua5.1", // Lua HTTP Server
+            "/guides/mariadb", // MariaDB
+            "/guides/mcp-server-arxiv", // MCP Servers: ArXiv MCP Server
+            "/guides/memcached1.6", // Memcached
+            "/guides/minio", // Minio
+            "/guides/mongodb", // MongoDB
+            "/guides/mysql", // MySQL
+            "/guides/neo4j", // Neo4j
+            "/guides/httpserver-node21-nextjs", // Next.js HTTP Server
+            "/guides/nginx", // Nginx
+            "/guides/node24-karaoke", // Node AllKaraoke
+            "/guides/httpserver-node26", // Node HTTP Server
+            "/guides/node21-websocket", // Node WebSocket Server
+            "/guides/opentelemetry-collector", // OpenTelemetry Collector
+            "/guides/httpserver-perl5.42", // Perl HTTP Server
+            "/guides/phoenix-postgres", // Phoenix with PostgreSQL
+            "/guides/httpserver-php8.2", // PHP HTTP Server
+            "/guides/node-playwright-chromium", // Playwright (Chromium) with Node.js
+            "/guides/python-playwright-chromium", // Playwright (Chromium) with Python FastAPI
+            "/guides/node-playwright-firefox", // Playwright (Firefox) with Node.js
+            "/guides/node-playwright-webkit", // Playwright (WebKit) with Node.js
+            "/guides/httpserver-prisma-expressjs4.19-node18", // Prisma HTTP Server
+            "/guides/prometheus-grafana", // Prometheus and Grafana
+            "/guides/httpserver-python3.12", // Python HTTP Server
+            "/guides/httpserver-node22-react-router", // React Router HTTP Server
+            "/guides/redis7.2", // Redis
+            "/guides/novnc-browser", // Remote Desktops: noVNC
+            "/guides/visual-studio-code-server", // Remote IDEs: Visual Studio Code Server
+            "/guides/httpserver-ruby3.2", // Ruby HTTP Server
+            "/guides/ruby3.2-rails", // Ruby on Rails
+            "/guides/httpserver-rust1.88-actix-web4", // Rust (Actix Web) HTTP Server
+            "/guides/httpserver-rust-trunkrs-leptos", // Rust (Leptos + Trunk) HTTP Server
+            "/guides/httpserver-rust1.88-rocket0.5", // Rust (Rocket) HTTP Server
+            "/guides/httpserver-rust1.75-tokio", // Rust (Tokio) HTTP Server
+            "/guides/httpserver-rust1.91", // Rust HTTP Server
+            "/guides/openclaw", // Sandboxes: OpenClaw
+            "/guides/postgres", // Serverless Databases: PostgreSQL
+            "/guides/node-code-execution", // Serverless Functions: Node.js Code Execution with ROMs
+            "/guides/mcp-server-simple", // Simple MCP Server
+            "/guides/skipper0.18", // Skipper
+            "/guides/httpserver-node21-solid-start", // SolidJS HTTP Server
+            "/guides/spin-wagi-http", // Spin
+            "/guides/httpserver-java17-springboot", // Spring Boot HTTP Server
+            "/guides/httpserver-java17-spring-petclinic", // Spring PetClinic
+            "/guides/httpserver-c-debug", // SSH and HTTP Server with C and Debugging Tools
+            "/guides/httpserver-node22-sveltekit", // SvelteKit HTTP Server
+            "/guides/traefik", // Traefik
+            "/guides/httpserver-node-vite-vanilla", // Vite (vanilla)
+            "/guides/httpserver-node-vite-ssr-vanilla", // Vite (vanilla) SSR
+            "/guides/httpserver-nginx-vite-vanilla", // Vite HTTP Server
+            "/guides/vsftpd", // vsftpd
+            "/guides/wazero-import-go", // Wazero
+            "/guides/github-webhook-node", // Webhooks: GitHub Webhook Receiver
+            "/guides/node18-wingsio", // Wings.io (Node)
+            "/guides/wordpress-all-in-one", // Wordpress
+            "/guides/wordpress", // Wordpress with Nginx and MariaDB
+            // AUTO-GENERATED:GUIDES-END
+          ],
+        },
+      ],
     },
     {
       type: "category",
