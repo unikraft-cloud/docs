@@ -117,10 +117,10 @@ The `relay` object accepts the following fields:
 
 | Error message | Cause |
 |---------------|-------|
-| `Insufficient license. Please make sure your license is valid and includes custom network configurations` | Your account's license doesn't include custom network configuration, which relay is part of. |
-| `Unknown member 'network_interfaces'` | Your account lacks the `net_manager` permission required for this feature. |
-| `Invalid relay '<interface>'. Please make sure the relay exists and does not create a circular dependency` | The interface you named doesn't exist, already relays through another interface, or is itself a custom interface. |
-| `Network interface without an IP address cannot use a relay` | You configured a `relay` on an interface without an `ip`, and the relay datapath keys on the client interface's address. |
+| Insufficient license. Please make sure your license is valid and includes custom network configurations. | Your account's license doesn't include custom network configuration, which relay is part of. |
+| Unknown member 'network_interfaces'. | Your account lacks the `net_manager` permission required for this feature. |
+| Invalid relay '<interface>'. Please make sure the relay exists and does not create a circular dependency. | The interface you named doesn't exist, already relays through another interface, or is itself a custom interface. |
+| Network interface without an IP address cannot use a relay. | You configured a `relay` on an interface without an `ip`, and the relay datapath keys on the client interface's address. |
 
 ## Limitations
 
