@@ -1,4 +1,5 @@
 import type { ZudokuConfig } from "zudoku";
+import { BlocksIcon, BookMarkedIcon } from "zudoku/icons";
 import {
   CheckpointTimeline,
   FeatureRow,
@@ -16,6 +17,7 @@ import {
   ValueCard,
   ValueCards,
 } from "./src/DiagramComponents";
+import { topNavMenus } from "./src/TopNavMenus";
 import { UseCaseCast, UseCaseVideo } from "./src/UseCaseMedia";
 
 const config: ZudokuConfig = {
@@ -176,16 +178,6 @@ const config: ZudokuConfig = {
             "/use-cases/remote-desktops",
           ],
         },
-        {
-          type: "category",
-          label: "Integrations",
-          icon: "blocks",
-          collapsed: false,
-          items: [
-            "/integrations/kubernetes",
-            "/integrations/karpenter",
-          ],
-        },
       ],
     },
     {
@@ -339,7 +331,7 @@ const config: ZudokuConfig = {
     },
     {
       type: "category",
-      label: "CLI Reference",
+      label: "CLI",
       icon: "terminal",
       items: [
         "/cli/overview",
@@ -649,6 +641,26 @@ const config: ZudokuConfig = {
       ],
     } as any,
     {
+      type: "link",
+      label: "API",
+      icon: "unplug",
+      to: "/api/platform/v1",
+    },
+    "/integrations/kubernetes",
+    {
+      type: "link",
+      label: "Docker",
+      icon: "package",
+      to: "/tutorials/docker-to-ukc",
+    },
+    {
+      type: "link",
+      label: "Terraform",
+      icon: "layers",
+      to: "https://github.com/unikraft-cloud/terraform-provider-ukc",
+    },
+    "/integrations/karpenter",
+    {
       type: "category",
       label: "Kraftfile",
       icon: "file-text",
@@ -666,12 +678,6 @@ const config: ZudokuConfig = {
         },
       ],
     } as any,
-    {
-      type: "link",
-      label: "Platform API",
-      icon: "unplug",
-      to: "/api/platform/v1",
-    },
     {
       type: "category",
       label: "Releases",
@@ -694,6 +700,20 @@ const config: ZudokuConfig = {
       ],
     },
   ],
+  slots: {
+    "top-navigation-side": topNavMenus([
+      {
+        label: "Integrations",
+        icon: BlocksIcon,
+        tabs: ["Kubernetes", "Docker", "Terraform", "Karpenter"],
+      },
+      {
+        label: "Reference",
+        icon: BookMarkedIcon,
+        tabs: ["Kraftfile"],
+      },
+    ]),
+  },
   search: {
     type: "pagefind",
   },
@@ -705,6 +725,7 @@ const config: ZudokuConfig = {
     { from: "/use-cases", to: "/use-cases/overview" },
     { from: "/releases", to: "/releases/index" },
     { from: "/sdks", to: "/sdks/overview" },
+    { from: "/integrations", to: "/integrations/kubernetes" },
     // The SDKs used to live under Integrations.
     { from: "/integrations/sdks", to: "/sdks/overview" },
     { from: "/integrations/sdks/go", to: "/sdks/go" },
