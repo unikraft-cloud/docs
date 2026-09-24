@@ -1,0 +1,93 @@
+pages/sdks/js/sandboxes.mdx
+  s_4a3d12201bd53a::t_c700fbb03e385d 1-21,25,27-29,31,46-57,60-66,69-75,77
+  s_4a3d12201bd53a::t_40e0dcd78aae02 76
+  s_4a3d12201bd53a::t_0be96f4b5d2975 22-24,30,32-45,58-59,67-68,78-85
+  s_4a3d12201bd53a::t_aec7474586cc6f 26
+pages/sdks/js/sandboxes/commands.mdx
+  s_4a3d12201bd53a::t_0a8f7886d6af35 11
+  s_4a3d12201bd53a::t_2cc1cc15d8f25e 98
+  s_4a3d12201bd53a::t_6e937a3c3686db 12
+  s_4a3d12201bd53a::t_a5b7064bf2f579 13,16-22,25,27,29-34,36,38-39,41-49,51,53-54,69,71-76,78,80-81,84-87,90-91,93-97,99-103
+  s_4a3d12201bd53a::t_dcefeb96edd723 1-2,4-10,14-15,23-24,26,28,35,37,40,50,52,55-68,70,77,79,82-83,88-89,92
+  s_4a3d12201bd53a::t_2302fad9f83ffa 3
+pages/sdks/js/sandboxes/connect.mdx
+  s_4a3d12201bd53a::t_992c5ba2a1af02 1-12,15-18,21-34,37-38,40-43,45,47-54,56-60
+  s_4a3d12201bd53a::t_b8a9938760507e 13-14,19-20,35-36,39,44,61-70
+  s_4a3d12201bd53a::t_5fb781ffdbcf76 46
+  s_4a3d12201bd53a::t_165c6dc8e261ec 55
+pages/sdks/js/resources.mdx
+  s_4a3d12201bd53a::t_46fca989a46d48 59
+  s_4a3d12201bd53a::t_8b9cfe13d6d8bc 91,96
+  s_4a3d12201bd53a::t_26e0737ab82b2c 168
+  s_4a3d12201bd53a::t_d57537659c084f 80
+  s_4a3d12201bd53a::t_6e196f576a2d28 48
+  s_4a3d12201bd53a::t_040b7874cb54a0 1-47,49-58,60-79,81-90,92-95,97-167,169-189,192
+  s_4a3d12201bd53a::t_5ca6e6c6739d53 190-191
+pages/sdks/js/client.mdx
+  s_4a3d12201bd53a::t_01a36ac69cbef2 74
+  s_4a3d12201bd53a::t_170e5479ad8da6 1-7,9-47,49-73,75-86,88-95,97,100-102
+  s_4a3d12201bd53a::t_d7659e456c4d5b 96,98-99
+  s_4a3d12201bd53a::t_99f96f03f62904 87
+  s_4a3d12201bd53a::t_675b7ac7d1e182 48
+  s_4a3d12201bd53a::t_207f30aa51a9c8 8
+pages/sdks/js.mdx
+  s_4a3d12201bd53a::t_8796b690558781 3-4,8-9,13,18,22-23,29,33,39-40,42,45,47-52,54,56-57,60,63,65-66,70,73,75,77-80,82,84,88-94,98-100,106
+  s_4a3d12201bd53a::t_dfab141936ed17 83,86
+  s_4a3d12201bd53a::t_fd8e93861849eb 17
+pages/sdks/js/sandboxes/configuration.mdx
+  s_4a3d12201bd53a::t_396b277b17cf2d 1-11,14-27,29,43-44,46,55-57,61,66-68,70-102,107
+  s_4a3d12201bd53a::t_e8ee52f93264ab 59
+  s_4a3d12201bd53a::t_dd84131ad099a4 28,42
+  s_4a3d12201bd53a::t_f2372295638352 12-13,30-41,45,47-54,58,60,62-65,103-106,108-109
+  s_4a3d12201bd53a::t_a250c3c3c1b3cd 69
+pages/sdks/overview.mdx
+  s_4a3d12201bd53a::t_2798fe724113c5 18
+zudoku.config.tsx
+  s_4a3d12201bd53a::t_8a63395b8e1576 308-333
+  s_4a3d12201bd53a::t_d33657f528f3d5 723
+  h_3a8cdd8dbdd7a3 109,181,343,358,397,538,614,645
+pages/use-cases/sandboxes.mdx
+  s_4a3d12201bd53a::t_2798fe724113c5 45
+pages/sdks/js/sandboxes/files.mdx
+  s_4a3d12201bd53a::t_c9beb94de98999 7,10-14,16-19,23,26-27,29,31-33,35,37,43,48-49,52,55,58
+  s_4a3d12201bd53a::t_b12035e4a8bf30 40-42
+  s_4a3d12201bd53a::t_cc957f15368e68 1-6,8-9,15,20-22,24-25,28,30,34,36,38-39,44-47,50-51,53-54,56-57
+.vale/styles/config/vocabularies/Unikraft/accept.txt
+  s_4a3d12201bd53a::t_22fe4dc233881d 34
+pages/sdks/js/metros.mdx
+  s_4a3d12201bd53a::t_47809d7d73e58f 7
+  s_4a3d12201bd53a::t_e1bf4c34b92af2 125
+  s_4a3d12201bd53a::t_4f6eef4b37ac8d 64,69-70,73
+  s_4a3d12201bd53a::t_59c54d2420982f 89
+  s_4a3d12201bd53a::t_fe745cfa0a3d57 1-6,8-42,44-55,57-60,62-63,65-68,71-72,74-88,90-124,126-131,133-140,142
+  s_4a3d12201bd53a::t_2a7236a2647e90 61
+  s_4a3d12201bd53a::t_20b398213625e4 141
+  s_4a3d12201bd53a::t_4e7e9908afb98c 43
+  s_4a3d12201bd53a::t_9dd4f31718e0fd 56
+  s_4a3d12201bd53a::t_b1e34d5ae271bd 132
+pages/sdks/js/errors.mdx
+  s_4a3d12201bd53a::t_0f404429beb36d 39,41,43
+  s_4a3d12201bd53a::t_4dc7e9cb72d990 1-6,8-38,40,42,44-74
+  s_4a3d12201bd53a::t_5172e30dd4fceb 7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6fc743c701fd454424b2213fd03c964aa563d289",
+  "prompts": {},
+  "humans": {
+    "h_3a8cdd8dbdd7a3": {
+      "author": "aabedraba <abdallah@unikraft.com>"
+    }
+  },
+  "sessions": {
+    "s_4a3d12201bd53a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4de8cd1e-8476-436c-8c44-9a8ec44d2b92",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": null
+    }
+  }
+}
