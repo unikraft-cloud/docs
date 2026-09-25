@@ -1,0 +1,192 @@
+---
+title: Resources
+description: Refs, handles, updates, the method list, and the raw API
+navigation_icon: boxes
+---
+
+Every resource of the platform API has an idiomatic client on `ukc`: `ukc.instances`, `ukc.volumes`, `ukc.services`, `ukc.certificates`, and `ukc.users`.
+This page covers what they have in common.
+
+## Refs
+
+Every operation on an existing resource takes a **ref**: `{ name }` or `{ uuid }`, never both.
+
+```ts
+await ukc.instances.get({ name: "web" });
+await ukc.instances.get({ uuid: "550e8400-e29b-41d4-a716-446655440000" });
+
+// A name belongs to a metro, so a ref can carry the metro.
+await ukc.instances.get({ name: "web", metro: "fra" });
+
+// A bulk operation takes one ref or an array of refs.
+await ukc.instances.stop([{ name: "web" }, { name: "worker" }]);
+```
+
+The API validates each identifier, so a name in the `uuid` filter fails with `Invalid uuid '<name>'`.
+The ref makes you state which kind you hold, and the SDK sends only that field.
+
+## Handles
+
+A single-resource operation returns a **handle**: a lazy reference to one resource in one metro.
+Await the handle to get the resource.
+Call an operation on the handle to get another handle.
+
+```ts
+await ukc.instances.get({ name: "web" });           // the instance
+await ukc.instances.get({ name: "web" }).suspend(); // the suspended instance
+await ukc.instances.get({ name: "web" }).update({ memory_mb: 512 });
+
+await ukc.metro("fra").instances
+  .create({ image: "nginx:latest" })
+  .wait({ state: "running", timeoutSeconds: 30 })
+  .logs({ offset: -4096 });
+
+await ukc.volumes.get({ name: "data" }).attach({ attach_to: { name: "web" }, at: "/data" });
+```
+
+A handle sends nothing until you await it or chain onto it.
+Each step runs at most once, even when you await it many times.
+
+### What a chain costs
+
+The number of requests depends on the ref and on the scope.
+For `get(ref).suspend()`:
+
+| Ref and scope                    | Requests                                                                                                                                      |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `{ name, metro }`, any scope     | One: the suspend. The ref says where.                                                                                                         |
+| `{ name }`, one metro in scope   | One: the suspend. The scope says where.                                                                                                       |
+| `{ name }`, many metros in scope | One concurrent read per metro to locate the resource, then the suspend in the metro that holds it. If more than one metro matches, the handle throws `AmbiguousRefError`. |
+
+### Where a handle landed
+
+A handle reports where it landed.
+A mutating step returns what the endpoint reports, so `suspend()` resolves to `{ uuid, name, state, previous_state }`, not to a full instance.
+
+```ts
+const web = ukc.instances.get({ name: "web" });
+await web.where();   // "dal"
+await web.resolve(); // { ref: { name: "web" }, metro: "dal", baseUrl: "..." }
+```
+
+### The direct form
+
+Every method is also available directly, with a ref as the first argument.
+`ukc.instances.logs({ name: "web" }, { offset: -4096 })` is shorthand for `ukc.instances.get({ name: "web" }).logs({ offset: -4096 })`.
+
+## Update a resource
+
+Write a **patch object**, and the SDK works out the operation for each property.
+A value sets the property, `null` removes it, and an omitted or `undefined` property stays unchanged.
+This follows JSON Merge Patch.
+
+```ts
+await ukc.instances.get({ name: "web" }).update({ memory_mb: 512, vcpus: 2 });
+await ukc.instances.get({ name: "web" }).update({ env: { LOG_LEVEL: "debug" } });
+await ukc.instances.get({ name: "web" }).update({ autokill: null });
+await ukc.volumes.get({ name: "data" }).update({ size_mb: 2048 });
+await ukc.services.get({ name: "web" }).update({ soft_limit: 5, hard_limit: 20 });
+```
+
+Every property has a type, so `memory_mb: "512"` doesn't compile.
+`image` takes the same string shorthand as `create`.
+
+### Merge and remove members
+
+When a plain set isn't enough, stage the operations with `edit()` and send them as one request.
+`set` replaces a property, `add` merges into it, and `del` removes members of it.
+
+```ts
+await ukc.instances.get({ name: "web" }).edit()
+  .set({ memory_mb: 512 })
+  .add({ env: { LOG_LEVEL: "debug" }, tags: ["prod"] })
+  .del({ env: ["OLD_FLAG"], tags: ["staging"] })
+  .apply();
+```
+
+`null` in `del()` removes the whole property: `ukc.services.edit({ name: "web" }).del({ domains: null }).apply()`.
+
+`apply()` returns a handle, so the chain continues:
+
+```ts
+await ukc.metro("fra").instances
+  .edit({ name: "web" })
+  .set({ memory_mb: 1024 })
+  .apply()
+  .wait({ state: "running" });
+```
+
+Both forms are one request.
+Both also take a ref instead of a handle: `ukc.instances.update({ name: "web" }, { memory_mb: 512 })` and `ukc.instances.edit({ name: "web" })`.
+
+The API models an update as a list of `{ prop, op, value }` triples, and the raw triples still work: `update({ name: "web" }, [{ prop: "memory_mb", op: "set", value: 512 }])`.
+
+## Methods
+
+| Resource                    | Methods                                                                                                                       |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `ukc.instances`             | `create`, `get`, `each`, `list`, `update`, `edit`, `delete`, `start`, `stop`, `suspend`, `wait`, `metrics`, `history`, `logs` |
+| `ukc.volumes`               | `create`, `get`, `each`, `list`, `update`, `edit`, `delete`, `attach`, `detach`                                               |
+| `ukc.services`              | `create`, `get`, `each`, `list`, `update`, `edit`, `delete`                                                                   |
+| `ukc.certificates`          | `create`, `get`, `each`, `list`, `update`, `delete`                                                                           |
+| `ukc.users`                 | `quotas`, `quotasByUuid`                                                                                                      |
+| `ukc.metro("fra").sandboxes` | `create`, `get`, `list`. See [Sandboxes](/sdks/js/sandboxes).                                                                |
+
+A handle adds the operations of its resource:
+
+| Handle        | Operations                                                                                                     |
+| ------------- | -------------------------------------------------------------------------------------------------------------- |
+| Instance      | `refresh`, `start`, `stop`, `suspend`, `delete`, `update`, `edit`, `wait`, `logs`, `metrics`, `history`         |
+| Volume        | `attach`, `detach`, `update`, `edit`, `delete`                                                                 |
+| Service group | `update`, `edit`, `delete`                                                                                     |
+
+## The raw API
+
+The idiomatic layer holds a raw client, and the raw client is one property away.
+The raw layer mirrors the [OpenAPI specification](https://github.com/unikraft-cloud/openapi): one method per `operationId`, the response envelope untouched, and one metro per call.
+
+The SDK covers both Unikraft Cloud APIs:
+
+- **Platform**, per metro: instances, volumes, services, certificates, autoscale, and images.
+  Idiomatic at the top level, and raw under `ukc.api.platform` and `@unikraft/cloud/api/platform`.
+- **Control plane**, global: the account, the metros, images, and self-hosted nodes.
+  Raw only, under `ukc.api.controlplane` and `@unikraft/cloud/api/controlplane`.
+
+```ts
+// From the client, with the same credentials.
+const res = await ukc.api.platform.instances.getInstances({ count: 10, details: true });
+console.log(res.status, res.data?.instances);
+
+// From a resource.
+await ukc.instances.api.getInstanceLogs({ name: ["web"] });
+
+// The control plane.
+const metros = await ukc.api.controlplane.metros.listMetros();
+console.log(metros.data?.metros);
+```
+
+Everything that the idiomatic layer doesn't cover is reachable this way: autoscale, the image registry, node information, and the whole control plane.
+
+```ts
+await ukc.api.platform.autoscale.getAutoscaleConfigurations({ uuid: ["sg1"] });
+await ukc.api.platform.images.getImages({});
+```
+
+### Standalone raw clients
+
+A raw client also works on its own, without the idiomatic layer:
+
+```ts
+import { PlatformApi } from "@unikraft/cloud/api/platform";
+import { ControlPlaneApi } from "@unikraft/cloud/api/controlplane";
+
+const api = new PlatformApi({
+  baseUrl: "https://api.fra.unikraft.cloud",
+  token: process.env.UKC_TOKEN,
+});
+await api.instances.getInstances({ count: 10 });
+```
+
+A raw client belongs to one metro.
+It talks to its `baseUrl`, and one call can go elsewhere with `{ baseUrl }`.
+The fan-out across metros is the job of the idiomatic layer.

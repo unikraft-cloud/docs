@@ -1,0 +1,58 @@
+---
+title: Files
+description: Read, write, and upload files, and create directories in a sandbox
+navigation_icon: folder
+---
+
+A sandbox exposes its filesystem through four methods: `readFile`, `writeFile`, `mkdir`, and `upload`.
+Every path is absolute, inside the sandbox.
+
+## Write and read a file
+
+`writeFile` creates a missing file, and truncates an existing one.
+`readFile` returns the file as a `Uint8Array`.
+
+```ts
+import { Sandbox } from "@unikraft/cloud";
+
+await using sandbox = await Sandbox.create();
+
+await sandbox.writeFile("/work/input/a.txt", "hello\n");
+
+const bytes = await sandbox.readFile("/work/input/a.txt");
+console.log(new TextDecoder().decode(bytes)); // hello
+```
+
+A string is UTF-8.
+Pass a `Uint8Array` for binary content.
+
+## Append to a file
+
+```ts
+await sandbox.writeFile("/work/build.log", "step 2 done\n", { append: true });
+```
+
+## Upload a file into a directory
+
+`upload` takes the directory, the file name, and the content, and it creates the missing parent directories:
+
+```ts
+import { readFile } from "node:fs/promises";
+
+const csv = await readFile("./data.csv");
+await sandbox.upload("/work/input", "data.csv", csv);
+```
+
+## Create a directory
+
+`mkdir` creates the missing parent directories too.
+Pass `parents: false` to create only the last one.
+
+```ts
+await sandbox.mkdir("/work/out/reports");
+```
+
+## Reference
+
+Every method also accepts `signal` and `headers`, as the [client](/sdks/js/client) does.
+See [`Sandbox`](https://github.com/unikraft-cloud/js-sdk/blob/HEAD/src/resources/sandboxes/sandbox.ts) in the source for the complete list.

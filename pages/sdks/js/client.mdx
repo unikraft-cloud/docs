@@ -1,0 +1,102 @@
+---
+title: Client
+description: Configure the UnikraftCloud client, its endpoints, and its transport
+navigation_icon: settings
+---
+
+The `UnikraftCloud` class is the entry point of the SDK.
+One client holds one token, one metro scope, and one transport, and every resource belongs to it.
+
+## Create a client
+
+The constructor takes one configuration object.
+Every field is optional.
+
+```ts
+import { UnikraftCloud } from "@unikraft/cloud";
+
+const ukc = new UnikraftCloud({
+  token: process.env.UKC_TOKEN,
+  metro: "fra",
+});
+```
+
+## Options
+
+| Option            | Default           | Description                                                                                                 |
+| ----------------- | ----------------- | ----------------------------------------------------------------------------------------------------------- |
+| `token`           | `UKC_TOKEN`       | The bearer token.                                                                                           |
+| `metro`           | `UKC_METRO`       | One metro code, such as `fra`, or a full `http(s)://` address. Operations that need one metro use this one. |
+| `metros`          | `"all"`           | The metros that operations cover: `"all"`, one metro code, or a list of codes.                              |
+| `baseUrl`         |                   | The platform API address. It overrides `metro`.                                                             |
+| `controlPlaneUrl` |                   | The control plane API address.                                                                              |
+| `fetch`           | The global `fetch` | A custom `fetch` implementation.                                                                           |
+| `headers`         |                   | Extra headers that the client sends with every request.                                                     |
+| `userAgent`       | `@unikraft/cloud` | The `User-Agent` header.                                                                                    |
+| `proxyFromEnv`    | `true`            | Read the proxy environment variables on Node.js.                                                            |
+
+`metros` sets the scope of reads and bulk operations.
+`metro` sets the target of operations that need exactly one metro, such as `create`.
+When you set both, `metros` wins for the scope, and `metro` stays the target.
+When you set neither, the scope is every metro that the account can reach, and the target is `fra`.
+[Metros](/sdks/js/metros) explains the scope in detail.
+
+## Endpoints
+
+A metro code expands to `https://api.<metro>.unikraft.cloud`.
+The client asks the control plane for the metros of the account, and it uses the endpoint that the control plane reports.
+As a result, a new metro works without an SDK upgrade.
+
+## Self-hosted and staging deployments
+
+`metro` and `UKC_METRO` also accept a full `http(s)://` address.
+The client uses the address as given.
+It drops a trailing `/v1`, because every operation path already carries it.
+
+```sh
+export UKC_METRO=https://api.staging.example.internal
+```
+
+A named address is the only endpoint that the client uses.
+It does no metro discovery, and it invents no hostnames, whatever the scope says.
+Point the control plane at the same deployment with `controlPlaneUrl`:
+
+```ts
+const ukc = new UnikraftCloud({
+  token,
+  metro: "https://api.staging.example.internal",
+  controlPlaneUrl: "https://controlplane.staging.example.internal",
+});
+```
+
+## Runtime
+
+The SDK needs Node.js 22.12 or later, and it ships as ECMAScript modules (ESM) only.
+From that version, Node.js can `require()` an ESM package, so CommonJS code can load it too.
+
+The client uses the global `fetch`, which Node.js supplies.
+To use another runtime, or to control the transport, pass your own:
+
+```ts
+const ukc = new UnikraftCloud({ token, fetch: myFetch });
+```
+
+## Proxy support
+
+On Node.js, the client reads the standard proxy environment variables.
+This lets you route its traffic through a proxy such as [mitmproxy](https://mitmproxy.org), Charles, or Proxyman without a code change.
+
+```sh
+npm install undici
+export HTTPS_PROXY=http://127.0.0.1:8080
+export NODE_EXTRA_CA_CERTS=~/.mitmproxy/mitmproxy-ca-cert.pem
+node your-script.js
+```
+
+The client recognises `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, and `NO_PROXY`, in either letter case.
+The global `fetch` of Node.js ignores these variables, so the SDK applies them through the `EnvHttpProxyAgent` of `undici`.
+`undici` is an optional peer dependency, and the SDK imports it only when you set a proxy variable.
+If `undici` isn't installed, the SDK sends the requests without a proxy, and it logs one warning.
+
+To turn this off for one client, set `proxyFromEnv: false`.
+Browsers and Deno ignore these variables.

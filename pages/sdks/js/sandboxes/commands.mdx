@@ -1,0 +1,103 @@
+---
+title: Commands
+description: Run commands inside a sandbox, wait for them, and read their output
+navigation_icon: terminal
+---
+
+A sandbox runs commands in two ways.
+`exec` runs a command to completion and returns its output.
+`start` returns at once and gives you a `Command` to control.
+
+## Run a command to completion
+
+`exec` returns the exit code and both output streams:
+
+```ts
+import { Sandbox } from "@unikraft/cloud";
+
+await using sandbox = await Sandbox.create();
+
+const result = await sandbox.exec("ls -la /etc");
+console.log(result.exitcode); // 0
+console.log(result.stdout);
+```
+
+## Set the working directory and the environment
+
+Each command takes its own `cwd` and `env`:
+
+```ts
+const result = await sandbox.exec("npm test", {
+  cwd: "/work/app",
+  env: { CI: "1" },
+});
+```
+
+## Limit how long you wait
+
+`timeoutSeconds` makes `exec` return when the time runs out.
+This isn't an error: you get the output so far, `exitcode` is `null`, and the command keeps running.
+
+```ts
+const result = await sandbox.exec("make", { timeoutSeconds: 30 });
+
+if (result.exitcode === null) {
+  const build = sandbox.command(result.uuid);
+  await build.wait();
+  console.log((await build.logs()).stdout);
+}
+```
+
+## Start a long-running command
+
+`start` doesn't wait.
+It returns a `Command`, and you decide what happens next: write to its standard input, wait for it, read its logs, or stop it.
+
+```ts
+const server = await sandbox.start("cat", { cwd: "/work" });
+
+await server.stdin("first line\n");
+await server.stdin("last line\n", { eof: true });
+await server.wait({ timeoutSeconds: 10 });
+
+const logs = await server.logs();
+console.log(logs.stdout);
+
+await server.delete();
+```
+
+## Stop a command
+
+`signal` sends a signal by name or by number:
+
+```ts
+const server = await sandbox.start("sleep 3600");
+await server.signal("TERM");
+```
+
+## Read the output later
+
+`exec` deletes the command record when the command finishes.
+Pass `keep: true` to keep it, so another part of your program can read the logs by UUID:
+
+```ts
+const { uuid } = await sandbox.exec("make", { keep: true });
+
+const logs = await sandbox.command(uuid).logs();
+console.log(logs.stderr);
+```
+
+`logsRaw` reads one stream as bytes, and it takes a byte range.
+A negative `offset` reads from the end of the stream:
+
+```ts
+const tail = await sandbox.command(uuid).logsRaw("stdout", { offset: -4096 });
+console.log(new TextDecoder().decode(tail));
+```
+
+`sandbox.commands()` returns every command that the sandbox knows about, in start order.
+
+## Reference
+
+Every method on `Command` is exactly one request, so you can see what a step costs.
+See [`Command`](https://github.com/unikraft-cloud/js-sdk/blob/HEAD/src/resources/sandboxes/command.ts) and [`ExecOptions`](https://github.com/unikraft-cloud/js-sdk/blob/HEAD/src/resources/sandboxes/types.ts) in the source for the complete list.
