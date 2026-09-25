@@ -244,11 +244,11 @@ Otherwise, a checkpoint request can fail for the following reasons:
 
 | Error message | Cause |
 |---------------|-------|
-| `Insufficient license. Please make sure your license is valid and includes checkpointing` | Your account's license doesn't include the checkpointing feature. |
-| `A checkpoint with the name '<name>' already exists` | A checkpoint with the requested name already exists. Choose a different name. |
-| `Failed to create instance from checkpoint: ...` | The referenced checkpoint isn't ready yet. Wait until it reaches the `checkpoint` state before loading it. |
-| `Deletion protection enabled` | The checkpoint has a [delete lock](/platform/delete-locks) set. Remove the lock before deleting. |
-| `Failed to allocate checkpoint: ...` | The platform couldn't create the checkpoint (for example, it hit a quota limit). |
+| Insufficient license. Please make sure your license is valid and includes checkpointing. | Your account's license doesn't include the checkpointing feature. |
+| A checkpoint with the name '<name>' already exists. | A checkpoint with the requested name already exists. Choose a different name. |
+| Failed to create instance from checkpoint: .... | The referenced checkpoint isn't ready yet. Wait until it reaches the `checkpoint` state before loading it. |
+| Deletion protection enabled. | The checkpoint has a [delete lock](/platform/delete-locks) set. Remove the lock before deleting. |
+| Failed to allocate checkpoint: ... | The platform couldn't create the checkpoint (for example, it hit a quota limit). |
 
 ## Limitations
 

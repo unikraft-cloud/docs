@@ -66,12 +66,12 @@ Otherwise, a branch request can fail for the following reasons:
 
 | Error message | Cause |
 |---------------|-------|
-| `Cannot specify 'image' when 'branch_from' is set` | The request sets both `image` and `branch_from`. A branch derives its image from the source. |
-| `Cannot specify 'branch_from' when creating an instance from a template` | The request sets both `template` and `branch_from`. Choose one creation source, not both. |
-| `Cannot specify '<field>' when branching from an existing instance` | The request sets a field the branch inherits from its source (`args`, `env`, `memory_mb`, or `vcpus`). |
-| `Cannot branch from VM with pending snapshot` | The source already has a snapshot in progress. Retry once it completes. |
-| `Cannot branch from VM in state '<state>'` | The source is in a state that branching doesn't support. |
-| `Insufficient license. Please make sure your license is valid and includes branching` | Your account's license doesn't include the branching feature. |
+| Cannot specify 'image' when 'branch_from' is set. | The request sets both `image` and `branch_from`. A branch derives its image from the source. |
+| Cannot specify 'branch_from' when creating an instance from a template. | The request sets both `template` and `branch_from`. Choose one creation source, not both. |
+| Cannot specify '<field>' when branching from an existing instance. | The request sets a field the branch inherits from its source (`args`, `env`, `memory_mb`, or `vcpus`). |
+| Cannot branch from VM with pending snapshot. | The source already has a snapshot in progress. Retry once it completes. |
+| Cannot branch from VM in state '<state>'. | The source is in a state that branching doesn't support. |
+| Insufficient license. Please make sure your license is valid and includes branching. | Your account's license doesn't include the branching feature. |
 
 ## Limitations
 

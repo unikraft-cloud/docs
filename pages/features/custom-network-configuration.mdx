@@ -172,17 +172,17 @@ Both ends of a relay have to be interfaces that Unikraft Cloud allocates, meanin
 
 | Error message | Cause |
 |---------------|-------|
-| `Insufficient license. Please make sure your license is valid and includes custom network configurations` | Your account's license doesn't include custom network configuration. |
-| `Network interface IP and MAC address require a TAP device` | You set `ip` or `mac` without a `tap_name`, so either add the TAP device or drop the address. |
-| `Network interface IP address cannot be from the platform's address pool` | The `ip` overlaps the platform's managed address pool. Use an address outside it. |
-| `Network interface TAP device cannot be from the platform's device pool` | The `tap_name` refers to a platform-managed TAP device. Use one of your own. |
-| `Invalid MAC address '<value>'` | The `mac` isn't a `hh:hh:hh:hh:hh:hh` address, or it's all-zero, which the platform reads as an omitted field. |
-| `Network interface MAC address must be a unicast address` | The `mac` has its multicast bit set, so choose an address whose first octet is even. |
-| `Network interface MAC address cannot be from the platform's address pool` | The `mac` starts with `12:b0:`, which the platform reserves for the addresses it derives itself. |
-| `Network interface without an IP address cannot be auto-configured in the guest` | You set `autoconfig` to `true` on an interface without an `ip`, which has to keep autoconfiguration off. |
-| `Network interface without an IP address cannot use a relay` | You configured a `relay` on an interface without an `ip`, and the relay datapath keys on the client interface's address. |
-| `Invalid relay '<interface>'. Please make sure the relay exists and does not create a circular dependency` | The interface named as the relay doesn't exist, already relays through another interface, or is itself a custom interface. |
-| `Unknown member 'network_interfaces'` | Your account lacks the `net_manager` permission required for this feature. |
+| Insufficient license. Please make sure your license is valid and includes custom network configurations. | Your account's license doesn't include custom network configuration. |
+| Network interface IP and MAC address require a TAP device. | You set `ip` or `mac` without a `tap_name`, so either add the TAP device or drop the address. |
+| Network interface IP address cannot be from the platform's address pool. | The `ip` overlaps the platform's managed address pool. Use an address outside it. |
+| Network interface TAP device cannot be from the platform's device pool. | The `tap_name` refers to a platform-managed TAP device. Use one of your own. |
+| Invalid MAC address '<value>'. | The `mac` isn't a `hh:hh:hh:hh:hh:hh` address, or it's all-zero, which the platform reads as an omitted field. |
+| Network interface MAC address must be a unicast address. | The `mac` has its multicast bit set, so choose an address whose first octet is even. |
+| Network interface MAC address cannot be from the platform's address pool. | The `mac` starts with `12:b0:`, which the platform reserves for the addresses it derives itself. |
+| Network interface without an IP address cannot be auto-configured in the guest. | You set `autoconfig` to `true` on an interface without an `ip`, which has to keep autoconfiguration off. |
+| Network interface without an IP address cannot use a relay. | You configured a `relay` on an interface without an `ip`, and the relay datapath keys on the client interface's address. |
+| Invalid relay '<interface>'. Please make sure the relay exists and does not create a circular dependency. | The interface named as the relay doesn't exist, already relays through another interface, or is itself a custom interface. |
+| Unknown member 'network_interfaces'. | Your account lacks the `net_manager` permission required for this feature. |
 
 ## Limitations
 
