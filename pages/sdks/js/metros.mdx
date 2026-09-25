@@ -1,0 +1,142 @@
+---
+title: Metros
+description: How one client covers many metros, and how names behave across them
+navigation_icon: earth
+---
+
+The platform API is per metro, but the instances of one account live in more than one metro.
+The SDK treats the metros in scope as one namespace.
+A read asks every metro at the same time and merges the answers, and every result carries the `metro` it came from.
+
+## The scope
+
+Set the scope for the client, for a group of calls, or for one call.
+
+```ts
+// The client. The default is every metro the account can reach.
+const ukc = new UnikraftCloud({ token });
+new UnikraftCloud({ token, metro: "fra" });
+new UnikraftCloud({ token, metros: ["fra", "dal"] });
+
+// A group of calls.
+ukc.metro("fra").instances.list();
+ukc.metros(["fra", "dal"]).instances.list();
+
+// One call.
+ukc.instances.list({ metros: ["fra", "dal"] });
+ukc.instances.list({ metros: "all" });
+```
+
+An explicit scope skips metro discovery.
+`UKC_METRO` works like `metro`, so it limits the client to that metro.
+
+To see which metros the account can reach:
+
+```ts
+for (const { metro, baseUrl } of await ukc.availableMetros()) {
+  console.log(metro, baseUrl);
+}
+```
+
+The client discovers the metros once, and it caches the result.
+It asks the control plane and trusts the endpoint that the control plane reports, so a new [metro](/platform/metros) works without an SDK upgrade.
+`KNOWN_METROS` lists the metros known at the release of this version:
+
+| Code  | Location            |
+| ----- | ------------------- |
+| `fra` | Frankfurt, DE       |
+| `dal` | Dallas, TX, USA     |
+| `sin` | Singapore           |
+| `was` | Washington, DC, USA |
+| `sfo` | San Francisco, USA  |
+
+## How operations behave in a scope
+
+- **A read covers the whole scope.**
+  Pages arrive in the order that the metros answer, so a slow metro doesn't delay a fast one.
+- **`create` never fans out.**
+  It needs one metro: the metro of the client, or the default target (`metro`, `UKC_METRO`, or `fra`) when the scope is wider.
+- **A bulk operation acts on the whole scope.**
+  The SDK locates the refs first, then sends one call to each metro that matched.
+  In a wide scope, `delete([{ name: "web" }])` deletes every `web` in scope.
+  Make the scope narrower, or qualify the ref, to act on one resource.
+- **The control plane is global.**
+  The scope doesn't affect it.
+
+## Names across metros
+
+A name identifies a resource within one metro.
+The same name can exist in more than one metro at once, often because you deployed the same thing everywhere.
+As a result, a name with a wide scope can match more than one resource.
+A `{ uuid }` ref never has this problem, because a UUID identifies one resource wherever it lives.
+
+You have three ways to say which resource you mean:
+
+```ts
+// 1. Qualify the ref. One request, no search.
+await ukc.instances.get({ name: "web", metro: "fra" }).suspend();
+
+// 2. Narrow the scope, which qualifies every ref in it.
+await ukc.metro("fra").instances.get({ name: "web" }).suspend();
+
+// 3. Address every metro that holds the name.
+await ukc.instances.each({ name: "web" }).suspend();
+```
+
+### One match: `get()`
+
+`get()` requires exactly one match, because the next step is often a mutation.
+If a name matches in more than one metro, `get()` throws an `AmbiguousRefError`.
+The error carries the matches, so a recovery costs no further request:
+
+```ts
+import { AmbiguousRefError } from "@unikraft/cloud";
+
+try {
+  await ukc.instances.get({ name: "web" }).suspend();
+} catch (err) {
+  if (err instanceof AmbiguousRefError) {
+    console.log(err.metros);  // ["fra", "dal", "sin"]
+    console.log(err.matches); // the instances, each with its metro
+  }
+}
+```
+
+### Every match: `each()`
+
+`each(ref)` is the deliberate plural.
+It resolves the matches once, then runs each operation in the metro that holds the match:
+
+```ts
+const web = ukc.instances.each({ name: "web" });
+
+await web.where();          // ["fra", "dal", "sin"]
+await web.size();           // 3
+const instances = await web;
+await web.suspend();        // one result per metro
+await web.edit().set({ memory_mb: 512 }).apply();
+```
+
+An operation on a set returns an array.
+`each()` exists on instances, volumes, services, and certificates.
+
+## Partial failure
+
+One unreachable metro doesn't discard the rest of the answer.
+The SDK drains the healthy metros first, then it throws a `MetroFanoutError` that names the failures:
+
+```ts
+import { MetroFanoutError } from "@unikraft/cloud";
+
+try {
+  for await (const inst of ukc.instances.list()) console.log(inst.name);
+} catch (err) {
+  if (err instanceof MetroFanoutError) {
+    console.log(err.message);  // "1 of 4 metros failed: sin (503)"
+    console.log(err.failures); // [{ metro: "sin", error: UnikraftCloudError }]
+  }
+}
+```
+
+A bulk operation can't yield results as it goes, so the error carries the results that did succeed as `err.results`.
+The same rule applies to a set from `each()`.

@@ -1,0 +1,70 @@
+---
+title: Existing sandboxes
+description: Reconnect to a sandbox from another process, list sandboxes, and wait for readiness
+navigation_icon: plug
+---
+
+A sandbox outlives the process that created it.
+The UUID and the metro are all that a later process needs to attach again.
+
+## Reconnect
+
+```ts
+import { Sandbox } from "@unikraft/cloud";
+
+const sandbox = await Sandbox.connect(
+  { uuid: "550e8400-e29b-41d4-a716-446655440000", metro: "fra" },
+  { token: process.env.UKC_TOKEN },
+);
+
+console.log((await sandbox.exec("cat /work/state.json")).stdout);
+```
+
+An instance UUID is per metro.
+If the ref carries no `metro`, `connect` searches the scope for the UUID.
+Name the metro to skip the search.
+
+Through a client that you already hold, the same operation is `get`:
+
+```ts
+const sandbox = await ukc.metro("fra").sandboxes.get({ uuid });
+```
+
+## List sandboxes
+
+A sandbox is an instance, so the list of sandboxes is the instance list, filtered by plugin.
+`tags` narrows it further:
+
+```ts
+for await (const sandbox of ukc.metro("fra").sandboxes.list({ tags: ["ci"] })) {
+  console.log(sandbox.uuid);
+}
+```
+
+## Wait after a restart
+
+`connect` and `get` don't wait for the plugin, because the sandbox was already there.
+After a start, or after a resume from `standby`, the plugin reloads, so wait for it before the first command:
+
+```ts
+await sandbox.instance.start();
+await sandbox.ready({ timeoutMs: 10_000 });
+```
+
+If the wait runs out of time, the error names the cause.
+The SDK reads the state of the instance and reports, for example, that the image didn't boot, or that the main process exited.
+
+## Delete
+
+`sandbox.delete()` deletes the instance underneath the sandbox.
+An `await using` declaration does this for you at the end of the scope.
+
+```ts
+for await (const sandbox of ukc.metro("fra").sandboxes.list({ tags: ["ci"] })) {
+  await sandbox.delete();
+}
+```
+
+## Reference
+
+See [`ConnectSandboxOptions` and `ListSandboxesOptions`](https://github.com/unikraft-cloud/js-sdk/blob/HEAD/src/resources/sandboxes/types.ts) in the source for the complete list of options.
