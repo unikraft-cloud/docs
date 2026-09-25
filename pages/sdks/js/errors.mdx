@@ -1,0 +1,80 @@
+---
+title: Errors
+description: The error classes that the SDK throws, the error kinds, and how waits behave
+navigation_icon: triangle-alert
+---
+
+The SDK throws for every network failure and for every response with a status outside 2xx.
+It never returns an error envelope as a value.
+
+## `UnikraftCloudError`
+
+Every failure of a request or of a wait is an `UnikraftCloudError`, or a subclass of it.
+Two other cases throw a native error instead:
+
+- A wrong argument throws a `TypeError` or a `RangeError`. For example, a reference with no `uuid` and no `name`, or a wait duration that isn't a usable number.
+- A wait that your `AbortSignal` cancels rethrows the reason of that signal.
+
+Thus, check `instanceof UnikraftCloudError` before you read `kind`, `status`, or `errors`.
+
+```ts
+import { UnikraftCloudError } from "@unikraft/cloud";
+
+try {
+  await ukc.metro("fra").instances.get({ name: "does-not-exist" });
+} catch (err) {
+  if (err instanceof UnikraftCloudError) {
+    console.error(err.kind, err.status, err.message, err.errors);
+  }
+}
+```
+
+| Property  | Content                                                                    |
+| --------- | -------------------------------------------------------------------------- |
+| `kind`    | Which layer failed. See [error kinds](#error-kinds).                       |
+| `status`  | The HTTP status, when the server answered.                                 |
+| `message` | A sentence that names the failure.                                         |
+| `errors`  | The error list from the response envelope, when the server sent one.       |
+| `body`    | The parsed response body, when there is one.                               |
+| `cause`   | The failure underneath, for a wait that ran out of time.                   |
+
+## Error kinds
+
+| `kind`      | Meaning                                                                                                                 |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `"http"`    | The server answered with a status outside 2xx. `err.status` and `err.errors` carry the detail.                          |
+| `"network"` | The request got no answer: a refused connection, a reset, a DNS miss, or an unreachable proxy.                          |
+| `"parse"`   | The server answered, but the body isn't the JSON that the operation expects.                                            |
+| `"fanout"`  | A multi-metro operation failed in part, or the scope is unusable. See [`MetroFanoutError`](#errors-of-the-metro-fan-out). |
+| `"config"`  | The SDK couldn't send the call as configured: a missing token, or two options that contradict each other.               |
+| `"timeout"` | A wait ran out of time. It carries no `status`, because no single request failed. The last failure is in `err.cause`.   |
+
+## Errors of the metro fan-out
+
+Two subclasses come from operations that span metros.
+[Metros](/sdks/js/metros) explains both in context.
+
+| Class               | When                                                                            | Extra properties                                |
+| ------------------- | ------------------------------------------------------------------------------- | ----------------------------------------------- |
+| `AmbiguousRefError` | A `{ name }` ref matched a resource in more than one metro.                     | `metros`, and `matches` with the resources      |
+| `MetroFanoutError`  | One or more metros failed while the others answered.                            | `failures`, and `results` for a bulk operation  |
+
+## Waits and retries
+
+The transport sends each request exactly once.
+It has no retries, and nothing in the SDK retries a call that you made.
+
+A wait is a separate, explicit step, and it takes one of two shapes:
+
+- **The server waits.**
+  `instance.wait({ state: "running" })` sends the deadline to the platform, and the platform holds the connection open.
+  This is one request.
+- **The SDK polls.**
+  Where the platform has nothing to hold open, the SDK asks again on a schedule.
+  The delay doubles from 100 ms to 2 s with jitter, and the deadline is 60 s.
+  The deadline and a `signal` both stop the probe in flight, not only the loop around it.
+  Only a failure that can still change gets another probe: a network fault, or a `404`, `502`, `503`, or `504`.
+  The SDK throws a `401` or a `403` at once, so a rejected token reports itself instead of a timeout.
+
+Both shapes reject on failure.
+A poll that runs out of time throws `kind: "timeout"`.

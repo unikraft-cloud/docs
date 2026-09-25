@@ -1,0 +1,111 @@
+---
+title: Configuration
+description: The instance fields, the client options, snapshots, and your own plugin
+navigation_icon: settings
+---
+
+`Sandbox.create(spec, options)` takes two arguments.
+The first says what the sandbox is.
+The second says how the call reaches it, and how long the call waits.
+
+```ts
+import { Sandbox } from "@unikraft/cloud";
+
+const sandbox = await Sandbox.create(
+  {
+    image: "nginx:latest",
+    memory_mb: 1024,
+    env: { LOG_LEVEL: "debug" },
+  },
+  {
+    token: process.env.UKC_TOKEN,
+    metro: "fra",
+    bootTimeoutSeconds: 60,
+  },
+);
+```
+
+## What the sandbox is
+
+The first argument accepts the fields that [`POST /instances`](/api/platform/v1) accepts, except `autostart`, `timeout_s`, `wait_timeout_ms`, and `replicas`.
+It also accepts two fields for the plugin.
+These are the fields with a sandbox default:
+
+| Field        | Default                  | Description                                                                               |
+| ------------ | ------------------------ | ----------------------------------------------------------------------------------------- |
+| `image`      | `debian-slim:latest`     | The instance image. `UKC_SANDBOX_IMAGE` replaces the default.                             |
+| `memory_mb`  | `2048`                   | The memory of the instance.                                                               |
+| `autokill`   | `300000`                 | The time in milliseconds that the platform keeps a stopped instance before it deletes it. |
+| `rom`        | `plugins/sandbox:latest` | The plugin ROM. Shorthand for one entry in `plugins`.                                     |
+| `pluginName` | `sandbox`                | The plugin name, which is also its path segment.                                          |
+
+An image for a sandbox must carry a shell and a main process that stays alive.
+The SDK sets `autostart` and `timeout_s` for you, because a plugin can't answer in a stopped instance.
+It excludes `wait_timeout_ms` and `replicas`, because a `Sandbox` addresses exactly one instance.
+If you pass one of these four fields, `create` throws an [error](/sdks/js/errors) of kind `"config"`.
+
+## How the call behaves
+
+| Option               | Default     | Description                                                                                |
+| -------------------- | ----------- | ------------------------------------------------------------------------------------------ |
+| `token`              | `UKC_TOKEN` | The bearer token.                                                                          |
+| `metro`              | `UKC_METRO` | The metro of the sandbox, as a code or as a full `http(s)://` address.                     |
+| `client`             |             | An existing `UnikraftCloud` client to borrow, instead of a new one.                        |
+| `bootTimeoutSeconds` | `30`        | How long the call waits for the instance to reach `running`. Raise it for a large image.   |
+| `ready`              | `{}`        | How to wait for the plugin to answer, or `false` to return as soon as the instance exists. |
+| `signal`             |             | An `AbortSignal` that cancels the call.                                                    |
+
+Every option of the [client constructor](/sdks/js/client#options) is also accepted, because `Sandbox.create()` builds a client from them.
+
+`create` waits for the plugin by default, and gives up after 60 seconds.
+If the wait fails, `create` deletes the instance it made, so a broken sandbox doesn't linger.
+To wait longer, or to keep a failed sandbox for inspection:
+
+```ts
+await Sandbox.create({}, { ready: { timeoutMs: 120_000 } });
+await Sandbox.create({}, { ready: false });
+```
+
+## Through a client
+
+`ukc.metro("fra").sandboxes.create(spec, options)` takes the same first argument.
+Its options exclude `token`, `metro`, `client`, and the other client fields, because the call runs through the client that you reached it from.
+
+```ts
+const sandbox = await ukc.metro("fra").sandboxes.create(
+  { image: "nginx:latest", memory_mb: 1024 },
+  { bootTimeoutSeconds: 60 },
+);
+```
+
+## Create from a snapshot
+
+A `template`, a `branch_from` source, or a `checkpoint` replaces the image.
+The snapshot carries the image, the memory, and the plugins of its source, so the sandbox plugin comes with it.
+
+```ts
+await using sandbox = await Sandbox.create({ template: { name: "my-template" } });
+```
+
+For a snapshot, the SDK applies no default image, memory, or plugin entry.
+Leave `rom` out, and pass `pluginName` only when the source attached the plugin under another name.
+See [on-demand templates](/features/on-demand-templates), [branching](/features/branching), and [checkpoints](/features/checkpoints).
+
+## Your own plugin
+
+A sandbox can run a plugin that you built with the [plugin SDK](/sdks/plugin), as long as it speaks the sandbox API.
+Name its ROM in `rom`:
+
+```ts
+const sandbox = await Sandbox.create({
+  image: "my-org/sandbox-base:latest",
+  rom: "my-org/my-plugin:latest",
+});
+```
+
+To give the plugin a `config`, attach it in `plugins` yourself, and omit `rom`.
+
+## Reference
+
+Every field and option has a type.
+See [`SandboxSpec` and `SandboxCallOptions`](https://github.com/unikraft-cloud/js-sdk/blob/HEAD/src/resources/sandboxes/types.ts) in the source for the complete list.

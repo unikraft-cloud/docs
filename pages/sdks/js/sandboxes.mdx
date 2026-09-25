@@ -1,0 +1,85 @@
+---
+title: Sandboxes
+description: Run commands and move files inside a microVM with the Sandbox class
+navigation_label: Overview
+navigation_icon: box
+---
+
+A **sandbox** is an instance with the [sandbox plugin](/features/plugins#sandbox-plugin) attached: a microVM that runs the commands you give it, and that you move files in and out of.
+The `Sandbox` class wraps the plugin, so you write none of that by hand.
+
+## Your first sandbox
+
+```ts
+import { Sandbox } from "@unikraft/cloud";
+
+await using sandbox = await Sandbox.create();
+
+const { stdout } = await sandbox.exec("echo hello");
+console.log(stdout); // hello
+```
+
+`Sandbox.create()` reads the token from `UKC_TOKEN`.
+With nothing else set, it boots `debian-slim:latest` with 2 GiB of memory in the default metro.
+[Configuration](/sdks/js/sandboxes/configuration) lists what you can change.
+
+`await using` deletes the sandbox when the scope ends, even if the scope throws.
+It needs TypeScript 5.2 or newer, or a runtime with explicit resource management.
+Without it, call `sandbox.delete()` yourself.
+
+## Write a file and run it
+
+Write a script into the sandbox, run it, and check the exit code before you trust the output:
+
+```ts
+import { Sandbox } from "@unikraft/cloud";
+
+await using sandbox = await Sandbox.create();
+
+await sandbox.writeFile("/work/hello.sh", "echo hello from $(uname -m)\n");
+const result = await sandbox.exec("sh /work/hello.sh");
+
+if (result.exitcode !== 0) throw new Error(result.stderr);
+console.log(result.stdout); // hello from x86_64
+```
+
+## The instance underneath
+
+A sandbox is a real instance, so the whole [platform API](/sdks/js/resources) still applies to it.
+`sandbox.instance` is a [handle](/sdks/js/resources#handles) on that instance:
+
+```ts
+const { name, state, memory_mb } = await sandbox.instance;
+console.log(`${name} in ${sandbox.metro}: ${state}, ${memory_mb} MiB`);
+
+await sandbox.instance.update({ memory_mb: 4096 });
+```
+
+`sandbox.uuid` and `sandbox.metro` identify the instance.
+`sandbox.api` is the raw plugin API, pinned to this sandbox.
+
+## Two ways in
+
+`Sandbox.create()` builds its own client from the options you give it.
+A client that you already hold opens the same door through `ukc.metro("fra").sandboxes`, and spends no second token:
+
+```ts
+import { UnikraftCloud } from "@unikraft/cloud";
+
+const ukc = new UnikraftCloud({ token: process.env.UKC_TOKEN });
+const sandbox = await ukc.metro("fra").sandboxes.create({ memory_mb: 512 });
+
+console.log((await sandbox.exec("uname -a")).stdout);
+await sandbox.delete();
+```
+
+`sandboxes` belongs to a metro client, not to `ukc`, because a sandbox lives in exactly one metro.
+
+## Next steps
+
+- [Configuration](/sdks/js/sandboxes/configuration): the image, the memory, the metro, snapshots, and your own plugin.
+- [Commands](/sdks/js/sandboxes/commands): run a command to completion, or start one and control it.
+- [Files](/sdks/js/sandboxes/files): read, write, and upload files.
+- [Existing sandboxes](/sdks/js/sandboxes/connect): reconnect from another process, and list sandboxes.
+- [`examples/sandbox.ts`](https://github.com/unikraft-cloud/js-sdk/blob/HEAD/examples/sandbox.ts): a complete program.
+- [Sandboxes](/use-cases/sandboxes): what the platform underneath gives a sandbox.

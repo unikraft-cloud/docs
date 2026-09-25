@@ -108,10 +108,7 @@ const config: ZudokuConfig = {
           label: "Getting Started",
           icon: "star",
           collapsed: false,
-          items: [
-            "/introduction",
-            "/faq",
-          ],
+          items: ["/introduction", "/faq"],
         },
         {
           type: "category",
@@ -313,7 +310,32 @@ const config: ZudokuConfig = {
           icon: "library",
           collapsed: false,
           items: [
-            "/sdks/js",
+            {
+              type: "category",
+              label: "JavaScript SDK",
+              icon: "code",
+              collapsed: true,
+              items: [
+                "/sdks/js",
+                {
+                  type: "category",
+                  label: "Sandboxes",
+                  icon: "box",
+                  collapsed: true,
+                  items: [
+                    "/sdks/js/sandboxes",
+                    "/sdks/js/sandboxes/configuration",
+                    "/sdks/js/sandboxes/commands",
+                    "/sdks/js/sandboxes/files",
+                    "/sdks/js/sandboxes/connect",
+                  ],
+                },
+                "/sdks/js/client",
+                "/sdks/js/metros",
+                "/sdks/js/resources",
+                "/sdks/js/errors",
+              ],
+            },
             "/sdks/python",
             "/sdks/go",
           ],
@@ -323,9 +345,7 @@ const config: ZudokuConfig = {
           label: "Extending the platform",
           icon: "puzzle",
           collapsed: false,
-          items: [
-            "/sdks/plugin",
-          ],
+          items: ["/sdks/plugin"],
         },
       ],
     },
@@ -340,10 +360,7 @@ const config: ZudokuConfig = {
           label: "Concepts",
           icon: "lightbulb",
           collapsed: false,
-          items: [
-            "/cli/registries",
-            "/cli/fields",
-          ],
+          items: ["/cli/registries", "/cli/fields"],
         },
         {
           type: "category",
@@ -382,10 +399,7 @@ const config: ZudokuConfig = {
               label: "unikraft config",
               icon: "settings",
               collapsed: false,
-              items: [
-                "/cli/unikraft/config",
-                "/cli/unikraft/config/get",
-              ],
+              items: ["/cli/unikraft/config", "/cli/unikraft/config/get"],
             },
             {
               type: "category",
@@ -526,7 +540,7 @@ const config: ZudokuConfig = {
               ],
             },
             // AUTO-GENERATED:UNIKRAFT-CLI-END
-          ]
+          ],
         },
         {
           type: "category",
@@ -602,10 +616,7 @@ const config: ZudokuConfig = {
               label: "kraft cloud metro",
               icon: "earth",
               collapsed: false,
-              items: [
-                "/cli/kraft/metro",
-                "/cli/kraft/metro/list",
-              ],
+              items: ["/cli/kraft/metro", "/cli/kraft/metro/list"],
             },
             {
               type: "category",
@@ -636,7 +647,7 @@ const config: ZudokuConfig = {
                 "/cli/kraft/volume/remove",
               ],
             },
-          ]
+          ],
         },
       ],
     } as any,
@@ -743,6 +754,7 @@ const config: ZudokuConfig = {
     customCss: `
       .prose td code {
         white-space: normal;
+        overflow-wrap: normal;
       }
 
       .prose header h1 {
