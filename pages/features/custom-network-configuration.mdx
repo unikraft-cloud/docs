@@ -164,6 +164,41 @@ Configure it with the `relay` field of a `network_interfaces` entry.
 
 Both ends of a relay have to be interfaces that Unikraft Cloud allocates, meaning entries where you set no `ip`, `mac`, or `tap_name` of your own.
 
+## Managed network mode
+
+{/* vale off */}
+:::caution[**Limited Access**]
+Managed network mode is only available in BYOC or on-prem Unikraft Cloud installations.
+Each host sets its network mode through host-level configuration.
+To explore such a deal - reach out to the [Unikraft Cloud Discord](https://unikraft.com/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
+:::
+{/* vale on */}
+
+Operators can hand a node's networking over to their own infrastructure entirely with `managed` network mode.
+
+In this mode the platform creates no network devices and assigns no IP addresses on that node.
+Every interface of an instance attaches to a TAP device that you create on the host before the instance starts, so every `network_interfaces` entry needs a `tap_name`.
+The address, gateway, and nameserver come from the request or from a [`unikraft.com/cni` annotation](/features/annotations#guest-network-configuration-with-cni):
+
+```json title="POST /instances"
+{
+  ...
+  "network_interfaces": [
+    {
+      "tap_name": "tap-web0",
+      "ip": "10.20.0.5/24"
+    }
+  ],
+  "gateway": "10.20.0.1"
+}
+```
+
+Routing, NAT, and firewall rules are yours to provide too, for example through firewall hook scripts on the host.
+This lets you connect instances directly to networks that you already run, such as VPNs, overlay networks, or routed data-center networks.
+The platform's address pool and NAT stay out of the path.
+
+The default mode, `isolates`, keeps the behavior that the rest of this page describes.
+
 ## Error handling
 
 | Error message | Cause |
@@ -188,6 +223,9 @@ Both ends of a relay have to be interfaces that Unikraft Cloud allocates, meanin
 - You currently **can't** [branch](/features/branching) or [checkpoint](/features/checkpoints) an instance with more than one interface.
 - The [relay](/features/network-shield) feature works between pool-allocated interfaces only, on both ends.
 - The create call sets the configuration once; **no** PATCH support exists yet.
+- [Managed network mode](#managed-network-mode) is only available on BYOC and on-prem installations, and requires the same permission and license as the rest of this feature.
+- On a node in managed mode, the TAP device of every interface has to exist before the instance starts.
+- On a node in managed mode, [autoscale](/features/autoscale), [relay](/features/network-shield) interfaces, internal [service groups](/platform/services), and the internal DNS for instance names aren't available.
 
 ## Learn more
 
