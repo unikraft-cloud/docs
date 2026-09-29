@@ -27,22 +27,16 @@ You can only [load](#loading-a-checkpoint) a checkpoint once it reaches the `che
 
 To create a checkpoint, pass the source instance to `unikraft instance checkpoint create`:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instance checkpoint create my-instance
 ```
-
-</CodeTabs>
 
 The CLI doesn't name the checkpoint, so the platform derives a name from the source instance's name plus a random suffix.
 
 Checkpoint creation is asynchronous, so the new checkpoint reports `starting` until its snapshot completes.
 Either wait for it afterward, or have the create call wait for you:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 # wait for an existing checkpoint to become ready
 unikraft instance checkpoint wait my-checkpoint --until state==checkpoint
 
@@ -50,9 +44,7 @@ unikraft instance checkpoint wait my-checkpoint --until state==checkpoint
 unikraft instance checkpoint create my-instance --set wait-timeout=60s
 ```
 
-</CodeTabs>
-
-To choose the name yourself, or to give the checkpoint an [autokill](#autokill) policy, call [`POST /instances/checkpoints`](/api/platform/v1/instances) directly—the CLI covers neither:
+To choose the name yourself, call [`POST /instances/checkpoints`](/api/platform/v1/instances) directly—the CLI doesn't cover it:
 
 ```bash title="POST /instances/checkpoints"
 unikraft api /v1/instances/checkpoints \
@@ -82,13 +74,9 @@ The history of `inst2` lists both `chk2` (taken directly from `inst2`) and `chk1
 
 To query this history, run `unikraft instance history`:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instance history my-instance
 ```
-
-</CodeTabs>
 
 ```text title="output"
 METRO  TARGET           NAME                 CREATED
@@ -99,35 +87,23 @@ fra    fra/my-instance  my-checkpoint        4 minutes ago
 The checkpoints themselves also carry this history of their lineage.
 You can query it directly with `unikraft instance checkpoint history`, which returns the same shape:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instance checkpoint history my-checkpoint
 ```
-
-</CodeTabs>
 
 ## Checkpoint information
 
 To retrieve detailed information about a checkpoint, including its instance configuration, and volumes, query it by name or UUID:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instance checkpoint get my-checkpoint
 ```
 
-</CodeTabs>
-
 List all available checkpoints by omitting the identifier:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instance checkpoint list
 ```
-
-</CodeTabs>
 
 ```text title="output"
 METRO  NAME           STATE       IMAGE  ARGS  MEMORY  VCPUS  CREATED
@@ -139,15 +115,11 @@ fra    my-checkpoint  checkpoint  nginx        256MiB  2      4 minutes ago
 You load a checkpoint by creating a new instance from it.
 Pass the checkpoint to `--checkpoint`:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instance create --metro fra \
   --name my-new-instance \
   --checkpoint my-checkpoint
 ```
-
-</CodeTabs>
 
 Use `unikraft run --checkpoint` instead to load the checkpoint and follow the new instance's logs in one step.
 
@@ -162,46 +134,26 @@ Loading a checkpoint that's still in the `starting` state fails (see [Error hand
 Like instance templates, checkpoints persist on the machine once created, holding onto the storage their snapshot occupies.
 A checkpoint can carry an [autokill](/features/autokill) policy that removes it automatically when nothing loads it for a configured time, measured from the last load.
 
-The `unikraft` CLI doesn't expose checkpoint autokill yet, so set the policy (with the time in milliseconds) through the API when you create the checkpoint:
+Set the policy with `--autokill` when you create the checkpoint:
 
-```bash title="POST /instances/checkpoints"
-unikraft api /v1/instances/checkpoints \
-  '{
-    "name": "my-checkpoint",
-    "from": {
-      "name": "my-instance"
-    },
-    "autokill": {
-      "time_ms": 3600000
-    }
-  }'
+```bash
+unikraft instance checkpoint create my-instance --autokill time=1h
 ```
 
 You can also set or update the policy on an existing checkpoint:
 
-```bash title="PATCH /instances/checkpoints"
-unikraft api /v1/instances/checkpoints -X PATCH \
-  '[{
-    "name": "my-checkpoint",
-    "prop": "autokill",
-    "op": "set",
-    "value": {
-      "time_ms": 3600000
-    }
-  }]'
+```bash
+unikraft instance checkpoint edit my-checkpoint --autokill time=1h
 ```
 
 This example removes the checkpoint after 1 hour without a load.
-The configured policy appears as a `checkpoint_autokill` object in the API status response.
-`unikraft instance checkpoint get` doesn't report it.
+`unikraft instance checkpoint get` reports the policy as `autokill.time`.
 
 ## Editing a checkpoint
 
-Use `unikraft instance checkpoint edit` to update a checkpoint's tags and delete lock:
+Use `unikraft instance checkpoint edit` to update a checkpoint's tags, delete lock, and [autokill](#autokill) policy:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 # add a tag, keeping the existing ones
 unikraft instance checkpoint edit my-checkpoint --add tags=my-new-tag
 
@@ -212,19 +164,13 @@ unikraft instance checkpoint edit my-checkpoint --tag my-only-tag
 unikraft instance checkpoint edit my-checkpoint --delete-lock
 ```
 
-</CodeTabs>
-
 ## Deleting a checkpoint
 
 Delete a checkpoint by name or UUID:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instance checkpoint delete my-checkpoint
 ```
-
-</CodeTabs>
 
 :::note
 If a checkpoint has a [delete lock](/platform/delete-locks) set, the delete request fails until you remove the lock:

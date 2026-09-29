@@ -71,9 +71,10 @@ See any of the apps/langs guides [here](/guides/bun) to see examples.
 #### What is `kraft`?
 {/* vale on */}
 
-`kraft` is Unikraft Cloud's legacy [open source CLI tool written in Go](https://github.com/unikraft/kraftkit).
-You can control Unikraft Cloud with it as well as build unikernels and try things out locally.
-If you want to interact with the latest features of Unikraft Cloud, you should use the new [open source `unikraft` CLI tool](https://github.com/unikraft-cloud/cli), written in Go as well.
+`kraft` is the open source CLI tool of the Unikraft project.
+Use it to build Unikraft [unikernels](https://unikraft.org) and try things out locally.
+Its `kraft cloud` command is the deprecated way to deploy to Unikraft Cloud.
+Use the [open source `unikraft` CLI tool](https://github.com/unikraft-cloud/cli) instead.
 
 {/* vale off */}
 #### What is `Kraftfile`?
@@ -176,7 +177,7 @@ Unikraft can provide cost savings in many ways:
 #### What's the relationship between the Unikraft open source project and Unikraft Cloud?
 
 Unikraft OSS allows you to build and run unikernels locally via `kraft run` (and even hack the Unikraft OS itself if you like tinkering!).
-When you're ready to deploy to cloud, use the `unikraft` CLI (or the legacy `kraft cloud` CLI).
+When you're ready to deploy to cloud, use the `unikraft` CLI.
 
 
 #### Are you a replacement for Docker?
@@ -210,8 +211,8 @@ Contact information is available for more details.
 #### Can you try Unikraft open source first?
 
 Yes.
-Head on over to [unikraft.org](https://unikraft.org/docs/cli/install) to install the legacy `kraft` tool, and use `kraft run` to build, package and run your app locally.
-When you're ready to deploy to cloud, use the [`unikraft`](https://github.com/unikraft-cloud/cli) CLI or the legacy `kraft cloud` CLI.
+Head on over to [unikraft.org](https://unikraft.org/docs/cli/install) to install the `kraft` tool, and use `kraft run` to build, package and run your app locally.
+When you're ready to deploy to cloud, use the [`unikraft`](https://github.com/unikraft-cloud/cli) CLI.
 
 
 #### Does Unikraft Cloud work on Mac/Windows/Linux?
@@ -232,7 +233,7 @@ See [architectures](/platform/images#architectures) for more detail.
 {/* vale off */}
 :::caution[**Limited Access**]
 `arm64` hosts are available as part of enterprise plans.
-To deploy to them, reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
+To deploy to them, reach out to the [Unikraft Cloud Discord](https://unikraft.com/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
 :::
 {/* vale on */}
 

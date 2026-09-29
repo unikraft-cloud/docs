@@ -14,15 +14,9 @@ It shows how to run a Spin app serving routes from two programs written in diffe
 
 To run this example, follow these steps:
 
-1. Install the CLI.
-   Use the [unikraft CLI](/cli/unikraft) or the legacy [kraft CLI](https://unikraft.org/docs/cli/install).
+1. Install the [unikraft CLI](/cli).
    You need a [BuildKit](https://github.com/moby/buildkit) builder. The easiest way to get one is via [Docker](https://docs.docker.com/engine/install/).
    Alternatively, you can also directly set up and use BuildKit, see the [quick start](https://github.com/moby/buildkit#quick-start).
-
-   :::note
-   The unikraft CLI is the current standard, while kraft is the legacy version.
-   Choose one of the CLIs below and only run the commands associated with it for the rest of this guide.
-   :::
 
 2. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/spin-wagi-http/` directory:
 
@@ -34,26 +28,13 @@ To run this example, follow these steps:
 Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪):
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft login
 ```
 
-```bash title="kraft"
-# Set Unikraft Cloud access token
-export UKC_TOKEN=token
-# Set metro to Frankfurt, DE
-export UKC_METRO=fra
-```
-
-</CodeTabs>
-
 When done, invoke the following command to deploy this app on Unikraft Cloud:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft build . --output <my-org>/spin-wagi-http:latest
 unikraft run --metro fra \
   -m 4G \
@@ -62,23 +43,9 @@ unikraft run --metro fra \
   --image <my-org>/spin-wagi-http:latest
 ```
 
-```bash title="kraft"
-kraft cloud deploy \
-  -M 4Gi \
-  -p 443:3000/tls+http \
-  --scale-to-zero on \
-  --scale-to-zero-stateful \
-  --scale-to-zero-cooldown 1s \
-  .
-```
-
-</CodeTabs>
-
 The output shows the instance address and other details:
 
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mmetro[22m:        fra
 [1mname[22m:         spin-wagi-http-is72r
 [1muuid[22m:         045c1bda-0f2e-4f8b-98c7-a208bfa7d143
@@ -99,23 +66,6 @@ The output shows the instance address and other details:
 [1mtimestamps[22m:
 [3m  created[23m:    just now
 ```
-
-```ansi title="kraft"
-[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
- [38;5;245m│[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mname[0m: spin-wagi-http-is72r
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245muuid[0m: 045c1bda-0f2e-4f8b-98c7-a208bfa7d143
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mstate[0m: [92mstarting[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mdomain[0m: https://damp-bobo-wg43p36e.fra.unikraft.app
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/spin-wagi-http@sha256:57a5151996d83332af6da521e1cd92271a8c3ac7ae26bc44a7c0dbbc0a30e577
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmemory[0m: 4096 MiB
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mservice[0m: damp-bobo-wg43p36e
- [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: spin-wagi-http-is72r.internal
- [38;5;245m└[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mprivate ip[0m: 10.0.28.16
-```
-
-</CodeTabs>
 
 In this case, the instance name is `spin-wagi-http-is72r` and the address is `https://damp-bobo-wg43p36e.fra.unikraft.app`.
 They're different for each run.
@@ -138,47 +88,20 @@ Goodbye, Fermyon!
 
 You can list information about the instance by running:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances list
 ```
 
-```bash title="kraft"
-kraft cloud instance list
-```
-
-</CodeTabs>
-
-<div style={{ marginTop: '0.8em' }} />
-
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mMETRO[22m  [1mNAME[22m                  [1mSTATE[22m    [1mIMAGE[22m                    [1mARGS[22m  [1mMEMORY[22m  [1mVCPUS[22m  [1mFQDN[22m                                 [1mCREATED[22m
 fra    spin-wagi-http-is72r  [38;2;0;188;125mrunning[0m  <my-org>/spin-wagi-http        4.0GiB  1      damp-bobo-wg43p36e.fra.unikraft.app  2 minutes ago
 ```
 
-```ansi title="kraft"
-[0;1;39mNAME[0m                  [0;1;39mFQDN[0m                                 [0;1;39mSTATE[0m    [0;1;39mSTATUS[0m        [0;1;39mIMAGE[0m                                              [0;1;39mMEMORY[0m   [0;1;39mVCPUS[0m  [0;1;39mARGS[0m  [0;1;39mBOOT TIME[0m
-spin-wagi-http-is72r  damp-bobo-wg43p36e.fra.unikraft.app  [0;32mrunning[0m  1 minute ago  oci://unikraft.io/<my-org>/spin-wagi-http@sha2...  4.0 GiB  1            300.06 ms
-```
-
-</CodeTabs>
-
 When done, you can remove the instance:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances delete spin-wagi-http-is72r
 ```
-
-```bash title="kraft"
-kraft cloud instance remove spin-wagi-http-is72r
-```
-
-</CodeTabs>
 
 ## Customize your app
 
@@ -214,17 +137,9 @@ The following options are available for customizing the app:
 
 Use the `--help` option for detailed information on using Unikraft Cloud:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft --help
 ```
 
-```bash title="kraft"
-kraft cloud --help
-```
-
-</CodeTabs>
-
-Or visit the [CLI Reference](/cli/unikraft) or the [legacy CLI Reference](/cli/kraft/overview).
+Or visit the [CLI Reference](/cli/unikraft).
 {/* vale on */}

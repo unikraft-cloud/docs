@@ -10,7 +10,7 @@ It focuses on the differences that matter during day-to-day work: authentication
 
 Make sure you have the new CLI installed.
 See the [unikraft CLI overview](/docs/cli/overview) for installation instructions.
-If you still need the legacy syntax during the migration, keep the [legacy CLI overview](/docs/cli/legacy-overview) nearby for reference.
+If you still need the legacy syntax during the migration, keep the [`kraft cloud` reference](https://unikraft.org/docs/cli/reference/kraft/cloud) nearby.
 
 ## Main mental shift
 
@@ -390,13 +390,12 @@ When moving an existing guide, script, or workshop from `kraft cloud` to `unikra
 * Update instance management commands such as list and delete to the new command names;
 * Take advantage of new `--filter` and `--until` flags where they simplify scripts.
 
-## When to keep using the legacy CLI
+## The legacy `kraft cloud` CLI
 
-The `unikraft` CLI is the recommended default for new workflows leveraging the latest features and improvements.
-That said, the legacy CLI can still make sense if you depend on existing Compose-oriented flows (`kraft cloud compose`) or you need time to migrate automation gradually.
+The `unikraft` CLI replaces the deprecated `kraft cloud` CLI.
+Use it for all work on Unikraft Cloud.
 
-Another reason to keep using `kraft` is for local development.
-Through `kraft pkg` and `kraft run`, you can run Unikraft unikernels locally, and it remains the preferred CLI for that use case.
+Unikraft no longer recommends the `kraft cloud` CLI.
 
 ## Learn more
 
@@ -417,6 +416,6 @@ kraft cloud --help
 For more details, check the following references:
 
 * The [unikraft CLI overview](/docs/cli/overview).
-* The [legacy CLI overview](/docs/cli/legacy-overview).
+* The [`kraft cloud` reference](https://unikraft.org/docs/cli/reference/kraft/cloud) on unikraft.org.
 * The [Fields](/docs/cli/fields#filter-expression-reference) reference for the new filtering language.
 * The [Environment Variables](/tutorials/environment-variables) tutorial for runtime configuration patterns.

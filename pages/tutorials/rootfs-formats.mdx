@@ -59,7 +59,6 @@ The only effect this has is on the time it takes to push the image.
 
 :::info
 The default format for the CLI tool is EROFS, as it provides better performance and lower memory usage at boot time.
-The legacy `kraft` CLI defaults to CPIO, but you can specify the format using the `--rootfs-type` flag.
 :::
 
 You can specify the rootfs format in the `Kraftfile`:
@@ -82,24 +81,12 @@ rootfs:
 
 </CodeTabs>
 
-The legacy `kraft` CLI also supports overriding the rootfs format when packaging:
-
-```bash title="kraft"
-kraft pkg --rootfs-type erofs ...
-```
-
-```bash title="kraft"
-kraft cloud deploy --rootfs-type erofs ...
-```
-
 Below are two attempts at creating and starting an instance from the same [image](https://github.com/unikraft-cloud/examples/tree/main/node-playwright-chromium), packaged using both formats.
 A full guide on using this image is available [here](/guides/node-playwright-chromium).
 
 ### EROFS deployment
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 # make sure to specify the erofs format in Kraftfile
 # ...
 # rootfs:
@@ -113,24 +100,7 @@ unikraft run --metro fra \
   --image <my-org>/node-playwright-chromium:latest
 ```
 
-```bash title="kraft"
-# the --keep-file-owners flag preserves the file ownership metadata in the EROFS archive, which is required for some workloads
-kraft cloud deploy \
-  -p 443:8080 \
-  -M 1000Mi \
-  --rootfs-type erofs \
-  --keep-file-owners \
-  <my-org>/node-playwright-chromium \
-  .
-```
-
-</CodeTabs>
-
-<div style={{ marginTop: '0.8em' }} />
-
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mmetro[22m:        fra
 [1mname[22m:         node-playwright-chromium-4rrxr
 [1muuid[22m:         aeff2d28-d718-4068-9e24-4e2bb203022c
@@ -152,30 +122,18 @@ kraft cloud deploy \
 [3m  created[23m:    just now
 ```
 
-```ansi title="kraft"
-[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
- [38;5;245m│[0m
- [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245mname[0m: node-playwright-chromium-q9ynl
- [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245muuid[0m: cb7a1770-6d6a-4f53-a98a-f021ae796313
- [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
- [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mstate[0m: [0;32mrunning[0m
- [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mdomain[0m: https://proud-dream-udqhbav3.fra.unikraft.app
- [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/node-playwright-chromium@sha256:056d5daa3e0f8a91ac18930a9a7714203515a6fae1244b1ecea831f64f593e79
- [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mmemory[0m: 1000 MiB
- [38;5;245m├[0m[38;5;245m──────[0m [38;5;245mservice[0m: proud-dream-udqhbav3
- [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: node-playwright-chromium-q9ynl.internal
- [38;5;245m└[0m[38;5;245m───[0m [38;5;245mprivate ip[0m: 10.0.3.133
-```
-
-</CodeTabs>
+:::note
+unikraft build makes root the owner of every file in the rootfs.
+It has no option to keep the original file owners, which some workloads need.
+EROFS is read-only, so you can't change owners in place.
+Instead, have the entrypoint copy those files to a writable path (for example, a volume) and run chown there.
+:::
 
 ### CPIO deployment
 
 As stated, CPIO requires more memory to boot, so you need to give more than the 1000MiB used in the EROFS case.
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 # make sure to specify the cpio format in Kraftfile
 # ...
 # rootfs:
@@ -189,22 +147,7 @@ unikraft run --metro fra \
   --image <my-org>/node-playwright-chromium:latest
 ```
 
-```bash title="kraft"
-kraft cloud deploy \
-  -p 443:8080 \
-  -M 2700Mi \
-  --rootfs-type cpio \
-  <my-org>/node-playwright-chromium \
-  .
-```
-
-</CodeTabs>
-
-<div style={{ marginTop: '0.8em' }} />
-
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mmetro[22m:        fra
 [1mname[22m:         node-playwright-chromium-b0nyn
 [1muuid[22m:         e4d00b20-4fc9-4cba-a29d-846fa733c358
@@ -226,23 +169,6 @@ kraft cloud deploy \
 [3m  created[23m:    just now
 ```
 
-```ansi title="kraft"
-[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
- [38;5;245m│[0m
- [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245mname[0m: node-playwright-chromium-b0nyn
- [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245muuid[0m: e4d00b20-4fc9-4cba-a29d-846fa733c358
- [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
- [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mstate[0m: [0;32mrunning[0m
- [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mdomain[0m: https://fragrant-dawn-v42h579x.fra.unikraft.app
- [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/node-playwright-chromium@sha256:57d1773398bc6d4ff94f063d6e9b7400dca66171d04ce78cd8a45789ba0a7d93
- [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mmemory[0m: 2700 MiB
- [38;5;245m├[0m[38;5;245m──────[0m [38;5;245mservice[0m: fragrant-dawn-v42h579x
- [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: node-playwright-chromium-b0nyn.internal
- [38;5;245m└[0m[38;5;245m───[0m [38;5;245mprivate ip[0m: 10.0.3.157
-```
-
-</CodeTabs>
-
 ## Conclusion
 
 The packaged archives have a size of around 900MiB each.
@@ -258,5 +184,4 @@ Bottom-line is, using EROFS is the go-to in every case where possible, as the up
 
 ## Learn more
 
-* The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
-* The `kraft pkg` [command reference](https://unikraft.org/docs/cli/reference/kraft/pkg) for packaging images.
+* The [CLI reference](/docs/cli/unikraft).

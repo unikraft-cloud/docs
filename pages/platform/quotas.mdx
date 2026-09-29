@@ -13,10 +13,6 @@ Unikraft Cloud enforces per-account resource quotas to govern how many instances
 unikraft quotas
 ```
 
-```bash title="kraft"
-kraft cloud quotas
-```
-
 ```bash title="API"
 curl -X GET \
   -H "Authorization: Bearer ${UKC_TOKEN}" \
@@ -59,33 +55,6 @@ curl -X GET \
 [1mscale-to-zero[0m[49m:      [38;5;105menabled[39m
 
 [2m  Tab/←→: switch metro  q: quit[0m[49m
-```
-
-```ansi title="kraft"
-          [0;1;39muser uuid[0m: <my-uuid>
-          [0;1;39muser name[0m: <my-username>
-                   
-      [0;1;39mimage storage[0m: [0;33m████████████████████████[0m[38;5;243m████████████[0m 702 MiB/1.0 GiB
-                   
-   [0;1;39mactive instances[0m: [0;32m██[0m[38;5;243m██████████████████████████████████[0m 5/64
-    [0;1;39mtotal instances[0m: [0;32m██[0m[38;5;243m██████████████████████████████████[0m 5/64
-       [0;1;39mactive vcpus[0m: [0;32m██[0m[38;5;243m██████████████████████████████████[0m 5/64
-         [0;1;39mvcpu limit[0m: 1-1
-                   
- [0;1;39mactive used memory[0m: [0;32m██[0m[38;5;243m██████████████████████████████████[0m 2.5 GiB/32 GiB
- [0;1;39mmemory size limits[0m: 16 MiB-8.0 GiB
-                   
-   [0;1;39mexposed services[0m: [0;32m█[0m[38;5;243m███████████████████████████████████[0m 10/253
-           [0;1;39mservices[0m: [38;5;243m████████████████████████████████████[0m 5/253
-                   
-            [0;1;39mvolumes[0m: [0;32menabled[0m
-     [0;1;39mactive volumes[0m: [38;5;243m████████████████████████████████████[0m 0/253
-  [0;1;39mused volume space[0m: [38;5;243m████████████████████████████████████[0m 0 B/20 GiB
- [0;1;39mvolume size limits[0m: 8.0 MiB-20 GiB
-                   
-          [0;1;39mautoscale[0m: [0;32menabled[0m
-    [0;1;39mautoscale limit[0m: 0-16
-      [0;1;39mscale-to-zero[0m: [0;32menabled[0m
 ```
 
 ```json title="API"

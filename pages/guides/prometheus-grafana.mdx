@@ -18,15 +18,9 @@ Rename panels, drop rows you don't need, and tune the alert thresholds to your w
 
 To run this example, follow these steps:
 
-1. Install the CLI.
-   Use the [unikraft CLI](/cli/unikraft) or the legacy [kraft CLI](https://unikraft.org/docs/cli/install).
+1. Install the [unikraft CLI](/cli).
    You need a [BuildKit](https://github.com/moby/buildkit) builder. The easiest way to get one is via [Docker](https://docs.docker.com/engine/install/).
    Alternatively, you can also directly set up and use BuildKit, see the [quick start](https://github.com/moby/buildkit#quick-start).
-
-   :::note
-   The unikraft CLI is the current standard, while kraft is the legacy version.
-   Choose one of the CLIs below and only run the commands associated with it for the rest of this guide.
-   :::
 
 2. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/prometheus-grafana` directory:
 
@@ -38,20 +32,9 @@ To run this example, follow these steps:
 Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪):
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft login
 ```
-
-```bash title="kraft"
-# Set Unikraft Cloud access token
-export UKC_TOKEN=token
-# Set metro to Frankfurt, DE
-export UKC_METRO=fra
-```
-
-</CodeTabs>
 
 ## Configure
 
@@ -85,13 +68,11 @@ The repository ships these files:
 
 Create a volume so the time-series database survives a restart:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft volume create --metro fra --name prometheus-data --size 1G
 ```
 
-```ansi title="unikraft"
+```ansi
 [1mmetro[22m:        fra
 [1mname[22m:         prometheus-data
 [1muuid[22m:         689b21aa-8f2c-4d94-ba84-947119c11bc9
@@ -105,16 +86,10 @@ unikraft volume create --metro fra --name prometheus-data --size 1G
 [3m  created[23m:    just now
 ```
 
-```bash title="kraft"
-kraft cloud volume create --name prometheus-data --size 1Gi
-```
-
-</CodeTabs>
-
 Build and deploy Prometheus.
 It gets an internal domain and no published port, so only Grafana on the same private network can reach it:
 
-```bash title="unikraft"
+```bash
 unikraft build prometheus/ --output <my-org>/prometheus:latest
 
 unikraft run --metro fra \
@@ -128,7 +103,7 @@ unikraft run --metro fra \
 
 The output shows the instance details:
 
-```ansi title="unikraft"
+```ansi
 [1mmetro[22m:        fra
 [1mname[22m:         prometheus
 [1muuid[22m:         7b71c6ec-1029-4040-b134-1eec95421f0b
@@ -174,7 +149,7 @@ A sleeping Prometheus stops scraping, which leaves gaps in the data.
 
 Build and deploy Grafana, this time with a public port:
 
-```bash title="unikraft"
+```bash
 unikraft build grafana/ --output <my-org>/grafana:latest
 
 unikraft run --metro fra \
@@ -199,7 +174,7 @@ Choose a strong, unique `<password>` rather than the placeholder, and keep `GF_U
 
 The output shows the generated address under `domains`:
 
-```ansi title="unikraft"
+```ansi
 [1mmetro[22m:                              fra
 [1mname[22m:                               grafana
 [1muuid[22m:                               43e60d11-3db3-4da2-a491-5abd869eae3e
@@ -251,44 +226,25 @@ The `rate()`-based panels need one to two minutes of history before they render 
 
 You can list information about the instances by running:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances list
 ```
 
-```ansi title="unikraft"
+```ansi
 [1mMETRO[22m  [1mNAME[22m        [1mSTATE[22m    [1mIMAGE[22m                [1mARGS[22m  [1mMEMORY[22m  [1mVCPUS[22m  [1mFQDN[22m                                      [1mCREATED[22m
 fra    grafana     [38;2;43;127;255mstandby[0m  <my-org>/grafana           1GiB    1      twilight-brook-c7ps65ek.fra.unikraft.app  just now
 fra    prometheus  [38;2;0;188;125mrunning[0m  <my-org>/prometheus        1GiB    1      prometheus-internal.internal              6 minutes ago
 ```
 
-</CodeTabs>
-
 Grafana shows as `standby` rather than `running` because `cooldown-time=1000` is 1000 **milliseconds**, so it parks almost immediately when idle.
 The next request wakes it.
 
-or
-
-```bash title="kraft"
-kraft cloud instance list
-```
-
 When done, you can remove the instances and the volume:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances delete grafana prometheus
 unikraft volume delete prometheus-data
 ```
-
-```bash title="kraft"
-kraft cloud instance remove grafana prometheus
-kraft cloud volume remove prometheus-data
-```
-
-</CodeTabs>
 
 ## What the dashboard shows
 
@@ -345,17 +301,9 @@ If you rename the job in `prometheus.yml`, update the dashboard queries to match
 
 Use the `--help` option for detailed information on using Unikraft Cloud:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft --help
 ```
 
-```bash title="kraft"
-kraft cloud --help
-```
-
-</CodeTabs>
-
-Or visit the [CLI Reference](/cli/unikraft) or the [legacy CLI Reference](/cli/kraft/overview).
+Or visit the [CLI Reference](/cli/unikraft).
 {/* vale on */}

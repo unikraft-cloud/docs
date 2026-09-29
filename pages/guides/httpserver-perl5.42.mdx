@@ -11,15 +11,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "zudoku/ui/Tabs"
 This guide explains how to create and deploy a simple Perl-based HTTP web server.
 To run this example, follow these steps:
 
-1. Install the CLI.
-   Use the [unikraft CLI](/cli/unikraft) or the legacy [kraft CLI](https://unikraft.org/docs/cli/install).
+1. Install the [unikraft CLI](/cli).
    You need a [BuildKit](https://github.com/moby/buildkit) builder. The easiest way to get one is via [Docker](https://docs.docker.com/engine/install/).
    Alternatively, you can also directly set up and use BuildKit, see the [quick start](https://github.com/moby/buildkit#quick-start).
-
-   :::note
-   The unikraft CLI is the current standard, while kraft is the legacy version.
-   Choose one of the CLIs below and only run the commands associated with it for the rest of this guide.
-   :::
 
 2. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/httpserver-perl5.42/` directory:
 
@@ -31,26 +25,13 @@ To run this example, follow these steps:
 Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪):
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft login
 ```
 
-```bash title="kraft"
-# Set Unikraft Cloud access token
-export UKC_TOKEN=token
-# Set metro to Frankfurt, DE
-export UKC_METRO=fra
-```
-
-</CodeTabs>
-
 When done, invoke the following command to deploy this app on Unikraft Cloud:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft build . --output <my-org>/httpserver-perl542:latest
 unikraft run --metro fra \
   -m 512M \
@@ -59,22 +40,9 @@ unikraft run --metro fra \
   --image <my-org>/httpserver-perl542:latest
 ```
 
-```bash title="kraft"
-kraft cloud deploy \
-  -M 512Mi \
-  -p 443:8080/tls+http \
-  --scale-to-zero on \
-  --scale-to-zero-cooldown 1s \
-  .
-```
-
-</CodeTabs>
-
 The output shows the instance address and other details:
 
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mmetro[22m:        fra
 [1mname[22m:         httpserver-perl542-xue8j
 [1muuid[22m:         59d08bbc-cbb7-4c6b-a2cb-847828845db9
@@ -96,23 +64,6 @@ The output shows the instance address and other details:
 [3m  created[23m:    just now
 ```
 
-```ansi title="kraft"
-[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
- [38;5;245m│[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mname[0m: httpserver-perl542-xue8j
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245muuid[0m: 59d08bbc-cbb7-4c6b-a2cb-847828845db9
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mstate[0m: [92mstarting[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mdomain[0m: https://fragrant-water-wau08gaw.fra.unikraft.app
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/httpserver-perl542@sha256:af86e8f03c0d4cfd596ccfd9a9d18ea75ac68c996c9cde31f64db24dc11100fe
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmemory[0m: 512 MiB
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mservice[0m: fragrant-water-wau08gaw
- [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: httpserver-perl542-xue8j.internal
- [38;5;245m└[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mprivate ip[0m: 10.0.1.161
-```
-
-</CodeTabs>
-
 In this case, the instance name is `httpserver-perl542-xue8j` and the address is `https://fragrant-water-wau08gaw.fra.unikraft.app`.
 They're different for each run.
 
@@ -128,69 +79,32 @@ Hello, World!
 
 You can list information about the instance by running:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances list
 ```
 
-```bash title="kraft"
-kraft cloud instance list
-```
-
-</CodeTabs>
-
-<div style={{ marginTop: '0.8em' }} />
-
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mMETRO[22m  [1mNAME[22m                      [1mSTATE[22m    [1mIMAGE[22m                        [1mARGS[22m  [1mMEMORY[22m  [1mVCPUS[22m  [1mFQDN[22m                                      [1mCREATED[22m
 fra    httpserver-perl542-xue8j  [38;2;43;127;255mstandby[0m  <my-org>/httpserver-perl542        512MiB  1      fragrant-water-wau08gaw.fra.unikraft.app  2 minutes ago
 ```
-
-```ansi title="kraft"
-[0;1;39mNAME[0m                      [0;1;39mFQDN[0m                                      [0;1;39mSTATE[0m    [0;1;39mSTATUS[0m   [0;1;39mIMAGE[0m                                                     [0;1;39mMEMORY[0m   [0;1;39mVCPUS[0m  [0;1;39mARGS[0m  [0;1;39mBOOT TIME[0m
-httpserver-perl542-xue8j  fragrant-water-wau08gaw.fra.unikraft.app  [0;36mstandby[0m  standby  oci://unikraft.io/<my-org>/httpserver-perl542@sha256:...  512 MiB  1            109.46 ms
-```
-
-</CodeTabs>
 
 When you list your instances, you might notice they show as standby.
 This is normal behavior and means the instance is using Unikraft Cloud's scale-to-zero feature that saves resources when there is no traffic.
 To check your instance is working, open two terminals and use these commands to watch the status:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instance list --watch
 # In another terminal, make requests
 curl https://fragrant-water-wau08gaw.fra.unikraft.app
 ```
 
-```bash title="kraft"
-watch -n 1 "kraft cloud instance list"
-# In another terminal, make requests
-curl https://fragrant-water-wau08gaw.fra.unikraft.app
-```
-
-</CodeTabs>
-
 It switches to "running" then back to "standby."
 
 When done, you can remove the instance:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances delete httpserver-perl542-xue8j
 ```
-
-```bash title="kraft"
-kraft cloud instance remove httpserver-perl542-xue8j
-```
-
-</CodeTabs>
 
 ## Customize your app
 
@@ -212,17 +126,9 @@ The following options are available for customizing the app:
 
 Use the `--help` option for detailed information on using Unikraft Cloud:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft --help
 ```
 
-```bash title="kraft"
-kraft cloud --help
-```
-
-</CodeTabs>
-
-Or visit the [CLI Reference](/cli/unikraft) or the [legacy CLI Reference](/cli/kraft/overview).
+Or visit the [CLI Reference](/cli/unikraft).
 {/* vale on */}

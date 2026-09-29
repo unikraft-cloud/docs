@@ -23,22 +23,11 @@ When you enable this trigger, Unikraft Cloud will track incoming connections to 
 If there is no traffic for the configured duration, the instance scales down to zero.
 You can use the CLI to enable this trigger:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft run \
   --scale-to-zero policy=on,cooldown-time=5000 \
   ...
 ```
-
-```bash title="kraft"
-kraft cloud instance create \
-  --scale-to-zero on \
-  --scale-to-zero-cooldown 5s \
-  ...
-```
-
-</CodeTabs>
 
 ### Idle connections
 
@@ -47,22 +36,11 @@ The instance will scale down if you make no new network connections and all exis
 
 You can enable this trigger using the CLI as follows:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft run \
   --scale-to-zero policy=idle,cooldown-time=5000 \
   ...
 ```
-
-```bash
-kraft cloud instance create \
-  --scale-to-zero idle \
-  --scale-to-zero-cooldown 5s \
-  ...
-```
-
-</CodeTabs>
 
 :::tip
 If your app uses [keep-alive](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Keep-Alive) messages over this active connection, your instance won't scale down.
@@ -104,7 +82,7 @@ curl -X POST https://api.fra.unikraft.cloud/v1/instances/suspend \
 
 You can do the same using the `unikraft` CLI:
 
-```bash title="unikraft"
+```bash
 unikraft instance suspend my-instance --drain-timeout 10s
 ```
 
@@ -131,4 +109,4 @@ Once your app is ready to serve requests, you can write '-' to the file to re-en
 ## Learn more
 
 * The [Scale To Zero](/features/scale-to-zero) feature page.
-* The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
+* The [CLI reference](/docs/cli/unikraft).

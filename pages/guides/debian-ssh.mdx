@@ -11,15 +11,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "zudoku/ui/Tabs"
 This guide explains how to create and deploy a Debian app with SSH enabled.
 To run this example, follow these steps:
 
-1. Install the CLI.
-   Use the [unikraft CLI](/cli/unikraft) or the legacy [kraft CLI](https://unikraft.org/docs/cli/install).
+1. Install the [unikraft CLI](/cli).
    You need a [BuildKit](https://github.com/moby/buildkit) builder. The easiest way to get one is via [Docker](https://docs.docker.com/engine/install/).
    Alternatively, you can also directly set up and use BuildKit, see the [quick start](https://github.com/moby/buildkit#quick-start).
-
-   :::note
-   The unikraft CLI is the current standard, while kraft is the legacy version.
-   Choose one of the CLIs below and only run the commands associated with it for the rest of this guide.
-   :::
 
 2. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/debian-ssh` directory:
 
@@ -31,26 +25,13 @@ To run this example, follow these steps:
 Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪):
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft login
 ```
 
-```bash title="kraft"
-# Set Unikraft Cloud access token
-export UKC_TOKEN=token
-# Set metro to Frankfurt, DE
-export UKC_METRO=fra
-```
-
-</CodeTabs>
-
 When done, invoke the following command to deploy this app on Unikraft Cloud:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft build . --output <my-org>/debian-ssh:latest
 unikraft run --metro fra \
   -m 1G \
@@ -60,22 +41,9 @@ unikraft run --metro fra \
   --image <my-org>/debian-ssh:latest
 ```
 
-```bash title="kraft"
-kraft cloud deploy \
-  -M 1Gi \
-  -p 2222:2222/tls \
-  --scale-to-zero off \
-  -e PUBKEY="...." \
-  .
-```
-
-</CodeTabs>
-
 The output shows the instance address and other details:
 
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mmetro[22m:        fra
 [1mname[22m:         debian-ssh-2uwg5
 [1muuid[22m:         b3d158c5-fb52-4685-a76b-2497973308dc
@@ -96,23 +64,6 @@ The output shows the instance address and other details:
 [1mtimestamps[22m:
 [3m  created[23m:    just now
 ```
-
-```ansi title="kraft"
-[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
- [38;5;245m│[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mname[0m: debian-ssh-2uwg5
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245muuid[0m: b3d158c5-fb52-4685-a76b-2497973308dc
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mstate[0m: [92mstarting[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mdomain[0m: https://nameless-cherry-sw2e9ul2.fra.unikraft.app
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/debian-ssh@sha256:2442b4d5e078e7bc9ccd887fac65623511551592315d341a219f34a2c6628949
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmemory[0m: 1024 MiB
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mservice[0m: nameless-cherry-sw2e9ul2
- [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: debian-ssh-2uwg5.internal
- [38;5;245m└[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mprivate ip[0m: 10.0.0.109
-```
-
-</CodeTabs>
 
 In this case, the instance name is `debian-ssh-2uwg5` and the address is `nameless-cherry-sw2e9ul2.fra.unikraft.app`.
 They're different for each run.
@@ -135,63 +86,28 @@ This is normal if you have set up tunnels to connect with SSH on `localhost`, so
 
 You can list information about the instance by running:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances list
 ```
 
-```bash title="kraft"
-kraft cloud instance list
-```
-
-</CodeTabs>
-
-<div style={{ marginTop: '0.8em' }} />
-
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mMETRO[22m  [1mNAME[22m              [1mSTATE[22m    [1mIMAGE[22m                [1mARGS[22m  [1mMEMORY[22m  [1mVCPUS[22m  [1mFQDN[22m                                    [1mCREATED[22m
 fra    debian-ssh-2uwg5  [38;2;0;188;125mrunning[0m  <my-org>/debian-ssh        1.0GiB  1      nameless-cherry-sw2e9ul2.fra.unikraft…  2 minutes ago
 ```
 
-```ansi title="kraft"
-[0;1;39mNAME[0m              [0;1;39mFQDN[0m                                       [0;1;39mSTATE[0m    [0;1;39mSTATUS[0m       [0;1;39mIMAGE[0m                                             [0;1;39mMEMORY[0m   [0;1;39mVCPUS[0m  [0;1;39mARGS[0m  [0;1;39mBOOT TIME[0m
-debian-ssh-2uwg5  nameless-cherry-sw2e9ul2.fra.unikraft.app  [0;32mrunning[0m  since 5mins  oci://unikraft.io/<my-org>/debian-ssh@sha256:...  1.0 GiB  1            217.26 ms
-```
-
-</CodeTabs>
-
 When done, you can remove the instance:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances delete debian-ssh-2uwg5
 ```
-
-```bash title="kraft"
-kraft cloud instance remove debian-ssh-2uwg5
-```
-
-</CodeTabs>
 
 ## Learn more
 
 Use the `--help` option for detailed information on using Unikraft Cloud:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft --help
 ```
 
-```bash title="kraft"
-kraft cloud --help
-```
-
-</CodeTabs>
-
-Or visit the [CLI Reference](/cli/unikraft) or the [legacy CLI Reference](/cli/kraft/overview).
+Or visit the [CLI Reference](/cli/unikraft).
 {/* vale on */}

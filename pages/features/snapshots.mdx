@@ -13,24 +13,12 @@ You can reduce this initialization time by taking a snapshot of the app memory a
 
 The quickest way to set this up is when creating an instance, via the CLI:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft run --metro fra \
   -p 443:8080/http+tls \
   --scale-to-zero policy=on,stateful=true \
   ...
 ```
-
-```bash title="kraft"
-kraft cloud deploy \
-  -p 443:8080/http+tls \
-  --scale-to-zero on \
-  --scale-to-zero-stateful \
-  ...
-```
-
-</CodeTabs>
 
 ## How it works
 
@@ -47,7 +35,7 @@ It also eliminates long initialization times from heavyweight apps.
 
 ## Learn more
 
-* The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
+* The [CLI reference](/docs/cli/unikraft).
 * Unikraft Cloud's [REST API reference](/api/platform/v1).
 * [Instances](/platform/instances) documentation.
 * [Service groups](/platform/services) documentation.

@@ -11,15 +11,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "zudoku/ui/Tabs"
 This guide explains how to create and deploy a Go app with a Redis database.
 To run this example, follow these steps:
 
-1. Install the CLI.
-   Use the [unikraft CLI](/cli/unikraft) or the legacy [kraft CLI](https://unikraft.org/docs/cli/install).
+1. Install the [unikraft CLI](/cli).
    You need a [BuildKit](https://github.com/moby/buildkit) builder. The easiest way to get one is via [Docker](https://docs.docker.com/engine/install/).
    Alternatively, you can also directly set up and use BuildKit, see the [quick start](https://github.com/moby/buildkit#quick-start).
-
-   :::note
-   The unikraft CLI is the current standard, while kraft is the legacy version.
-   Choose one of the CLIs below and only run the commands associated with it for the rest of this guide.
-   :::
 
 2. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/httpserver-go1.22-redis` directory:
 
@@ -31,20 +25,9 @@ To run this example, follow these steps:
 Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪):
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft login
 ```
-
-```bash title="kraft"
-# Set Unikraft Cloud access token
-export UKC_TOKEN=token
-# Set metro to Frankfurt, DE
-export UKC_METRO=fra
-```
-
-</CodeTabs>
 
 ## Redis
 
@@ -52,9 +35,7 @@ First, deploy the Redis instance.
 Redis is an internal service (not publicly accessible), reached via the `go122-redis.internal` domain.
 The Redis password is set at runtime via the `REDIS_PASSWORD` environment variable (defaults to `unikraft` if not provided).
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft build ./redis --output <my-org>/httpserver-go-122-redis-db:latest
 unikraft run --metro fra \
   -m 256M \
@@ -64,26 +45,11 @@ unikraft run --metro fra \
   --image <my-org>/httpserver-go-122-redis-db:latest
 ```
 
-```bash title="kraft"
-kraft cloud deploy \
-  -M 256Mi \
-  --scale-to-zero idle \
-  --scale-to-zero-stateful \
-  --scale-to-zero-cooldown 1s \
-  --domain go122-redis.internal \
-  --env REDIS_PASSWORD=unikraft \
-  ./redis/
-```
-
-</CodeTabs>
-
 Make sure to replace `<my-org>` with your username / org-name.
 
 The output shows the Redis instance details:
 
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mmetro[22m:           fra
 [1mname[22m:            httpserver-go-122-redis-db-2xc9u
 [1muuid[22m:            8abe24f6-5670-4e9b-8955-8ec10f3bad21
@@ -110,31 +76,12 @@ The output shows the Redis instance details:
 [3m  cooldown-time[23m: 1s
 ```
 
-```ansi title="kraft"
-[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
- [38;5;245m│[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mname[0m: httpserver-go-122-redis-db-2xc9u
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245muuid[0m: 8abe24f6-5670-4e9b-8955-8ec10f3bad21
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mstate[0m: [92mstarting[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mdomain[0m: go122-redis.internal
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/httpserver-go-122-redis-db@sha256:0b007ec2f56194da3a468aa93f4a2b8f267b1726ef3780355fbadb228fdf5c23
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmemory[0m: 256 MiB
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mservice[0m: late-sound-rhboe98o
- [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: httpserver-go-122-redis-db-2xc9u.internal
- [38;5;245m└[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mprivate ip[0m: 10.0.0.85
-```
-
-</CodeTabs>
-
 ## Go HTTP Server
 
 Next, deploy the Go HTTP server.
 It connects to Redis using the `REDIS_ADDR` and `REDIS_PASS` environment variables:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft build ./httpserver-go --output <my-org>/httpserver-go-122-redis-app:latest
 unikraft run --metro fra \
   -m 256M \
@@ -145,24 +92,9 @@ unikraft run --metro fra \
   --image <my-org>/httpserver-go-122-redis-app:latest
 ```
 
-```bash title="kraft"
-kraft cloud deploy \
-  -M 256Mi \
-  -p 443:8080/tls+http \
-  --scale-to-zero on \
-  --scale-to-zero-cooldown 1s \
-  --env REDIS_ADDR=go122-redis.internal:6379 \
-  --env REDIS_PASS=unikraft \
-  ./httpserver-go/
-```
-
-</CodeTabs>
-
 The output shows the instance address and other details:
 
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mmetro[22m:           fra
 [1mname[22m:            httpserver-go-122-redis-app-bnnnc
 [1muuid[22m:            82093bcf-fc4c-471c-89c8-4d0b7810e280
@@ -192,23 +124,6 @@ The output shows the instance address and other details:
 [3m  cooldown-time[23m: 1s
 ```
 
-```ansi title="kraft"
-[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
- [38;5;245m│[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mname[0m: httpserver-go-122-redis-app-bnnnc
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245muuid[0m: 82093bcf-fc4c-471c-89c8-4d0b7810e280
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mstate[0m: [92mstarting[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mdomain[0m: https://frosty-cherry-32qs6na2.fra.unikraft.app
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/httpserver-go-122-redis-app@sha256:b923ac1ea60f83bdc61564aff95b11bac8a9e084f62532d0e882484d26e99da9
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmemory[0m: 256 MiB
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mservice[0m: frosty-cherry-32qs6na2
- [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: httpserver-go-122-redis-app-bnnnc.internal
- [38;5;245m└[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mprivate ip[0m: 10.0.0.173
-```
-
-</CodeTabs>
-
 In this case, the instance names are `httpserver-go-122-redis-db-2xc9u` and `httpserver-go-122-redis-app-bnnnc`.
 They're different for each run.
 
@@ -234,67 +149,31 @@ Key "my-key" has value "my-value"
 
 You can list information about the instances by running:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances list
 ```
 
-```bash title="kraft"
-kraft cloud instance list
-```
-
-</CodeTabs>
-
-<div style={{ marginTop: '0.8em' }} />
-
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mMETRO[22m  [1mNAME[22m                               [1mSTATE[22m    [1mIMAGE[22m                                 [1mARGS[22m  [1mMEMORY[22m  [1mVCPUS[22m  [1mFQDN[22m                                     [1mCREATED[22m
 fra    httpserver-go-122-redis-app-bnnnc  [38;2;43;127;255mstandby[0m  <my-org>/httpserver-go-122-redis-app        256MiB  1      frosty-cherry-32qs6na2.fra.unikraft.app  4 minutes ago
 fra    httpserver-go-122-redis-db-2xc9u   [38;2;43;127;255mstandby[0m  <my-org>/httpserver-go-122-redis-db         256MiB  1      go122-redis.internal                     5 minutes ago
 ```
 
-```ansi title="kraft"
-[0;1;39mNAME[0m                               [0;1;39mFQDN[0m                                     [0;1;39mSTATE[0m    [0;1;39mSTATUS[0m        [0;1;39mIMAGE[0m                                                    [0;1;39mMEMORY[0m   [0;1;39mVCPUS[0m  [0;1;39mARGS[0m  [0;1;39mBOOT TIME[0m
-httpserver-go-122-redis-app-bnnnc  frosty-cherry-32qs6na2.fra.unikraft.app  [0;32mrunning[0m  since 3secs   oci://unikraft.io/<my-org>/httpserver-go-122-redis-a...  256 MiB  1            968.01 ms
-httpserver-go-122-redis-db-2xc9u   go122-redis.internal                     [0;32mrunning[0m  since 35secs  oci://unikraft.io/<my-org>/httpserver-go-122-redis-...   256 MiB  1            1707.20 ms
-```
-
-</CodeTabs>
-
 ## Clean up
 
 When done, remove the instances:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances delete httpserver-go-122-redis-db-2xc9u httpserver-go-122-redis-app-bnnnc
 ```
-
-```bash title="kraft"
-kraft cloud instance remove httpserver-go-122-redis-db-2xc9u httpserver-go-122-redis-app-bnnnc
-```
-
-</CodeTabs>
 
 ## Learn more
 
 Use the `--help` option for detailed information on using Unikraft Cloud:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft --help
 ```
 
-```bash title="kraft"
-kraft cloud --help
-```
-
-</CodeTabs>
-
-Or visit the [CLI Reference](/cli/unikraft) or the [legacy CLI Reference](/cli/kraft/overview).
+Or visit the [CLI Reference](/cli/unikraft).
 {/* vale on */}

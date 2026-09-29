@@ -144,7 +144,7 @@ Attach a `config` to the plugin in the [create instance](/api/platform/v1/instan
 ```json
 {
   "name": "example",
-  "rom": "user/example:latest",
+  "image": "user/example:latest",
   "config": { "greeting": "Bonjour" }
 }
 ```
@@ -379,47 +379,21 @@ The platform runs the image's `init` and appends `--api_fd` on its own, so set n
 
 Package and push the ROM image:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft build . --output <my-org>/example:latest
 ```
-
-```bash title="kraft"
-kraft pkg \
-  --plat kraftcloud \
-  --arch x86_64 \
-  --name index.unikraft.io/<my-org>/example:latest \
-  --rom-type erofs \
-  --push \
-  .
-```
-
-</CodeTabs>
 
 ## Deploying
 
 Attach the plugin when you create the instance, naming the ROM image and an optional `config`:
 
-<CodeTabs syncKey="cli">
-
 ```bash title="unikraft"
-unikraft api /v1/instances \
-  '{
-    "name": "my-instance",
-    "plugins": [
-      {
-        "name": "example",
-        "rom": "<my-org>/example:latest",
-        "config": {
-          "greeting": "Bonjour"
-        }
-      }
-    ]
-  }'
+unikraft instance create \
+  --name my-instance \
+  --metro fra \
+  --image my-app:latest \
+  --plugin 'name=example,image=<my-org>/example:latest,config={"greeting":"Bonjour"}'
 ```
-
-</CodeTabs>
 
 Then call the plugin through the instance's authenticated endpoint:
 

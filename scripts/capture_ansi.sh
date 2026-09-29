@@ -10,9 +10,9 @@ Usage:
 
 Examples:
   capture_ansi.sh build.ansi.log -- ls --color=always
-  capture_ansi.sh test.ansi.log -- bash -lc 'kraft cloud quotas'
-  capture_ansi.sh quotas.ansi.log -- kraft cloud quotas
-  capture_ansi.sh --docs-bars quotas.ansi.log -- kraft cloud quotas
+  capture_ansi.sh test.ansi.log -- bash -lc 'unikraft quotas'
+  capture_ansi.sh quotas.ansi.log -- unikraft quotas
+  capture_ansi.sh --docs-bars quotas.ansi.log -- unikraft quotas
   capture_ansi.sh --tui quotas.ansi.log -- unikraft quotas
 
 Notes:

@@ -11,15 +11,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "zudoku/ui/Tabs"
 This guide explains how to create and deploy a [vsftpd](https://security.appspot.com/vsftpd.html) app, to secure access to the files of your VM.
 To run this example, follow these steps:
 
-1. Install the CLI.
-   Use the [unikraft CLI](/cli/unikraft) or the legacy [kraft CLI](https://unikraft.org/docs/cli/install).
+1. Install the [unikraft CLI](/cli).
    You need a [BuildKit](https://github.com/moby/buildkit) builder. The easiest way to get one is via [Docker](https://docs.docker.com/engine/install/).
    Alternatively, you can also directly set up and use BuildKit, see the [quick start](https://github.com/moby/buildkit#quick-start).
-
-   :::note
-   The unikraft CLI is the current standard, while kraft is the legacy version.
-   Choose one of the CLIs below and only run the commands associated with it for the rest of this guide.
-   :::
 
 2. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/vsftpd` directory:
 
@@ -31,26 +25,13 @@ To run this example, follow these steps:
 Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪):
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft login
 ```
 
-```bash title="kraft"
-# Set Unikraft Cloud access token
-export UKC_TOKEN=token
-# Set metro to Frankfurt, DE
-export UKC_METRO=fra
-```
-
-</CodeTabs>
-
 When done, invoke the following command to deploy this app on Unikraft Cloud:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft volume create --set metro=fra --set name=vsftpd-workspace --set size=1G
 
 unikraft build . --output <my-org>/vsftpd:latest
@@ -66,31 +47,9 @@ unikraft run --metro fra \
   --image <my-org>/vsftpd:latest
 ```
 
-```bash title="kraft"
-kraft cloud volume create --name vsftpd-workspace --size 1Gi
-
-kraft cloud deploy \
-  --name vsftpd \
-  -M 1Gi \
-  -p 20:20/tls \
-  -p 21:21/tls \
-  -p 222:22/tls \
-  -p 990:990/tls \
-  -p 10100:10100/tls \
-  --scale-to-zero on \
-  --scale-to-zero-stateful \
-  --scale-to-zero-cooldown 3s \
-  -v vsftpd-workspace:/root \
-  .
-```
-
-</CodeTabs>
-
 The output shows the instance address and other details:
 
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mmetro[22m:        fra
 [1mname[22m:         vsftpd
 [1muuid[22m:         186a46a0-7c89-4bfd-83a8-649bcc60a96e
@@ -112,23 +71,6 @@ The output shows the instance address and other details:
 [3m  created[23m:    just now
 ```
 
-```ansi title="kraft"
-[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
- [38;5;245m│[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mname[0m: vsftpd
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245muuid[0m: 186a46a0-7c89-4bfd-83a8-649bcc60a96e
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mstate[0m: [92mstarting[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mdomain[0m: https://broken-orangutan-jypu2z53.fra.unikraft.app
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/vsftpd@sha256:31aad1619c31f499b11f1bef8fead6e6df76f235a57add011e5e414a3f51ee64
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmemory[0m: 1024 MiB
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mservice[0m: broken-orangutan-jypu2z53
- [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: vsftpd.internal
- [38;5;245m└[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mprivate ip[0m: 10.0.0.109
-```
-
-</CodeTabs>
-
 This will create a volume for data persistence, and mount it at `/root` inside the VM.
 
 In this case, the instance name is `vsftpd` and the address is `https://broken-orangutan-jypu2z53.fra.unikraft.app`.
@@ -146,108 +88,46 @@ lftp root@broken-orangutan-jypu2z53.fra.unikraft.app:~> ls
 
 You can list information about the volume by running:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft volumes list
 ```
 
-```bash title="kraft"
-kraft cloud volume list
-```
-
-</CodeTabs>
-
-<div style={{ marginTop: '0.8em' }} />
-
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mMETRO[22m  [1mNAME[22m              [1mSTATE[22m    [1mSIZE[22m    [1mCREATED[22m
 fra    vsftpd-workspace  [38;2;0;188;125mmounted[0m  1.0GiB  9 minutes ago
 ```
 
-```ansi title="kraft"
-[0;1;39mNAME[0m              [0;1;39mCREATED AT[0m     [0;1;39mSIZE[0m     [0;1;39mATTACHED TO[0m  [0;1;39mMOUNTED BY[0m  [0;1;39mSTATE[0m    [0;1;39mPERSISTENT[0m
-vsftpd-workspace  9 minutes ago  1.0 GiB  vsftpd       vsftpd      mounted  true
-```
-
-</CodeTabs>
-
 You can list information about the instance by running:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances list
 ```
 
-```bash title="kraft"
-kraft cloud instance list
-```
-
-</CodeTabs>
-
-<div style={{ marginTop: '0.8em' }} />
-
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mMETRO[22m  [1mNAME[22m    [1mSTATE[22m    [1mIMAGE[22m            [1mARGS[22m  [1mMEMORY[22m  [1mVCPUS[22m  [1mFQDN[22m                                    [1mCREATED[22m
 fra    vsftpd  [38;2;43;127;255mstandby[0m  <my-org>/vsftpd        1.0GiB  1      broken-orangutan-jypu2z53.fra.unikraf…  2 minutes ago
 ```
 
-```ansi title="kraft"
-[0;1;39mNAME[0m    [0;1;39mFQDN[0m                                        [0;1;39mSTATE[0m    [0;1;39mSTATUS[0m   [0;1;39mIMAGE[0m                                         [0;1;39mMEMORY[0m   [0;1;39mVCPUS[0m  [0;1;39mARGS[0m  [0;1;39mBOOT TIME[0m
-vsftpd  broken-orangutan-jypu2z53.fra.unikraft.app  [0;36mstandby[0m  standby  oci://unikraft.io/<my-org>/vsftpd@sha256:...  1.0 GiB  1            7.19 ms
-```
-
-</CodeTabs>
-
 When done, you can remove the instance:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances delete vsftpd
 ```
-
-```bash title="kraft"
-kraft cloud instance remove vsftpd
-```
-
-</CodeTabs>
 
 The volume isn't removed by default, so you can recreate the instance and still have access to your old data.
 Remove it using:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft volume delete vsftpd-workspace
 ```
-
-```bash title="kraft"
-kraft cloud volume remove vsftpd-workspace
-```
-
-</CodeTabs>
 
 ## Learn more
 
 Use the `--help` option for detailed information on using Unikraft Cloud:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft --help
 ```
 
-```bash title="kraft"
-kraft cloud --help
-```
-
-</CodeTabs>
-
-Or visit the [CLI Reference](/cli/unikraft) or the [legacy CLI Reference](/cli/kraft/overview).
+Or visit the [CLI Reference](/cli/unikraft).
 {/* vale on */}

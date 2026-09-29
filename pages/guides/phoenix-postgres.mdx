@@ -15,15 +15,9 @@ used for building the rootfs was generated following the instructions [here](htt
 
 To run this example, follow these steps:
 
-1. Install the CLI.
-   Use the [unikraft CLI](/cli/unikraft) or the legacy [kraft CLI](https://unikraft.org/docs/cli/install).
+1. Install the [unikraft CLI](/cli).
    You need a [BuildKit](https://github.com/moby/buildkit) builder. The easiest way to get one is via [Docker](https://docs.docker.com/engine/install/).
    Alternatively, you can also directly set up and use BuildKit, see the [quick start](https://github.com/moby/buildkit#quick-start).
-
-   :::note
-   The unikraft CLI is the current standard, while kraft is the legacy version.
-   Choose one of the CLIs below and only run the commands associated with it for the rest of this guide.
-   :::
 
 2. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/phoenix-postgres` directory:
 
@@ -35,72 +29,32 @@ To run this example, follow these steps:
 Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪):
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft login
 ```
-
-```bash title="kraft"
-# Set Unikraft Cloud access token
-export UKC_TOKEN=token
-# Set metro to Frankfurt, DE
-export UKC_METRO=fra
-```
-
-</CodeTabs>
 
 ## PostgreSQL
 
 Create a volume for PostgreSQL data persistence:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft volume create --metro fra --name db-data --size 512M
 ```
 
-```bash title="kraft"
-kraft cloud volume create --name db-data --size 512Mi
-```
-
-</CodeTabs>
-
 You can list the created volume by running:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft volume list
 ```
 
-```bash title="kraft"
-kraft cloud volume list
-```
-
-</CodeTabs>
-
-<div style={{ marginTop: '0.8em' }} />
-
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mMETRO[22m  [1mNAME[22m     [1mSTATE[22m      [1mSIZE[22m    [1mCREATED[22m
 fra    db-data  [38;2;0;188;125mavailable[0m  512MiB  just now
 ```
 
-```ansi title="kraft"
-[0;1;39mNAME[0m     [0;1;39mCREATED AT[0m  [0;1;39mSIZE[0m     [0;1;39mATTACHED TO[0m  [0;1;39mMOUNTED BY[0m  [0;1;39mSTATE[0m      [0;1;39mPERSISTENT[0m
-db-data  now         512 MiB                           available  true
-```
-
-</CodeTabs>
-
 Update `POSTGRES_PASSWORD` with a secure password and build and deploy the PostgreSQL instance:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft build ./postgres --output <my-org>/postgres:latest
 unikraft run --metro fra \
   -m 2G \
@@ -114,30 +68,11 @@ unikraft run --metro fra \
   --image <my-org>/postgres:latest
 ```
 
-```bash title="kraft"
-kraft cloud deploy \
-  -M 2Gi \
-  --scale-to-zero idle \
-  --scale-to-zero-stateful \
-  --scale-to-zero-cooldown 1s \
-  --domain postgres.internal \
-  --env POSTGRES_USER=postgres \
-  --env POSTGRES_PASSWORD=example_123 \
-  --env POSTGRES_DB=myapp_prod \
-  --env PGDATA=/var/lib/postgresql/data/pgdata \
-  --volume db-data:/var/lib/postgresql/data \
-  postgres/
-```
-
-</CodeTabs>
-
 Make sure to replace `<my-org>` with your username / org-name.
 
 The output shows the PostgreSQL instance details:
 
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mmetro[22m:                 fra
 [1mname[22m:                  postgres-ik5at
 [1muuid[22m:                  3776dbfe-2937-45e7-8079-c54275ef3cff
@@ -174,23 +109,6 @@ The output shows the PostgreSQL instance details:
 [3m  cooldown-time[23m:       1s
 ```
 
-```ansi title="kraft"
-[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
- [38;5;245m│[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mname[0m: postgres-ik5at
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245muuid[0m: 3776dbfe-2937-45e7-8079-c54275ef3cff
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mstate[0m: [92mstarting[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mdomain[0m: postgres.internal
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/postgres@sha256:...
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmemory[0m: 2048 MiB
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mservice[0m: dry-cloud-q8u7yjkl
- [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: postgres-ik5at.internal
- [38;5;245m└[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mprivate ip[0m: 10.0.14.117
-```
-
-</CodeTabs>
-
 ## Phoenix
 
 Generate a secret key for Phoenix:
@@ -202,9 +120,7 @@ openssl rand -base64 48
 Replace `<your-secret-key-base>` in the commands below with the generated value, and update the password in `DATABASE_URL` to match the one set for PostgreSQL.
 Then, deploy the Phoenix instance:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft build ./phoenix --output <my-org>/phoenix:latest
 unikraft run --metro fra \
   -m 2G \
@@ -215,24 +131,9 @@ unikraft run --metro fra \
   --image <my-org>/phoenix:latest
 ```
 
-```bash title="kraft"
-kraft cloud deploy \
-  -M 2Gi \
-  -p 443:4000/tls+http \
-  --scale-to-zero on \
-  --scale-to-zero-cooldown 1s \
-  --env SECRET_KEY_BASE=<your-secret-key-base> \
-  --env DATABASE_URL=ecto://postgres:example_123@postgres.internal:5432/myapp_prod \
-  phoenix/
-```
-
-</CodeTabs>
-
 The output shows the instance address and other details:
 
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mmetro[22m:               fra
 [1mname[22m:                phoenix-hd29m
 [1muuid[22m:                fa4db9cf-f7b5-4b8b-b007-8fd1ce87c7e1
@@ -262,23 +163,6 @@ The output shows the instance address and other details:
 [3m  cooldown-time[23m:     1s
 ```
 
-```ansi title="kraft"
-[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
- [38;5;245m│[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mname[0m: phoenix-hd29m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245muuid[0m: fa4db9cf-f7b5-4b8b-b007-8fd1ce87c7e1
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mstate[0m: [92mstarting[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mdomain[0m: https://wild-moon-pkwsqc49.fra.unikraft.app
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/phoenix@sha256:...
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmemory[0m: 2048 MiB
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mservice[0m: wild-moon-pkwsqc49
- [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: phoenix-hd29m.internal
- [38;5;245m└[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mprivate ip[0m: 10.0.14.53
-```
-
-</CodeTabs>
-
 In this case, the instance names are `postgres-ik5at` and `phoenix-hd29m`.
 They're different for each run.
 
@@ -286,49 +170,21 @@ Use a browser to access the Phoenix application using the URL from the `fqdn` fi
 
 You can list information about the instances by running:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances list
 ```
 
-```bash title="kraft"
-kraft cloud instance list
-```
-
-</CodeTabs>
-
-<div style={{ marginTop: '0.8em' }} />
-
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mMETRO[22m  [1mNAME[22m            [1mSTATE[22m    [1mIMAGE[22m              [1mMEMORY[22m  [1mVCPUS[22m  [1mFQDN[22m                                 [1mCREATED[22m
 fra    phoenix-hd29m   [38;2;0;188;125mrunning[0m  <my-org>/phoenix   2GiB    1      wild-moon-pkwsqc49.fra.unikraft.app  just now
 fra    postgres-ik5at  [38;2;43;127;255mstandby[0m  <my-org>/postgres  2GiB    1      postgres.internal                    3 minutes ago
 ```
 
-```ansi title="kraft"
-[0;1;39mNAME[0m            [0;1;39mFQDN[0m                                 [0;1;39mSTATE[0m    [0;1;39mSTATUS[0m      [0;1;39mIMAGE[0m                                           [0;1;39mMEMORY[0m    [0;1;39mVCPUS[0m  [0;1;39mARGS[0m  [0;1;39mBOOT TIME[0m
-phoenix-hd29m   wild-moon-pkwsqc49.fra.unikraft.app  [0;32mrunning[0m  since now   oci://unikraft.io/<my-org>/phoenix@sha256:...   2048 MiB  1            158.32 ms
-postgres-ik5at  postgres.internal                    [0;36mstandby[0m  since 3min  oci://unikraft.io/<my-org>/postgres@sha256:...  2048 MiB  1            1811.99 ms
-```
-
-</CodeTabs>
-
 When done, you can remove the instances:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances delete postgres-ik5at phoenix-hd29m
 ```
-
-```bash title="kraft"
-kraft cloud instance remove postgres-ik5at phoenix-hd29m
-```
-
-</CodeTabs>
 
 ## Volume
 
@@ -336,17 +192,9 @@ This deployment creates a volume (`db-data`) for PostgreSQL data persistence.
 The volume persists after removing instances, allowing you to redeploy without losing data.
 To remove the volume:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft volume delete db-data
 ```
-
-```bash title="kraft"
-kraft cloud volume remove db-data
-```
-
-</CodeTabs>
 
 ## Learn more
 
@@ -357,17 +205,9 @@ kraft cloud volume remove db-data
 
 Use the `--help` option for detailed information on using Unikraft Cloud:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft --help
 ```
 
-```bash title="kraft"
-kraft cloud --help
-```
-
-</CodeTabs>
-
-Or visit the [CLI Reference](/cli/unikraft) or the [legacy CLI Reference](/cli/kraft/overview).
+Or visit the [CLI Reference](/cli/unikraft).
 {/* vale on */}

@@ -252,8 +252,7 @@ This builds a history of restore points without an external scheduler, but it do
 
 To checkpoint an instance every night at 03:00 UTC:
 
-<CodeTabs syncKey="cli">
-```bash title="unikraft"
+```bash
 unikraft api /v1/instances -X POST --metro fra \
   '{
     "image": "...",
@@ -266,7 +265,6 @@ unikraft api /v1/instances -X POST --metro fra \
     ]
   }'
 ```
-</CodeTabs>
 
 The platform names each new checkpoint after the instance and appends a random suffix, which matches the name a checkpoint gets when you create one through the API without one.
 Find the resulting checkpoints in the instance's [checkpoint history](/features/checkpoints#checkpoint-history).

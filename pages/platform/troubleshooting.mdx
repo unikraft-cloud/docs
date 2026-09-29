@@ -5,24 +5,16 @@ navigation_icon: circle-check
 
 This guide explains how to debug apps on Unikraft Cloud so you can fix issues or collect enough information for the support team to help you.
 It follows platform best practices and supports efficient troubleshooting.
-If you need help, reach out to Unikraft Cloud Support on [Discord](https://kraft.cloud/discord) or write to [support@unikraft.cloud](mailto:support@unikraft.cloud).
+If you need help, reach out to Unikraft Cloud Support on [Discord](https://unikraft.com/discord) or write to [support@unikraft.cloud](mailto:support@unikraft.cloud).
 
 ## Debugging running apps
 
 The most direct way to debug an app is to use the app console output, which may include kernel output.
 To see it, after starting the Unikraft Cloud instance, use:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances logs <instance_name>
 ```
-
-```bash title="kraft"
-kraft cloud inst logs <instance_name>
-```
-
-</CodeTabs>
 
 In case of a crash, you'll see a full crash output:
 
@@ -62,23 +54,13 @@ or even
 
 Inspect the instance details to see the stop reason:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances get <instance_name>
 ```
 
-```bash title="kraft"
-kraft cloud instance get <instance_name>
-```
-
-</CodeTabs>
-
 This yields output like:
 
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mmetro[22m:           fra
 [1mname[22m:            node-playwright-chromium-nwa95
 [1muuid[22m:            59cd6c94-611c-4ca8-911f-78c7db95ad12
@@ -105,40 +87,6 @@ This yields output like:
 [1mstop[22m:
 [3m  reason[23m:        kernel crash: out of memory (ENOMEM)
 ```
-
-```ansi title="kraft"
-                   uuid: 59cd6c94-611c-4ca8-911f-78c7db95ad12
-                   name: node-playwright-chromium-nwa95
-                   fqdn: divine-dust-73sxgnb6.fra0-fe-test.unikraft.app
-           private fqdn: node-playwright-chromium-nwa95.internal
-             private ip: 10.0.0.109
-                  state: [0;31mstopped[0m
-                created: 2026-06-02T17:24:31Z
-                started: 2026-06-02T17:24:31Z
-                stopped: 2026-06-02T17:24:37Z
-            start count: 1
-          restart count: 0
-       restart attempts: 
-           next restart: 
-         restart policy: never
-            stop origin: initiated by kernel (----k)
-            stop reason: Out of memory. Try increasing instance's memory (see -M flag). (i0 PGFAULT ENOMEM)
-          app exit code: 
-                  image: oci://unikraft.io/<my-org>/node-playwright-chromium@sha256:e596b51af391792eacb772e52c701996a5c4dbfc3826ea9fd6ecf4b8a29441fb
-                 memory: 2.4 GiB
-                  vcpus: 1
-                   args: 
-                    env: 
-                volumes: 
-                service: divine-dust-73sxgnb6
-          scale to zero: on
- scale to zero cooldown: 1000
- scale to zero stateful: false
-              boot time: 0.00 ms
-                up time: 6.127s
-```
-
-</CodeTabs>
 
 This output shows the [stop reason](/platform/instances#stop-reason).
 Here the cause is insufficient memory.
@@ -168,9 +116,7 @@ That is, change `base-compat:latest` to `base-compat:latest-dbg`.
 
 Now you're ready to re-deploy:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft build . --output <my-org>/http-go-strace:latest
 unikraft run --metro fra \
   --name http-go-strace \
@@ -178,28 +124,11 @@ unikraft run --metro fra \
   --image <my-org>/http-go-strace:latest
 ```
 
-```bash title="kraft"
-kraft cloud deploy \
-  --name http-go-strace \
-  -p 443:8080 .
-```
-
-</CodeTabs>
-
 You can now inspect the logs as before and view system call tracing:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances logs http-go-strace
 ```
-
-```bash title="kraft"
-kraft cloud inst logs http-go-strace
-```
-
-</CodeTabs>
-
 
 This mechanism works for all apps and runtimes.
 Contact Unikraft Cloud on the [Discord server](/discord) and include this output if you need more detail.
@@ -208,17 +137,10 @@ Contact Unikraft Cloud on the [Discord server](/discord) and include this output
 While you debug an issue you can mitigate crashes by setting a restart policy.
 For example, use the CLI to set `--restart on-failure` so the platform restarts the app if it crashes.
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft run --metro fra --restart on-failure --image my-app:latest
 ```
 
-```bash title="kraft"
-kraft cloud deploy --restart on-failure .
-```
-
-</CodeTabs>
 :::
 
 ## Debugging the build and push steps
@@ -230,19 +152,11 @@ The CLI performs steps on your local device before actually deploying your app t
 1. Packages the app filesystem and the runtime in an Open Container Initiative (OCI) image.
 1. Pushes the OCI image to the to the Unikraft Cloud registry under your username's namespace.
 
-If any of these steps fail, enable legacy CLI debugging with the `--log-level` and `--log-type` flags:
+If any of these steps fail, enable CLI debugging with the `--log-level` and `--log-type` flags:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft build --log-level debug --log-type text ...
 ```
-
-```bash title="kraft"
-kraft cloud deploy --log-level debug --log-type basic ...
-```
-
-</CodeTabs>
 
 You should then see debug output for the 4 steps above.
 This output should give enough context to diagnose the issue.
@@ -251,14 +165,18 @@ This output should give enough context to diagnose the issue.
 
 When using a `Dockerfile` for the app filesystem, Unikraft Cloud passes the commands to [BuildKit](https://docs.docker.com/build/buildkit/).
 
-By default, each legacy `kraft cloud deploy` command starts an ephemeral BuildKit container.
-The platform then removes the filesystem app data, so each deploy starts from zero.
+The `unikraft` CLI uses the first BuildKit builder that it finds, in this order:
 
-To prevent this, follow the instructions [here](https://unikraft.org/guides/building-dockerfile-images-with-buildkit):
+1. The builder at the address in the `BUILDKIT_HOST` environment variable.
+1. The builder on the default BuildKit socket.
+1. The builder in Docker.
+
+The builder keeps its cache between builds.
+To control where the cache stays, start a BuildKit container and set `BUILDKIT_HOST` to its address:
 
 ```bash
 docker run -d --name buildkitd --privileged moby/buildkit:latest
-export KRAFTKIT_BUILDKIT_HOST=docker-container://buildkitd
+export BUILDKIT_HOST=docker-container://buildkitd
 ```
 
 The approach above caches builds in the BuildKit container filesystem.
@@ -266,7 +184,7 @@ Another approach saves the cache in a local host directory:
 
 ```bash title=""
 docker run -d --name buildkitd --privileged -v $HOME/.buildkit-cache:/var/lib/buildkit moby/buildkit:latest
-export KRAFTKIT_BUILDKIT_HOST=docker-container://buildkitd
+export BUILDKIT_HOST=docker-container://buildkitd
 ```
 
 Here `$HOME/.buildkit-cache` is a local path on your machine where BuildKit stores cache data.
@@ -335,7 +253,8 @@ In that case, inspect the [app logs](/platform/troubleshooting#debugging-running
 Unikraft Cloud uses TLS to expose services to the outside world.
 Some apps (such as [MongoDB](/guides/mongodb) or [MariaDB](/guides/mariadb)) don't use TLS.
 
-Create a TLS tunnel via the [legacy CLI](/cli/kraft/tunnel) or `socat`, which opens a local endpoint (`localhost` / `127.0.0.1`) and forwards traffic over TLS.
+Create a TLS tunnel with the [`unikraft instances tunnel`](/cli/unikraft/instances/tunnel) command or with `socat`.
+Both open a local endpoint (`localhost` / `127.0.0.1`) and forward the traffic over TLS.
 See the [MariaDB guide](/guides/mariadb) for an example.
 
 
@@ -351,38 +270,24 @@ This often means the local `kraft` cache is in an inconsistent state.
 
 To solve this, remove the local cache and local packages:
 
-<CodeTabs>
-
-```bash title="kraft"
+```bash
 kraft pkg rm --all
 rm -fr ~/.local/share/kraftkit
 ```
 
-</CodeTabs>
-
 ## Launched app not visible in list
 
 The most common reason is that you deployed an app to one metro but listed a different one.
-Use the `--metro` flag per command, or use the legacy CLI environment variable for a session:
+Use the `--metro` flag to select the metro for each command:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances list --metro <metro_name>
 ```
 
-```bash title="kraft"
-export UKC_METRO=<metro_name>
-kraft cloud instance list
-```
-
-</CodeTabs>
-
-The `UKC_METRO` environment variable is only supported by the legacy CLI.
 
 
 ## Learn more
 
-* The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
+* The [CLI reference](/docs/cli/unikraft).
 * Unikraft Cloud's [REST API reference](/api/platform/v1).
 * Many more guides [here](/guides/overview).

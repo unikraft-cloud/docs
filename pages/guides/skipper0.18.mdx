@@ -12,15 +12,9 @@ This example uses [`Skipper`](https://opensource.zalando.com/skipper/), an HTTP 
 
 To run this example, follow these steps:
 
-1. Install the CLI.
-   Use the [unikraft CLI](/cli/unikraft) or the legacy [kraft CLI](https://unikraft.org/docs/cli/install).
+1. Install the [unikraft CLI](/cli).
    You need a [BuildKit](https://github.com/moby/buildkit) builder. The easiest way to get one is via [Docker](https://docs.docker.com/engine/install/).
    Alternatively, you can also directly set up and use BuildKit, see the [quick start](https://github.com/moby/buildkit#quick-start).
-
-   :::note
-   The unikraft CLI is the current standard, while kraft is the legacy version.
-   Choose one of the CLIs below and only run the commands associated with it for the rest of this guide.
-   :::
 
 2. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/skipper0.18/` directory:
 
@@ -32,26 +26,13 @@ To run this example, follow these steps:
 Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪):
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft login
 ```
 
-```bash title="kraft"
-# Set Unikraft Cloud access token
-export UKC_TOKEN=token
-# Set metro to Frankfurt, DE
-export UKC_METRO=fra
-```
-
-</CodeTabs>
-
 When done, invoke the following command to deploy this app on Unikraft Cloud:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft build . --output <my-org>/skipper018:latest
 unikraft run --metro fra \
   -m 256M \
@@ -60,23 +41,9 @@ unikraft run --metro fra \
   --image <my-org>/skipper018:latest
 ```
 
-```bash title="kraft"
-kraft cloud deploy \
-  -M 256Mi \
-  -p 443:9090/tls+http \
-  --scale-to-zero on \
-  --scale-to-zero-stateful \
-  --scale-to-zero-cooldown 1s \
-  .
-```
-
-</CodeTabs>
-
 The output shows the instance address and other details:
 
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mmetro[22m:        fra
 [1mname[22m:         skipper018-mx4ai
 [1muuid[22m:         34e3d740-c2b0-4644-b7e1-647350f688dc
@@ -98,23 +65,6 @@ The output shows the instance address and other details:
 [3m  created[23m:    just now
 ```
 
-```ansi title="kraft"
-[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
- [38;5;245m│[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mname[0m: skipper018-mx4ai
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245muuid[0m: 34e3d740-c2b0-4644-b7e1-647350f688dc
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mstate[0m: [92mstarting[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mdomain[0m: https://aged-sea-o7d3c42s.fra.unikraft.app
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/skipper018@sha256:5483eaf3612cca2116ceaab9be42557686324f1d30337ae15d0495eef63d0386
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmemory[0m: 256 MiB
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mservice[0m: aged-sea-o7d3c42s
- [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: skipper018-mx4ai.internal
- [38;5;245m└[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mprivate ip[0m: 10.0.6.4
-```
-
-</CodeTabs>
-
 In this case, the instance name is `skipper018-mx4ai` and the address is `https://aged-sea-o7d3c42s.fra.unikraft.app`.
 They're different for each run.
 
@@ -130,47 +80,20 @@ Hello, world from Skipper on Unikraft!
 
 You can list information about the instance by running:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances list
 ```
 
-```bash title="kraft"
-kraft cloud instance list
-```
-
-</CodeTabs>
-
-<div style={{ marginTop: '0.8em' }} />
-
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mMETRO[22m  [1mNAME[22m              [1mSTATE[22m    [1mIMAGE[22m                [1mARGS[22m  [1mMEMORY[22m  [1mVCPUS[22m  [1mFQDN[22m                                [1mCREATED[22m
 fra    skipper018-mx4ai  [38;2;0;188;125mrunning[0m  <my-org>/skipper018        256MiB  1      aged-sea-o7d3c42s.fra.unikraft.app  2 minutes ago
 ```
 
-```ansi title="kraft"
-[0;1;39mNAME[0m              [0;1;39mFQDN[0m                                [0;1;39mSTATE[0m    [0;1;39mSTATUS[0m        [0;1;39mIMAGE[0m                                             [0;1;39mMEMORY[0m   [0;1;39mVCPUS[0m  [0;1;39mARGS[0m  [0;1;39mBOOT TIME[0m
-skipper018-mx4ai  aged-sea-o7d3c42s.fra.unikraft.app  [0;32mrunning[0m  1 minute ago  oci://unikraft.io/<my-org>/skipper018@sha256:...  256 MiB  1            43.71 ms
-```
-
-</CodeTabs>
-
 When done, you can remove the instance:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances delete skipper018-mx4ai
 ```
-
-```bash title="kraft"
-kraft cloud instance remove skipper018-mx4ai
-```
-
-</CodeTabs>
 
 ## Customize your app
 
@@ -180,17 +103,9 @@ To customize Skipper you can change the `example.eskip` configuration file.
 
 Use the `--help` option for detailed information on using Unikraft Cloud:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft --help
 ```
 
-```bash title="kraft"
-kraft cloud --help
-```
-
-</CodeTabs>
-
-Or visit the [CLI Reference](/cli/unikraft) or the [legacy CLI Reference](/cli/kraft/overview).
+Or visit the [CLI Reference](/cli/unikraft).
 {/* vale on */}

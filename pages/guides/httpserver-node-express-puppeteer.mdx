@@ -16,15 +16,9 @@ The example wraps Puppeteer in an [Express](https://expressjs.com/) HTTP server 
 
 To run it, follow these steps:
 
-1. Install the CLI.
-   Use the [unikraft CLI](/cli/unikraft) or the legacy [kraft CLI](https://unikraft.org/docs/cli/install).
+1. Install the [unikraft CLI](/cli).
    You need a [BuildKit](https://github.com/moby/buildkit) builder. The easiest way to get one is via [Docker](https://docs.docker.com/engine/install/).
    Alternatively, you can also directly set up and use BuildKit, see the [quick start](https://github.com/moby/buildkit#quick-start).
-
-   :::note
-   The unikraft CLI is the current standard, while kraft is the legacy version.
-   Choose one of the CLIs below and only run the commands associated with it for the rest of this guide.
-   :::
 
 2. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/httpserver-node-express-puppeteer/` directory:
 
@@ -36,22 +30,9 @@ To run it, follow these steps:
 Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪):
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft login
 ```
-
-```bash title="kraft"
-# Set Unikraft Cloud access token
-export UKC_TOKEN=token
-# Set metro to Frankfurt, DE
-export UKC_METRO=fra
-```
-
-</CodeTabs>
-
-The `UKC_TOKEN` and `UKC_METRO` environment variables are only supported by the legacy CLI.
 
 
 :::note
@@ -61,9 +42,7 @@ Request an increase in the instance memory quota when you need more memory.
 
 When done, invoke the following command to deploy this app on Unikraft Cloud:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft build . --output <my-org>/httpserver-node-express-puppeteer:latest
 unikraft run --metro fra \
   -m 4G \
@@ -72,23 +51,9 @@ unikraft run --metro fra \
   --image <my-org>/httpserver-node-express-puppeteer:latest
 ```
 
-```bash title="kraft"
-kraft cloud deploy \
-  -M 4Gi \
-  -p 443:3000/tls+http \
-  --scale-to-zero idle \
-  --scale-to-zero-stateful \
-  --scale-to-zero-cooldown 1s \
-  .
-```
-
-</CodeTabs>
-
 The output shows the instance address and other details:
 
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mmetro[22m:        fra
 [1mname[22m:         httpserver-node-express-puppeteer-7afg3
 [1muuid[22m:         7bb479d7-5b3e-444f-b07c-eae4da6f57cc
@@ -110,23 +75,6 @@ The output shows the instance address and other details:
 [3m  created[23m:    just now
 ```
 
-```ansi title="kraft"
-[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
- [38;5;245m│[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mname[0m: httpserver-node-express-puppeteer-7afg3
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245muuid[0m: 7bb479d7-5b3e-444f-b07c-eae4da6f57cc
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mstate[0m: [92mstarting[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mdomain[0m: https://nameless-fog-0tvh1uov.fra.unikraft.app
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/httpserver-node-express-puppeteer@sha256:78d0b180161c876f17d05116b93011ddcd44c76758d6fa0359f05938e67cea65
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmemory[0m: 4096 MiB
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mservice[0m: little-snow-7qwu6vv5
- [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: httpserver-node-express-puppeteer-7afg3.internal
- [38;5;245m└[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mprivate ip[0m: 10.0.3.1
-```
-
-</CodeTabs>
-
 In this case, the instance name is `httpserver-node-express-puppeteer-7afg3`.
 They're different for each run.
 
@@ -138,47 +86,20 @@ You can use the landing page to generate the PDF version of a remote page.
 
 You can list information about the instance by running:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances list
 ```
 
-```bash title="kraft"
-kraft cloud instance list
-```
-
-</CodeTabs>
-
-<div style={{ marginTop: '0.8em' }} />
-
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mMETRO[22m  [1mNAME[22m                                     [1mSTATE[22m    [1mIMAGE[22m                                       [1mARGS[22m  [1mMEMORY[22m   [1mVCPUS[22m  [1mFQDN[22m                                    [1mCREATED[22m
 fra    httpserver-node-express-puppeteer-7afg3  [38;2;0;188;125mrunning[0m  <my-org>/httpserver-node-express-puppeteer        4096MiB  1      nameless-fog-0tvh1uov.fra.unikraft.app  2 minutes ago
 ```
 
-```ansi title="kraft"
-[0;1;39mNAME[0m                                     [0;1;39mFQDN[0m                                    [0;1;39mSTATE[0m    [0;1;39mSTATUS[0m       [0;1;39mIMAGE[0m                                                              [0;1;39mMEMORY[0m   [0;1;39mVCPUS[0m  [0;1;39mARGS[0m  [0;1;39mBOOT TIME[0m
-httpserver-node-express-puppeteer-7afg3  nameless-fog-0tvh1uov.fra.unikraft.app  [0;32mrunning[0m  since 6mins  oci://unikraft.io/<my-org>/httpserver-node-express-puppeteer@s...  4.0 GiB  1            15.27 ms
-```
-
-</CodeTabs>
-
 When done, you can remove the instance:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances delete httpserver-node-express-puppeteer-7afg3
 ```
-
-```bash title="kraft"
-kraft cloud instance remove httpserver-node-express-puppeteer-7afg3
-```
-
-</CodeTabs>
 
 ## Customize your deployment
 
@@ -191,8 +112,8 @@ You can update the service to provide a REST-like interface.
 Use the `--help` option for detailed information on using Unikraft Cloud:
 
 ```bash
-kraft cloud --help
+unikraft --help
 ```
 
-Or visit the [CLI Reference](/cli/overview) or the [legacy CLI Reference](/cli/overview).
+Or visit the [CLI Reference](/cli/unikraft).
 {/* vale on */}

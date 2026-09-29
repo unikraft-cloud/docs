@@ -50,9 +50,7 @@ For example:
 Add an `annotations` object to the instance body when you create it.
 Each entry is a key-value pair:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft api /v1/instances -X POST --metro fra \
   '{
     "name": "annotations-demo",
@@ -64,8 +62,6 @@ unikraft api /v1/instances -X POST --metro fra \
     }
   }'
 ```
-
-</CodeTabs>
 
 Annotation keys are Kubernetes-compatible, so they can be plain keys (`my-key`) or prefixed with a domain (`example.com/annotation2`).
 
@@ -108,9 +104,7 @@ See [Kubernetes](/integrations/kubernetes#custom-networking-with-cni) for the CN
 
 The annotation value is the document as a JSON string, so the JSON inside it carries escapes:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft api /v1/instances -X POST --metro fra \
   '{
     "name": "cni-demo",
@@ -129,8 +123,6 @@ unikraft api /v1/instances -X POST --metro fra \
     }
   }'
 ```
-
-</CodeTabs>
 
 That instance keeps a pool-allocated primary interface and adds a second one on the `vpc0` TAP device, with a MAC address you pick and no IP address.
 Unescaped, the annotation holds a standard CNI Result (`types/100`):
@@ -190,9 +182,7 @@ If you patch a running instance, the platform accepts the request and queues the
 
 `set` replaces all existing annotations with the object you provide:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft api /v1/instances -X PATCH --metro fra \
   '[{
     "name": "annotations-demo",
@@ -205,16 +195,12 @@ unikraft api /v1/instances -X PATCH --metro fra \
   }]'
 ```
 
-</CodeTabs>
-
 ### Add or update annotations (`add`)
 
 `add` merges the given annotations into the existing set.
 It overwrites keys that already exist and leaves the other keys untouched:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft api /v1/instances -X PATCH --metro fra \
   '[{
     "name": "annotations-demo",
@@ -226,16 +212,12 @@ unikraft api /v1/instances -X PATCH --metro fra \
   }]'
 ```
 
-</CodeTabs>
-
 ### Delete annotations (`del`)
 
 `del` removes specific keys.
 The value is an array of key names (or a single key as a string):
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft api /v1/instances -X PATCH --metro fra \
   '[{
     "name": "annotations-demo",
@@ -244,8 +226,6 @@ unikraft api /v1/instances -X PATCH --metro fra \
     "value": ["my-key", "example.com/annotation2"]
   }]'
 ```
-
-</CodeTabs>
 
 ## Annotations in log output
 

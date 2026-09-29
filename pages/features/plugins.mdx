@@ -3,13 +3,6 @@ title: Plugins
 navigation_icon: puzzle
 ---
 
-{/* vale off */}
-:::caution
-Dedicated `unikraft` CLI subcommands for plugin API are coming soon.
-In the meantime, configure plugin API through the [API](/api/platform/v1/instances#create-instance), which you can invoke with `curl` or the [`unikraft api`](/cli/unikraft/api) command.
-:::
-{/* vale on */}
-
 Plugins let you attach small helper programs to an instance and reach each one over a direct, authenticated HTTP endpoint.
 A plugin runs inside the instance next to your main app, loads from its own image, and answers requests that the Unikraft Cloud API forwards to it.
 
@@ -21,17 +14,50 @@ The same mechanism fits any helper you want to reach over a per-instance, authen
 
 ### Sandbox plugin
 
-{/* vale off */}
-:::caution[**Limited Access**]
-The sandbox plugin is available as part of enterprise plans.
-To try it out, reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
-:::
-{/* vale on */}
-
 The sandbox plugin lets you run commands and manipulate the filesystem inside an instance, over the plugin endpoint:
 
 - **Commands**: start a shell command inside the instance, inspect it, read its output, feed its standard input, wait for it, and signal it.
 - **Filesystem**: create directories, and read, write, and upload files.
+
+Load the sandbox plugin with `--plugin` when you create, run, or [edit](#changing-plugins-on-an-existing-instance) an instance:
+
+```bash
+unikraft instance run \
+  --metro fra \
+  --image official/alpine:latest \
+  --volume :/data:size=1GiB \
+  --plugin 'name=sandbox,image=plugins/sandbox:latest,config={"persist_path":"/data"}'
+```
+
+An instance with the sandbox plugin loaded accepts five `unikraft` commands:
+
+| Command | Description |
+|---------|-------------|
+| [`unikraft instance exec`](/cli/unikraft/instances/exec) | Runs a command on the instance. `--dir` sets the working directory, `--env` sets the environment, and the command's exit status becomes the CLI's. |
+| [`unikraft instance shell`](/cli/unikraft/instances/shell) | Opens an interactive shell. The shell runs on your machine and sends each command to the instance, so paths resolve against the instance. |
+| [`unikraft instance copy`](/cli/unikraft/instances/copy) | Copies a single file in either direction. Write a path on an instance as `<instance>:<path>`, or `<metro>/<instance>:<path>` to pick the metro. The alias is `cp`. |
+| [`unikraft instance write`](/cli/unikraft/instances/write) | Uploads a single local file to the instance. `--parents` creates missing directories, and `--append` adds to the remote file instead of replacing it. |
+| [`unikraft instance read`](/cli/unikraft/instances/read) | Downloads a single file from the instance. The local path is optional and defaults to the remote file's base name. |
+
+```bash
+unikraft instance exec my-instance -- ls -la /var/log
+unikraft instance shell my-instance
+unikraft instance copy ./config.json my-instance:/etc/app.json
+unikraft instance write my-instance ./data.bin /var/lib/app.bin --parents
+unikraft instance read my-instance /var/log/app.log
+```
+
+The commands use the plugin named `sandbox` by default.
+Pass `--plugin <name>` to use a sandbox plugin that you loaded under a different name.
+
+A few limitations apply:
+
+- The instance must run on the [`base-compat` runtime](/platform/images#dockerfile-kraftfile-and-runtime).
+  Use an image that ships the standard Linux utilities, such as `official/alpine:latest` or `official/debian-slim:latest`, so that more commands work in the sandbox.
+- The shell is experimental and has no pseudo-terminal, so full-screen and interactive programs such as `vim`, `top`, `less`, or a password prompt don't work.
+  It has no job control either, so `ctrl-z`, `bg`, and `fg` don't work.
+- `copy`, `read`, and `write` carry one regular file at a time, and don't carry file permissions across.
+- `exec` forwards standard input only when you redirect it from a file or a pipe.
 
 ## How it works
 
@@ -74,36 +100,28 @@ Operators set the range with the node-level `--vmm-plugin-port-start` (default `
 
 ## Adding plugins when you create an instance
 
-List your plugins in the `plugins` field of a [`POST /instances`](/api/platform/v1/instances#create-instance) request:
+Pass `--plugin` to [`unikraft instance create`](/cli/unikraft/instances/create) or [`unikraft instance run`](/cli/unikraft/instances/run), once for each plugin:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
-unikraft api /v1/instances \
-  '{
-    "name": "my-instance",
-    "plugins": [
-      {
-        "name": "my-plugin",
-        "rom": "user/myplugin:latest",
-        "config": {
-          "workdir": "/tmp"
-        }
-      }
-    ]
-  }'
+```bash
+unikraft instance create \
+  --name my-instance \
+  --metro fra \
+  --image my-app:latest \
+  --plugin 'name=my-plugin,image=user/myplugin:latest,config={"workdir":"/tmp"}'
 ```
 
-</CodeTabs>
+The flag takes `name`, `image`, and an optional `config`, which must be valid JSON.
+The CLI sends these in the `plugins` field of a [`POST /instances`](/api/platform/v1/instances#create-instance) request.
 
-Each entry in the `plugins` array accepts these fields:
+In the API, each entry in the `plugins` array accepts these fields.
+The `--plugin` column shows which of them the CLI flag can set:
 
-| Field | Required | Description |
-|-------|----------|-------------|
-| `name` | Yes | The plugin name. It becomes the `<plugin_name>` segment in the plugin endpoint. See [Plugin names](#plugin-names) for the allowed format. |
-| `rom` | Yes | The plugin's ROM image, given as an image reference string such as `user/myplugin:latest`, or as an image object with a `url` and optional `headers` and `pull_policy`, the same as elsewhere in the API. |
-| `config` | No | Arbitrary JSON that the platform passes to the plugin's `init` on `STDIN`. Any JSON value works, including a string, a number, or an object. |
-| `authorization` | No | How the platform authorizes requests to this plugin, as described under [authorization](#authorization). |
+| Field | Required | `--plugin` | Description |
+|-------|----------|------------|-------------|
+| `name` | Yes | Yes | The plugin name. It becomes the `<plugin_name>` segment in the plugin endpoint. See [Plugin names](#plugin-names) for the allowed format. |
+| `image` | Yes | Reference string only | The plugin's ROM image, given as an image reference string such as `user/myplugin:latest`, or as an image object with a `url` and optional `headers` and `pull_policy`, the same as elsewhere in the API. The deprecated `rom` field still works in its place. |
+| `config` | No | Yes | Arbitrary JSON that the platform passes to the plugin's `init` on `STDIN`. Any JSON value works, including a string, a number, or an object. |
+| `authorization` | No | No | How the platform authorizes requests to this plugin, as described under [authorization](#authorization). |
 
 You can attach up to 8 plugins to an instance.
 
@@ -112,7 +130,8 @@ You can attach up to 8 plugins to an instance.
 Every request to a plugin endpoint carries a token in an `Authorization: Bearer <token>` header.
 The platform authorizes the request before it forwards anything, and strips that header on the way, so the plugin never sees the token.
 
-A plugin picks how the platform checks the token with an optional `authorization` object:
+In the API, a plugin entry picks how the platform checks the token with an optional `authorization` object.
+The `--plugin` flag can't set this object, so a plugin that you load with the CLI uses the `userdb` method.
 
 | Field | Required | Description |
 |-------|----------|-------------|
@@ -126,18 +145,17 @@ The token has to belong to a platform user with access to the instance, so the t
 
 ### A token of the plugin's own
 
-With `"type": "bearer"` the platform compares the supplied token against the plugin's own token and consults no user account:
+With `"type": "bearer"` the platform compares the supplied token against the plugin's own token and consults no user account.
+Send the request with [`unikraft api`](/cli/unikraft/api), because the `--plugin` flag can't set `authorization`:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft api /v1/instances \
   '{
     "name": "my-instance",
     "plugins": [
       {
         "name": "my-plugin",
-        "rom": "user/myplugin:latest",
+        "image": "user/myplugin:latest",
         "authorization": {
           "type": "bearer",
           "token": "s3cr3t"
@@ -146,8 +164,6 @@ unikraft api /v1/instances \
     ]
   }'
 ```
-
-</CodeTabs>
 
 A caller then reaches the plugin with that token alone:
 
@@ -159,13 +175,15 @@ curl -H "Authorization: Bearer s3cr3t" \
 This suits callers with no platform account and no business holding one: a sidecar, your own control plane, or a webhook from a third-party service.
 The token opens that one plugin on that one instance, and nothing else of the API.
 
-The instance status echoes a non-default `type` back in the plugin's `authorization` object, and never echoes the token.
+The instance status in the API echoes a non-default `type` back in the plugin's `authorization` object, and never echoes the token.
 A plugin on the default method reports no `authorization` object at all.
+`unikraft instance get` doesn't show `authorization`, so read it from the API with `unikraft api /v1/instances/<uuid>`.
 
 Two consequences follow from `bearer` consulting no user account:
 
 - Your platform token stops working on that plugin, so the plugin's token becomes the only way in.
-- Changing the token takes the same [PATCH path](#adding-plugins-to-an-existing-instance) as adding a plugin, so it lands the next time the instance stops.
+- Changing the token takes the same [PATCH path](#changing-plugins-on-an-existing-instance) as other plugin changes, so it lands the next time the instance stops.
+  Send it with `unikraft api`, because the CLI flags can't set `authorization`.
 
 ## Plugin names
 
@@ -175,36 +193,38 @@ A plugin name has a maximum length of 63 characters and contains only these char
 - Digits (`0`–`9`)
 - Hyphen (`-`) and underscore (`_`)
 
-## Adding plugins to an existing instance
+## Changing plugins on an existing instance
 
-The [`PATCH /instances`](/api/platform/v1/instances) endpoint supports plugins.
-Set `prop` to `plugins`, and pass the plugins in `value`:
+Use [`unikraft instance edit`](/cli/unikraft/instances/edit) to change the plugins of an existing instance.
+`--plugin` replaces the instance's plugin list, `--add plugins=...` appends to it, and `--del plugins=<name>` removes one plugin:
 
-<CodeTabs syncKey="cli">
+```bash
+# Replace the plugin list
+unikraft instance edit my-instance \
+  --plugin name=my-plugin,image=user/myplugin:latest
 
-```bash title="unikraft"
-unikraft api /v1/instances -X PATCH \
-  '[{
-    "name": "my-instance",
-    "prop": "plugins",
-    "op": "add",
-    "value": [
-      {
-        "name": "my-plugin",
-        "rom": "user/myplugin:latest"
-      }
-    ]
-  }]'
+# Append to the plugin list
+unikraft instance edit my-instance \
+  --add plugins=name=my-other-plugin,image=user/myotherplugin:latest
+
+# Remove a plugin by name
+unikraft instance edit my-instance \
+  --del plugins=my-other-plugin
 ```
 
-</CodeTabs>
-
-The `op` field takes `set` to replace the instance's plugin list or `add` to append to it.
+Each flag sends a [`PATCH /instances`](/api/platform/v1/instances) request with `prop` set to `plugins`.
+`--plugin` sends the `set` op, `--add` sends `add`, and `--del` sends `del`.
+The platform handles these requests the same way whether they come from the CLI or the API.
+A plugin that a `set` leaves out of the new list unloads, the same as with `del`.
 The platform applies the change while the instance sits in the `stopped` state.
-When the instance runs at the time of the request, the platform queues the change and applies it the next time the instance stops.
+On a running instance, the platform queues the change and applies it the next time the instance stops.
+A restart and a scale-to-zero both count as a stop.
+Until then, the instance keeps its current plugins, and a removed plugin still answers requests.
 
-:::note
-Adding plugins works today. Unloading a plugin from an instance is coming in a future release.
+:::caution
+The `--plugin` flag doesn't carry `authorization`, so `unikraft instance edit --plugin` turns every `bearer` plugin on the instance back into a `userdb` plugin.
+`--add` leaves the existing plugins as they are.
+To replace the list and keep a `bearer` plugin, send the `set` request with [`unikraft api`](/cli/unikraft/api).
 :::
 
 ## Reloading across the instance lifecycle
@@ -232,7 +252,6 @@ Plugins fit other patterns too. A few ideas:
 
 - On BYOC and on-prem installations, plugins require a license that includes the feature.
 - You can attach at most 8 plugins to an instance.
-- Adding plugins works today, and unloading a plugin from an instance is coming in a future release.
 - A plugin name has a maximum length of 63 characters and uses only letters, digits, `-`, and `_`.
 - A `bearer` token has a maximum length of 256 characters.
 

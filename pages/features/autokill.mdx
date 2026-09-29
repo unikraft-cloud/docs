@@ -3,13 +3,16 @@ title: Autokill
 navigation_icon: timer-off
 ---
 
-Autokill automatically terminates instances or service groups when a configured condition triggers.
-It helps avoid unnecessary resource usage when instances or groups are no longer needed.
+Autokill automatically deletes instances, service groups, templates, and checkpoints when a configured condition triggers.
+It stops workloads from piling up after they finish and are no longer needed.
 
 You can configure autokill on:
 - [**Instances**](/platform/instances): killed after a time, or after reaching a request limit.
 - [**Instance templates**](/platform/instances#instance-templates): killed if nobody clones them within a specified time.
 - [**Service groups**](/platform/services): killed after the group has been empty for a specified time.
+- [**Checkpoints**](/features/checkpoints): killed if nobody restores them within a specified time.
+
+Set autokill with the `--autokill` flag on the `create` and `edit` commands of each resource.
 
 ## Instance autokill
 
@@ -22,27 +25,10 @@ The autokill timer doesn't fire while a delete lock is active.
 
 Automatically kill an instance after it stops and remains stopped for a given time:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instance create --metro fra \
   --autokill time=1h ...
 ```
-
-```bash title="API"
-curl -X POST \
-  -H "Authorization: Bearer ${UKC_TOKEN}" \
-  -H "Content-Type: application/json" \
-  "https://api.fra.unikraft.cloud/v1/instances" \
-  -d '{
-    "autokill": {
-      "time_ms": 3600000
-    },
-    ...
-  }'
-```
-
-</CodeTabs>
 
 This example kills the instance 1 hour after it stops.
 
@@ -50,86 +36,28 @@ This example kills the instance 1 hour after it stops.
 
 Kill an instance after it serves a specified request count:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instance create --metro fra \
   --autokill num-requests=1000 ...
 ```
 
-```bash title="API"
-curl -X POST \
-  -H "Authorization: Bearer ${UKC_TOKEN}" \
-  -H "Content-Type: application/json" \
-  "https://api.fra.unikraft.cloud/v1/instances" \
-  -d '{
-    "autokill": {
-      "num_requests": 1000
-    },
-    ...
-  }'
-```
-
-</CodeTabs>
-
 ### Updating autokill on a stopped instance
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
-unikraft api /v1/instances -X PATCH --metro fra \
-  '[{
-    "name": "<instance-name>",
-    "prop": "autokill",
-    "op": "set",
-    "value": {
-      "time_ms": 10000
-    }
-  }]'
+```bash
+unikraft instance edit <instance-name> --autokill time=10s
 ```
 
-```bash title="API"
-curl -X PATCH \
-  -H "Authorization: Bearer ${UKC_TOKEN}" \
-  -H "Content-Type: application/json" \
-  "https://api.fra.unikraft.cloud/v1/instances" \
-  -d '[{
-    "name": "<instance-name>",
-    "prop": "autokill",
-    "op": "set",
-    "value": {
-      "time_ms": 10000
-    }
-  }]'
-```
-
-</CodeTabs>
+The new value replaces the whole policy.
+To keep a request limit, pass it again, for example `--autokill time=10s,num-requests=1000`.
 
 ## Service group autokill
 
-Automatically kill a service group after it stays empty (no instances) for a given number of milliseconds:
+Automatically kill a service group after it stays empty (no instances) for a given time:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft service create --metro fra \
   --autokill time=5m ...
 ```
-
-```bash title="API"
-curl -X POST \
-  -H "Authorization: Bearer ${UKC_TOKEN}" \
-  -H "Content-Type: application/json" \
-  "https://api.fra.unikraft.cloud/v1/services" \
-  -d '{
-    "autokill": {
-      "time_ms": 300000
-    },
-    ...
-  }'
-```
-
-</CodeTabs>
 
 This example kills the service group 5 minutes after its last instance leaves.
 
@@ -139,31 +67,44 @@ This example kills the service group 5 minutes after its last instance leaves.
 When you clone an instance from a template, the new instance inherits the autokill configuration.
 :::
 
-Automatically kill an instance template if nobody clones it within a given number of milliseconds:
+Automatically kill an instance template if nobody clones it within a given time:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instance template create --metro fra \
   --autokill time=24h ...
 ```
 
-```bash title="API"
-curl -X POST \
-  -H "Authorization: Bearer ${UKC_TOKEN}" \
-  -H "Content-Type: application/json" \
-  "https://api.fra.unikraft.cloud/v1/instances/templates" \
-  -d '{
-    "autokill": {
-      "time_ms": 86400000
-    },
-    ...
-  }'
+This example removes the template after 24 hours without a clone.
+
+## Checkpoint autokill
+
+Automatically kill a [checkpoint](/features/checkpoints) if nobody restores it within a given time:
+
+```bash
+unikraft instance checkpoint create my-instance \
+  --autokill time=1h
 ```
 
-</CodeTabs>
+This example removes the checkpoint after 1 hour without a restore.
 
-This example removes the template after 24 hours without a clone.
+## Changing autokill
+
+Use the `edit` command of the resource to set or change its autokill policy:
+
+```bash
+unikraft service edit <service-name> --autokill time=10m
+unikraft instance template edit <template-name> --autokill time=48h
+unikraft instance checkpoint edit <checkpoint-name> --autokill time=2h
+```
+
+## Listing and filtering
+
+The `autokill.time` and `autokill.num-requests` fields work like any other field.
+You can list, filter, sort, and inspect them:
+
+```bash
+unikraft instance list --filter 'autokill.time>0s' --sort autokill.time
+```
 
 ## Learn more
 

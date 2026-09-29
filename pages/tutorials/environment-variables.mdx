@@ -27,7 +27,7 @@ ENV MY_ENV_VAR=my_value
 ## Kraftfile env
 
 You can set environment variables in your `Kraftfile` using the `env` field.
-`kraft` automatically reads them when building the image and sets them in the resulting packaged image.
+`unikraft build` reads them and sets them in the resulting packaged image.
 
 ```yaml title="Kraftfile"
 # ...
@@ -46,21 +46,11 @@ When deploying an instance, you can pass environment variables using the `--env`
 You can specify many environment variables by using the flag many times.
 The flag works similarly to the `docker run -e` flag.
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft run --metro fra \
   -e MY_ENV_VAR=my_value \
   --image <my-org>/my-app:latest
 ```
-
-```bash title="kraft"
-kraft cloud deploy my-app \
-  -e MY_ENV_VAR=my_value \
-  .
-```
-
-</CodeTabs>
 
 :::tip
 This method takes precedence over the `Dockerfile` and `Kraftfile`.
@@ -111,6 +101,6 @@ Thus it's recommended to do this only for variables that you set and don't chang
 
 ## Learn more
 
-* The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
+* The [CLI reference](/docs/cli/unikraft).
 * The [`Dockerfile` reference](https://docs.docker.com/reference/dockerfile/) for understanding how to set environment variables in `Dockerfile`s.
 * The [`Kraftfile` reference](/docs/kraftfile/v0.7) for understanding how to set environment variables in `Kraftfile`s.

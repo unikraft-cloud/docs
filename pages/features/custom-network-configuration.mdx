@@ -6,7 +6,7 @@ navigation_icon: network
 {/* vale off */}
 :::caution[**Limited Access**]
 Custom network configuration is a new feature which is available to enterprise customers, and is coming soon to the hosted platform.
-If you would like to try it out now, please reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
+If you would like to try it out now, please reach out to the [Unikraft Cloud Discord](https://unikraft.com/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
 :::
 {/* vale on */}
 
@@ -45,9 +45,7 @@ Leaving out `network_interfaces` is the same as requesting a single pool-allocat
 
 Add a `network_interfaces` array to your [`POST /instances`](/api/platform/v1/instances#create-instance) request:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft api /v1/instances \
   '{
     "name": "my-instance",
@@ -67,8 +65,6 @@ unikraft api /v1/instances \
     "nameserver": "1.2.3.4"
   }'
 ```
-
-</CodeTabs>
 
 Each entry in `network_interfaces` accepts the following fields:
 

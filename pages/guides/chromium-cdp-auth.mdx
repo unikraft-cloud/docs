@@ -19,15 +19,9 @@ This example uses Chromium, a headless browser exposing a [CDP (Chrome DevTools 
 
 To run this example, follow these steps:
 
-1. Install the CLI.
-   Use the [unikraft CLI](/cli/unikraft) or the legacy [kraft CLI](https://unikraft.org/docs/cli/install).
+1. Install the [unikraft CLI](/cli).
    You need a [BuildKit](https://github.com/moby/buildkit) builder. The easiest way to get one is via [Docker](https://docs.docker.com/engine/install/).
    Alternatively, you can also directly set up and use BuildKit, see the [quick start](https://github.com/moby/buildkit#quick-start).
-
-   :::note
-   The unikraft CLI is the current standard, while kraft is the legacy version.
-   Choose one of the CLIs below and only run the commands associated with it for the rest of this guide.
-   :::
 
 2. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/chromium-cdp-auth/` directory:
 
@@ -39,21 +33,9 @@ To run this example, follow these steps:
 Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪):
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft login
 ```
-
-```bash title="kraft"
-# Set Unikraft Cloud access token
-export UKC_TOKEN=token
-export UKC_METRO=fra
-```
-
-</CodeTabs>
-
-The `UKC_TOKEN` and `UKC_METRO` environment variables are only supported by the legacy CLI.
 
 Pick a bootstrap admin token that will be used for initial setup.
 You pass it to the instance as the `BOOTSTRAP_ADMIN_TOKEN` environment variable (see the deploy commands below) and use it to create additional tokens:
@@ -65,23 +47,13 @@ export BOOTSTRAP_ADMIN_TOKEN=my-secret-admin-token
 The token database is persisted on a [volume](/platform/volumes) mounted at `/app/data`, so it survives restarts.
 First create the volume:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft volume create --set metro=fra --set name=chromium-cdp-auth-data --set size=64M
 ```
 
-```bash title="kraft"
-kraft cloud volume create --name chromium-cdp-auth-data --size 64Mi
-```
-
-</CodeTabs>
-
 When done, invoke the following command to deploy this app on Unikraft Cloud, mounting the volume and passing the bootstrap token:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft build . --output <my-org>/chromium-cdp-auth
 unikraft run --metro fra \
   -m 4G \
@@ -92,25 +64,9 @@ unikraft run --metro fra \
   --image <my-org>/chromium-cdp-auth
 ```
 
-```bash title="kraft"
-kraft cloud deploy \
-  -M 4Gi \
-  -p 443:8080/tls+http \
-  --scale-to-zero idle \
-  --scale-to-zero-stateful \
-  --scale-to-zero-cooldown 1s \
-  --env BOOTSTRAP_ADMIN_TOKEN="$BOOTSTRAP_ADMIN_TOKEN" \
-  --volume chromium-cdp-auth-data:/app/data \
-  .
-```
-
-</CodeTabs>
-
 The output shows the instance address and other details.
 
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mmetro[22m:        fra
 [1mname[22m:         chromium-cdp-auth-d0l6y
 [1muuid[22m:         debe81b0-8418-4e01-b795-b3546e0e5aac
@@ -131,23 +87,6 @@ The output shows the instance address and other details.
 [1mtimestamps[22m:
 [3m  created[23m:    just now
 ```
-
-```ansi title="kraft"
-[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
- [38;5;245m│[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mname[0m: chromium-cdp-auth-d0l6y
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245muuid[0m: debe81b0-8418-4e01-b795-b3546e0e5aac
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mstate[0m: [92mstarting[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mdomain[0m: https://spring-dream-p5wxwwl0.fra.unikraft.app
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/chromium-cdp-auth@sha256:9e22546a9234efbd586b3cc3ff2ab71d64b56e87b8af431a3dfffd4aff274cc3
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmemory[0m: 4096 MiB
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mservice[0m: spring-dream-p5wxwwl0
- [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: chromium-cdp-auth-d0l6y.internal
- [38;5;245m└[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mprivate ip[0m: 10.0.4.141
-```
-
-</CodeTabs>
 
 In this case, the instance name is `chromium-cdp-auth-d0l6y` and the address is `https://spring-dream-p5wxwwl0.fra.unikraft.app`.
 They're different for each run.
@@ -198,31 +137,15 @@ See [`test/README.md`](test/README.md) for setup and a screenshot example that p
 
 You can list information about the instance by running:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances list
 ```
 
-```bash title="kraft"
-kraft cloud instance list
-```
-
-</CodeTabs>
-
 When done, you can remove the instance:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances delete chromium-cdp-auth-d0l6y
 ```
-
-```bash title="kraft"
-kraft cloud instance remove chromium-cdp-auth-d0l6y
-```
-
-</CodeTabs>
 
 ## Learn more
 
@@ -232,17 +155,9 @@ kraft cloud instance remove chromium-cdp-auth-d0l6y
 
 Use the `--help` option for detailed information on using Unikraft Cloud:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft --help
 ```
 
-```bash title="kraft"
-kraft cloud --help
-```
-
-</CodeTabs>
-
-Or visit the [CLI Reference](/cli/unikraft) or the [legacy CLI Reference](/cli/kraft/overview).
+Or visit the [CLI Reference](/cli/unikraft).
 {/* vale on */}

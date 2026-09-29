@@ -45,7 +45,6 @@ dist/
 apis/platform.yaml
 build.log
 .examples/
-pages/cli/kraft/
 pages/cli/unikraft/
 pages/cli/unikraft.mdx
 pages/kraftfile/

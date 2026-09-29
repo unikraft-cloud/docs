@@ -13,8 +13,6 @@ env:
   UKC_TOKEN: ${{ secrets.UKC_TOKEN }}
   UKC_METRO: ${{ vars.UKC_METRO }}
   UKC_METRO_NAME: ${{ vars.UKC_METRO_NAME }}
-  KRAFTKIT_LOG_LEVEL: debug
-  KRAFTKIT_NO_CHECK_UPDATES: "true"
 
 permissions:
   deployments: write

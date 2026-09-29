@@ -17,15 +17,9 @@ This example deploys three services on Unikraft Cloud: NGINX (reverse proxy), Fl
 
 To run this example, follow these steps:
 
-1. Install the CLI.
-   Use the [unikraft CLI](/cli/unikraft) or the legacy [kraft CLI](https://unikraft.org/docs/cli/install).
+1. Install the [unikraft CLI](/cli).
    You need a [BuildKit](https://github.com/moby/buildkit) builder. The easiest way to get one is via [Docker](https://docs.docker.com/engine/install/).
    Alternatively, you can also directly set up and use BuildKit, see the [quick start](https://github.com/moby/buildkit#quick-start).
-
-   :::note
-   The unikraft CLI is the current standard, while kraft is the legacy version.
-   Choose one of the CLIs below and only run the commands associated with it for the rest of this guide.
-   :::
 
 2. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/nginx-flask-mongo` directory:
 
@@ -37,73 +31,33 @@ To run this example, follow these steps:
 Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪):
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft login
 ```
-
-```bash title="kraft"
-# Set Unikraft Cloud access token
-export UKC_TOKEN=token
-# Set metro to Frankfurt, DE
-export UKC_METRO=fra
-```
-
-</CodeTabs>
 
 ## MongoDB
 
 Create a volume for MongoDB data persistence:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft volume create --metro fra --name mongo-data --size 1G
 ```
 
-```bash title="kraft"
-kraft cloud volume create --name mongo-data --size 1Gi
-```
-
-</CodeTabs>
-
 You can list the created volume by running:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft volume list
 ```
 
-```bash title="kraft"
-kraft cloud volume list
-```
-
-</CodeTabs>
-
-<div style={{ marginTop: '0.8em' }} />
-
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mMETRO[22m  [1mNAME[22m        [1mSTATE[22m      [1mSIZE[22m  [1mCREATED[22m
 fra    mongo-data  [38;2;0;188;125mavailable[0m  1GiB  just now
 ```
 
-```ansi title="kraft"
-[0;1;39mNAME[0m        [0;1;39mCREATED AT[0m  [0;1;39mSIZE[0m     [0;1;39mATTACHED TO[0m  [0;1;39mMOUNTED BY[0m  [0;1;39mSTATE[0m      [0;1;39mPERSISTENT[0m
-mongo-data  now         1.0 GiB                           available  true
-```
-
-</CodeTabs>
-
 First, deploy the MongoDB instance.
 MongoDB is an internal service (not publicly accessible), reached via the `mongo.internal` domain:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft build ./mongo --output <my-org>/mongo:latest
 unikraft run --metro fra \
   -m 1024M \
@@ -113,24 +67,9 @@ unikraft run --metro fra \
   --image <my-org>/mongo:latest
 ```
 
-```bash title="kraft"
-kraft cloud deploy \
-  -M 1024Mi \
-  --scale-to-zero idle \
-  --scale-to-zero-stateful \
-  --scale-to-zero-cooldown 1s \
-  --domain mongo.internal \
-  --volume mongo-data:/data/db \
-  ./mongo
-```
-
-</CodeTabs>
-
 The output shows the MongoDB instance details:
 
-<CodeTabs syncKey="cli">
-
-```text title="unikraft"
+```ansi
 [1mmetro[22m:           fra
 [1mname[22m:            mongo-o3qhq
 [1muuid[22m:            90158c53-6654-4e73-bad1-1d6ab4452001
@@ -161,31 +100,12 @@ The output shows the MongoDB instance details:
 [3m  cooldown-time[23m: 1s
 ```
 
-```ansi title="kraft"
-[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
- [38;5;245m│[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mname[0m: mongo-o3qhq
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245muuid[0m: 90158c53-6654-4e73-bad1-1d6ab4452001
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mstate[0m: [92mstarting[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mdomain[0m: mongo.internal
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/mongo@sha256:68894454735e0e5b07d61aad19b1c03355f415ec33c050daeaa419d931962657
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmemory[0m: 1024 MiB
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mservice[0m: restless-glade-l8pu2mf0
- [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: mongo-o3qhq.internal
- [38;5;245m└[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mprivate ip[0m: 10.0.15.21
-```
-
-</CodeTabs>
-
 ## Flask
 
 Next, deploy the Flask backend.
 It connects to MongoDB using the `MONGO_SERVER_URL` environment variable and is reached internally via `backend.internal`:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft build ./flask --output <my-org>/flask:latest
 unikraft run --metro fra \
   -m 1024M \
@@ -196,24 +116,9 @@ unikraft run --metro fra \
   --image <my-org>/flask:latest
 ```
 
-```bash title="kraft"
-kraft cloud deploy \
-  -M 1024Mi \
-  --scale-to-zero on \
-  --scale-to-zero-cooldown 1s \
-  --domain backend.internal \
-  --env FLASK_SERVER_PORT=9091 \
-  --env MONGO_SERVER_URL=mongo.internal:27017 \
-  ./flask
-```
-
-</CodeTabs>
-
 The output shows the Flask instance details:
 
-<CodeTabs syncKey="cli">
-
-```text title="unikraft"
+```ansi
 [1mmetro[22m:                 fra
 [1mname[22m:                  flask-9a68z
 [1muuid[22m:                  bb6d91f7-0714-45e5-b14a-ec82a5dac36e
@@ -243,32 +148,13 @@ The output shows the Flask instance details:
 [3m  cooldown-time[23m:       1s
 ```
 
-```ansi title="kraft"
-[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
- [38;5;245m│[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mname[0m: flask-9a68z
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245muuid[0m: bb6d91f7-0714-45e5-b14a-ec82a5dac36e
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mstate[0m: [92mstarting[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mdomain[0m: backend.internal
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/flask@sha256:f23b3368cd777acae68ad8f35713a4cf55f901d6c266017bf6f0679ffc7a8172
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmemory[0m: 1024 MiB
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mservice[0m: broken-bird-8isa6q21
- [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: flask-9a68z.internal
- [38;5;245m└[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mprivate ip[0m: 10.0.17.97
-```
-
-</CodeTabs>
-
 ## NGINX
 
 Finally, deploy NGINX as the public-facing reverse proxy.
 It forwards requests to the Flask backend at `backend.internal:9091` by default.
 To use a different backend domain, set the `BACKEND_HOST` environment variable to the same value you pass as the Flask domain.
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft build ./nginx --output <my-org>/nginx:latest
 unikraft run --metro fra \
   -m 512M \
@@ -278,23 +164,9 @@ unikraft run --metro fra \
   --image <my-org>/nginx:latest
 ```
 
-```bash title="kraft"
-kraft cloud deploy \
-  -M 512Mi \
-  -p 443:80/tls+http \
-  --scale-to-zero on \
-  --scale-to-zero-cooldown 1s \
-  --env BACKEND_HOST=backend.internal \
-  ./nginx
-```
-
-</CodeTabs>
-
 The output shows the NGINX instance details including its public FQDN:
 
-<CodeTabs syncKey="cli">
-
-```text title="unikraft"
+```ansi
 [1mmetro[22m:           fra
 [1mname[22m:            nginx-jnpwi
 [1muuid[22m:            57f64e99-bd06-46fd-98f4-26b64751623e
@@ -320,50 +192,18 @@ The output shows the NGINX instance details including its public FQDN:
 [3m  cooldown-time[23m: 1s
 ```
 
-```ansi title="kraft"
-[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
- [38;5;245m│[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mname[0m: nginx-jnpwi
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245muuid[0m: 57f64e99-bd06-46fd-98f4-26b64751623e
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mstate[0m: [92mstarting[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mdomain[0m: https://snowy-river-gotjeojl.fra.unikraft.app
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/nginx@sha256:8cff54392eeead80bafe33538866b04bfd076f2052d65cb3751a938a22368bc0
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmemory[0m: 512 MiB
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mservice[0m: snowy-river-gotjeojl
- [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: nginx-jnpwi.internal
- [38;5;245m└[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mprivate ip[0m: 10.0.14.201
-```
-
-</CodeTabs>
-
 You can list all deployed instances with:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances list
 ```
 
-```text title="unikraft"
+```ansi
 [1mMETRO[22m  [1mNAME[22m         [1mSTATE[22m    [1mIMAGE[22m           [1mMEMORY[22m  [1mVCPUS[22m  [1mFQDN[22m                                   [1mCREATED[22m
 fra    nginx-jnpwi  [38;2;43;127;255mstandby[0m  <my-org>/nginx  512MiB  1      snowy-river-gotjeojl.fra.unikraft.app  11 minutes ago
 fra    flask-9a68z  [38;2;43;127;255mstandby[0m  <my-org>/flask  1GiB    1      backend.internal                       12 minutes ago
 fra    mongo-o3qhq  [38;2;43;127;255mstandby[0m  <my-org>/mongo  1GiB    1      mongo.internal                         14 minutes ago
 ```
-
-```bash title="kraft"
-kraft cloud instance list
-```
-
-```ansi title="kraft"
-[0;1;39mNAME[0m         [0;1;39mFQDN[0m                                   [0;1;39mSTATE[0m    [0;1;39mSTATUS[0m       [0;1;39mIMAGE[0m                                         [0;1;39mMEMORY[0m   [0;1;39mVCPUS[0m  [0;1;39mARGS[0m  [0;1;39mBOOT TIME[0m
-nginx-jnpwi  snowy-river-gotjeojl.fra.unikraft.app  [0;36mstandby[0m  standby      oci://unikraft.io/<my-org>/nginx@sha256:...   512 MiB  1            83.87 ms
-flask-9a68z  backend.internal                       [0;32mrunning[0m  since 2mins  oci://unikraft.io/<my-org>/flask@sha256:...   1.0 GiB  1            1916.54 ms
-mongo-o3qhq  mongo.internal                         [0;32mrunning[0m  since 5mins  oci://unikraft.io/<my-org>/mongo@sha256:...   1.0 GiB  1            2776.86 ms
-```
-
-</CodeTabs>
 
 ## Test the deployment
 
@@ -382,37 +222,20 @@ Hello from the MongoDB client!
 
 When done, remove the instances and volume:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances delete mongo-o3qhq flask-9a68z nginx-jnpwi
 unikraft volume delete mongo-data
 ```
-
-```bash title="kraft"
-kraft cloud instance remove mongo-o3qhq flask-9a68z nginx-jnpwi
-kraft cloud volume remove mongo-data
-```
-
-</CodeTabs>
 
 ## Learn more
 
 Use the `--help` option for detailed information on using Unikraft Cloud:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft --help
 ```
 
-```bash title="kraft"
-kraft cloud --help
-```
-
-</CodeTabs>
-
-Or visit the [CLI Reference](/cli/unikraft) or the [legacy CLI Reference](/cli/kraft/overview).
+Or visit the [CLI Reference](/cli/unikraft).
 
 - [Flask Documentation](https://flask.palletsprojects.com/en/stable/)
 - [MongoDB Documentation](https://www.mongodb.com/docs/)

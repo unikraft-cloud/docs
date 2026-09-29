@@ -40,23 +40,11 @@ Unikraft Cloud reports these as instance `state` values via the endpoints.
 You can visualize these states with the CLI.
 Here is an example of an instance that's in `stopped` state:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instance get httpserver-go121-taud8
 ```
 
-```bash title="kraft"
-kraft instance list httpserver-go121-taud8
-```
-
-</CodeTabs>
-
-<div style={{ marginTop: '0.8em' }} />
-
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mmetro[22m:           fra
 [1mname[22m:            httpserver-go121-taud8
 [1muuid[22m:            bd281cc4-7640-4cbc-af48-5a44c2bd7b74
@@ -84,40 +72,6 @@ kraft instance list httpserver-go121-taud8
 [3m  reason[23m:        platform stop
 [3m  exit-code[23m:     1
 ```
-
-```ansi title="kraft"
-                   uuid: bd281cc4-7640-4cbc-af48-5a44c2bd7b74
-                   name: httpserver-go121-taud8
-                   fqdn: floral-sun-54ixkmi6.fra.unikraft.app
-           private fqdn: httpserver-go121-taud8.internal
-             private ip: 10.0.0.37
-                  state: [0;36mstandby[0m
-                created: 2026-05-28T13:53:40Z
-                started: 2026-05-28T13:54:43Z
-                stopped: 2026-05-28T13:54:45Z
-            start count: 3
-          restart count: 0
-       restart attempts:
-           next restart:
-         restart policy: never
-            stop origin:
-            stop reason:
-          app exit code: 1
-                  image: oci://unikraft.io/<my-org>/httpserver-go121:latest@sha256:7785ebdf6c1ffaf05c3beab4cffc2548790c088233a0ee51ac5d047e21e43d77
-                 memory: 256 MiB
-                  vcpus: 1
-                   args:
-                    env:
-                volumes:
-                service: floral-sun-54ixkmi6
-          scale to zero: on
- scale to zero cooldown: 1000
- scale to zero stateful: false
-              boot time: 75.70 ms
-                up time: 47.521s
-```
-
-</CodeTabs>
 
 You can retrieve even more instance details via the API:
 
@@ -343,32 +297,22 @@ Replicas receive independent names and UUIDs.
 
 You can do this with the CLI as well:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instance create --replicas 2 ...
 ```
-
-```bash title="kraft"
-kraft cloud deploy --replicas 2 ...
-```
-
-</CodeTabs>
 
 ### GPUs
 
 :::caution[**Limited Access**]
 GPU support is currently only available as a preview for enterprise customers.
-To try out the preview, reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
+To try out the preview, reach out to the [Unikraft Cloud Discord](https://unikraft.com/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
 The interface described here reflects the current implementation and may change before general availability.
 :::
 
 Instances can run with an NVIDIA GPU attached.
 Pass `--gpus` when you create the instance, together with the `full` instance type that GPUs require:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instance create --metro fra \
   --name my-inference-app \
   --image my-inference-app:latest \
@@ -377,20 +321,14 @@ unikraft instance create --metro fra \
   --gpus 1
 ```
 
-</CodeTabs>
-
 An instance can currently hold at most one GPU, and you can't choose which one.
 The platform picks a free GPU from the host and keeps it assigned for the instance's entire lifetime, releasing it when you delete the instance.
 
 To see the GPUs an instance holds, inspect it:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instance get my-inference-app
 ```
-
-</CodeTabs>
 
 The `gpus.*.uuid` and `gpus.*.model` fields report the GPUs themselves, and `resources.gpus` reports how many the instance holds.
 Listings sort and filter on all three like any other [field](/docs/cli/fields).
@@ -420,8 +358,6 @@ Use `timeout_s` instead.
 
 :::note
 The `unikraft` CLI automatically waits for the instance to be running after creation, up until a preconfigured timeout of 10 seconds.
-The `kraft` CLI doesn't support this feature yet.
-Additionally, if you create an instance using `kraft cloud instance create`, you need to specify the `--start` flag to autostart the instance.
 :::
 
 ### Delete on stop
@@ -443,17 +379,9 @@ This is useful for ephemeral workloads—batch jobs, one-shot tasks—where you 
 
 You can also use the CLI to set this up:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instance create --rm ...
 ```
-
-```bash title="kraft"
-# not supported, use unikraft CLI instead
-```
-
-</CodeTabs>
 
 :::note
 To use the "delete-on-stop" feature, set the `restart_policy` to `never`.
@@ -464,7 +392,7 @@ To use the "delete-on-stop" feature, set the `restart_policy` to `never`.
 {/* vale off */}
 :::caution[**Limited Access**]
 Nested virtualization is available as part of enterprise plans.
-To enable it for your account, reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
+To enable it for your account, reach out to the [Unikraft Cloud Discord](https://unikraft.com/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
 :::
 {/* vale on */}
 
@@ -483,13 +411,9 @@ Pass `nested-virt` in the features array to expose them, so that a workload ship
 
 You can also use the CLI to set this up:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instance create --feature nested-virt ...
 ```
-
-</CodeTabs>
 
 The guest kernel needs the matching driver to use the extensions.
 A Linux guest needs `CONFIG_KVM` together with `CONFIG_KVM_INTEL` or `CONFIG_KVM_AMD`, and exposes `/dev/kvm` once it loads the module.
@@ -523,17 +447,9 @@ Set `drain_timeout_ms` to allow the instance to finish serving in-flight connect
 
 You can also use the CLI to set this up:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instance stop --drain-timeout 5s my-instance
 ```
-
-```bash title="kraft"
-kraft cloud instance stop --wait 5s my-instance
-```
-
-</CodeTabs>
 
 While draining, the instance enters the `draining` state.
 The platform accepts no new connections.
@@ -571,23 +487,11 @@ This lets the guest finish any instance-specific setup—such as reading per-ins
 If the template already exists, the clone happens right away and the write returns without re-snapshotting.
 You can also create a template from an instance (even when it's running) by calling [`POST /instances/templates`](/api/platform/v1/instances#create-template-instances-from-instances), or using the CLI:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instance template create httpserver-go121-taud8
 ```
 
-```bash title="kraft"
-kraft cloud instance template create
-```
-
-</CodeTabs>
-
-<div style={{ marginTop: '0.8em' }} />
-
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mmetro[22m:           fra
 [1mname[22m:            httpserver-go121-taud8
 [1muuid[22m:            bd281cc4-7640-4cbc-af48-5a44c2bd7b74
@@ -604,51 +508,26 @@ kraft cloud instance template create
 [3m  cooldown-time[23m: 1s
 ```
 
-```ansi title="kraft"
-bd281cc4-7640-4cbc-af48-5a44c2bd7b74
-```
-
-</CodeTabs>
-
 You can list templates with [`GET /instances/templates`](/api/platform/v1/instances#list-template-instances) or the CLI:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instance template list
 ```
 
-```bash title="kraft"
-kraft instance template list
-```
-
-</CodeTabs>
-
-<div style={{ marginTop: '0.8em' }} />
-
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mMETRO[22m  [1mNAME[22m                    [1mSTATE[22m     [1mIMAGE[22m                      [1mARGS[22m  [1mMEMORY[22m  [1mVCPUS[22m  [1mCREATED[22m
 fra    httpserver-go121-taud8  [38;2;43;127;255mtemplate[0m  <my-org>/httpserver-go121        256MiB  1      6 days ago
 ```
 
-```ansi title="kraft"
-[0;1;39mNAME[0m                    [0;1;39mIMAGE[0m                                                                                                                       [0;1;39mARGS[0m  [0;1;39mCREATED AT[0m
-httpserver-go121-taud8  oci://unikraft.io/<my-org>/httpserver-go121:latest@sha256:7785ebdf6c1ffaf05c3beab4cffc2548790c088233a0ee51ac5d047e21e43d77        6 days ago
-```
-
-</CodeTabs>
-
 Now, you can create an instance from the template using the `unikraft` CLI:
 
-```bash title="unikraft"
+```bash
 unikraft instance create --metro fra \
   --template httpserver-go121-taud8 \
   --name httpserver-go121-clone
 ```
 
-```ansi title="unikraft"
+```ansi
 [1mmetro[22m:           fra
 [1mname[22m:            httpserver-go121-clone
 [1muuid[22m:            91796fdb-bd41-4c7b-856f-9e60356c96bd
@@ -704,19 +583,11 @@ The logs capture the instance's `stdout` and `stderr` output, and they're preser
 
 With the CLI, you can also follow the logs in real time:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instance logs --follow my-instance
 ```
 
-```bash title="kraft"
-kraft cloud instance logs --follow my-instance
-```
-
-</CodeTabs>
-
 ## Learn more
 
-* The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
+* The [CLI reference](/docs/cli/unikraft).
 * Unikraft Cloud's [REST API reference](/api/platform/v1), in particular the section on [instances](/api/platform/v1/instances).

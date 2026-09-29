@@ -35,23 +35,18 @@ The `unikraft` CLI doesn't support compressing rootfses.
 This choice is deliberate, as the performance downsides aren't worth it most of the time.
 The legacy `kraft` CLI implements CPIO compression directly.
 
-Both CLIs support deploying pre-compressed EROFS rootfses.
+The `unikraft` CLI supports deploying pre-compressed EROFS rootfses.
 
 As a study case, this tutorial uses this [`node` image](https://github.com/unikraft-cloud/examples/tree/main/node-playwright-chromium), which has a big rootfs size.
 A full guide on using this image is available [here](/guides/node-playwright-chromium).
 
 ### CPIO compression
 
-To package a compressed CPIO rootfs using the legacy CLI, you can use the `--compress` flag when running the `kraft pkg` or `kraft cloud deploy` command.
+To package a compressed CPIO rootfs, use the `--compress` flag of the legacy `kraft pkg` command.
 This uses `gzip` compression to compress the initrd file before packaging it into a `OCI` image and uploading it to the Unikraft Cloud platform.
+Then deploy the image with the `unikraft` CLI:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
-# not supported, use the legacy CLI
-```
-
-```bash title="kraft"
+```bash
 kraft pkg \
   --plat kraftcloud \
   --arch x86_64 \
@@ -60,15 +55,12 @@ kraft pkg \
   --compress \
   --push \
   .
-kraft cloud vm create \
-  --start \
-  --scale-to-zero on \
-  -p 443:8080/tls+http \
-  -M 2200Mi \
-  index.unikraft.io/<my-org>/node-playwright-chromium:cpio-compressed
+unikraft run --metro fra \
+  --scale-to-zero policy=on \
+  -p 443:8080/http+tls \
+  -m 2200M \
+  --image <my-org>/node-playwright-chromium:cpio-compressed
 ```
-
-</CodeTabs>
 
 :::warning
 It's **not** recommended to use CPIO compression due to the performance downsides mentioned above.
@@ -94,9 +86,7 @@ mkfs.erofs --all-root -b 4096 -d2 -E noinline_data -z lz4hc,9 rootfs.erofs --tar
 
 Finally, you can package and deploy the compressed EROFS rootfs using the CLI:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 # first, modify the Kraftfile to use the compressed EROFS rootfs:
 # ...
 # rootfs:
@@ -112,24 +102,6 @@ unikraft run --metro fra \
   --image <my-org>/node-playwright-chromium:erofs-compressed
 ```
 
-```bash title="kraft"
-kraft pkg \
-  --plat kraftcloud \
-  --arch x86_64 \
-  --name index.unikraft.io/<my-org>/node-playwright-chromium:erofs-compressed \
-  --rootfs-type erofs \
-  --rootfs ./rootfs.erofs \
-  --push
-kraft cloud vm create \
-  --start \
-  --scale-to-zero on \
-  -p 443:8080/tls+http \
-  -M 600Mi \
-  index.unikraft.io/<my-org>/node-playwright-chromium:erofs-compressed
-```
-
-</CodeTabs>
-
 ## Performance impact
 
 You can see below the same [`node` image](https://github.com/unikraft-cloud/examples/tree/main/node-playwright-chromium) packaged and deployed four times, with and without compression, and with both CPIO and EROFS formats.
@@ -137,17 +109,9 @@ You can view the results in the table below, which show the image size, boot tim
 
 To check the image size, you can list your images:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft images list
 ```
-
-```bash title="kraft"
-kraft cloud image list
-```
-
-</CodeTabs>
 
 | rootfs Type   | Compression | Image Size | Boot Time  | Instance Memory Required |
 |---------------|-------------|------------|------------|--------------------------|
@@ -192,6 +156,6 @@ If limited by size constraints, try using compressed EROFS rootfses with a fast 
 
 * The [rootfs formats tutorial](/tutorials/rootfs-formats) for understanding the differences between CPIO and EROFS.
 * The [`mkfs.erofs` documentation](https://man.archlinux.org/man/extra/erofs-utils/mkfs.erofs.1.en) for more information on creating compressed EROFS file systems.
-* The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
+* The [CLI reference](/docs/cli/unikraft).
 * The `kraft pkg` [command reference](https://unikraft.org/docs/cli/reference/kraft/pkg) for packaging images.
 * The `Kraftfile` [reference](/kraftfile/v0.7) for specifying rootfs sources and formats.

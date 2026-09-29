@@ -12,28 +12,14 @@ They follow the same general pattern used in the [Unikraft Cloud example reposit
 
 ## Prerequisites
 
-Make sure you have the CLI installed.
-Use the [unikraft CLI](/docs/cli/unikraft) or the legacy [kraft CLI](https://unikraft.org/docs/cli/install).
+Make sure you have the [unikraft CLI](/docs/cli/overview) installed.
 You also need a container runtime such as Docker because the `Dockerfile` builds the root filesystem.
 
-Set your Unikraft Cloud credentials and preferred metro before deploying:
+Log into Unikraft Cloud before you deploy:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft login
 ```
-
-```bash title="kraft"
-# Set Unikraft Cloud access token
-export UKC_TOKEN=token
-# Set metro to Frankfurt, DE
-export UKC_METRO=fra
-```
-
-</CodeTabs>
-
-The `UKC_TOKEN` and `UKC_METRO` environment variables are only supported by the legacy CLI.
 
 ## Use the upstream image
 
@@ -107,25 +93,13 @@ Also note that instances run as `root` unless you explicitly switch users at run
 Run an initial deployment before optimizing anything.
 This confirms that the runtime, filesystem, and command line are valid.
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft build . --output <my-org>/docker-port:latest
 unikraft run --metro fra \
   -p 443:<container-port> \
   -m 512M \
   --image <my-org>/docker-port:latest
 ```
-
-```bash title="kraft"
-kraft cloud deploy \
-  -p 443:<container-port> \
-  -M 512Mi \
-  --rootfs-type erofs \
-  .
-```
-
-</CodeTabs>
 
 Replace [`<container-port>`](/platform/services) with the app's listen port.
 Take this value from the image documentation or from the `ExposedPorts` field you inspected earlier.
@@ -254,9 +228,7 @@ This is the same shape used by examples such as [`httpserver-node21-nextjs`](htt
 After reducing the filesystem, deploy it with [EROFS](/tutorials/rootfs-formats) when possible.
 This often gives better cold-boot behaviour and lower memory pressure than CPIO for larger images.
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 # make sure to specify the erofs format in Kraftfile
 # ...
 # rootfs:
@@ -269,16 +241,6 @@ unikraft run --metro fra \
   -m 256M \
   --image <my-org>/docker-port:latest
 ```
-
-```bash title="kraft"
-kraft cloud deploy \
-  -p 443:<container-port> \
-  -M 256Mi \
-  --rootfs-type erofs \
-  .
-```
-
-</CodeTabs>
 
 Treat the memory value as a starting point.
 Tune it after the first successful deployment by looking at the actual boot behaviour and logs.
@@ -300,9 +262,7 @@ Before calling the image minimized, check the following:
 If the upstream image depends on environment variables, you can optionally carry them over explicitly.
 The most reliable method at deployment time is to pass them through the CLI with `--env` or `-e`:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft build . --output <my-org>/docker-port:latest
 unikraft run --metro fra \
   -p 443:<container-port> \
@@ -311,18 +271,6 @@ unikraft run --metro fra \
   -e LOG_LEVEL=info \
   --image <my-org>/docker-port:latest
 ```
-
-```bash title="kraft"
-kraft cloud deploy \
-  -p 443:<container-port> \
-  -M 256Mi \
-  --rootfs-type erofs \
-  -e APP_ENV=production \
-  -e LOG_LEVEL=info \
-  .
-```
-
-</CodeTabs>
 
 If the image expects a wrapper entrypoint that prepares environment variables before starting the main process, keep that wrapper in your `cmd` line or replace it with your own script.
 The [Environment Variables](/tutorials/environment-variables) tutorial describes the wrapper pattern in more detail.
@@ -361,9 +309,7 @@ It tests whether the app can suspend cleanly and resume on the next request.
 
 The simplest way to test scale-to-zero is to deploy with an explicit scale-to-zero policy and a short cooldown:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft build . --output <my-org>/docker-port:latest
 unikraft run --metro fra \
   -p 443:<container-port> \
@@ -372,32 +318,11 @@ unikraft run --metro fra \
   --image <my-org>/docker-port:latest
 ```
 
-```bash title="kraft"
-kraft cloud deploy \
-  -p 443:<container-port> \
-  -M 256Mi \
-  --scale-to-zero on \
-  --scale-to-zero-stateful \
-  --scale-to-zero-cooldown 5s \
-  --rootfs-type erofs \
-  .
-```
-
-</CodeTabs>
-
 After deployment, wait a few seconds and then list the instances:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances list
 ```
-
-```bash title="kraft"
-kraft cloud instance list
-```
-
-</CodeTabs>
 
 If everything is working, the instance should transition to `standby` when idle and wake up again on the next request.
 

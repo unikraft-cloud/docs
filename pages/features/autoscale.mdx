@@ -6,7 +6,7 @@ navigation_icon: square-stack
 {/* vale off */}
 :::caution[**Limited Access**]
 At the moment, autoscale **is not** enabled by default (you might get an *"Autoscale not enabled for your account"* error).
-If you would like to enable it, please reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
+If you would like to enable it, please reach out to the [Unikraft Cloud Discord](https://unikraft.com/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
 :::
 {/* vale on */}
 
@@ -43,9 +43,7 @@ In the meantime, drive autoscale through the [API](/api/platform/v1/autoscale), 
 
 First, create an instance, in this example using NGINX:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 git clone https://github.com/unikraft-cloud/examples
 cd examples/nginx/
 unikraft build . --output <my-org>/nginx:latest
@@ -55,13 +53,9 @@ unikraft run --metro fra \
   --image <my-org>/nginx:latest
 ```
 
-</CodeTabs>
-
 The output shows the instance address and other details:
 
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mmetro[22m:        fra
 [1mname[22m:         nginx-67zbu
 [1muuid[22m:         8a8bc1b9-0af6-420e-a426-190dc2da9eaa
@@ -83,8 +77,6 @@ The output shows the instance address and other details:
 [3m  created[23m:    just now
 ```
 
-</CodeTabs>
-
 :::note
 Autoscale requires an [instance template](/platform/instances#instance-templates) to create new instances during scale-out.
 If you enable autoscale through the API, provide the template under the top-level `template` field.
@@ -92,7 +84,7 @@ If you enable autoscale through the API, provide the template under the top-leve
 
 The next step is to convert the instance you deployed into a template that autoscale clones during scale-out:
 
-```bash title="unikraft"
+```bash
 unikraft instance template create nginx-67zbu
 ```
 
@@ -101,7 +93,7 @@ The instance's `state` changes to `template`, and its name (`nginx-67zbu`) is th
 Converting the instance into a template consumes it, so the service that the deploy step created for it (`nameless-fog-0tvh1uov`) no longer exists.
 Create a new persistent [service](/platform/services) for autoscale to manage:
 
-```bash title="unikraft"
+```bash
 unikraft service create --metro fra \
   --name nginx-autoscale-service \
   --domain nginx-autoscale \
@@ -121,9 +113,7 @@ The instance-create call then prepares and reuses the underlying template automa
 
 Achieve this with the following commands:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft api /v1/services/<service-uuid>/autoscale -X POST --metro fra \
   '{
     "min_size": 1,
@@ -159,8 +149,6 @@ unikraft api /v1/services/<service-uuid>/autoscale/policies -X POST --metro fra 
   }'
 ```
 
-</CodeTabs>
-
 Note the following:
 
 * The first command sets the template to clone, and configures it to scale up to a maximum of 8 instances and a minimum of 1; the command also sets the warm up and cool down time to 1 second each, so it doesn't constantly fluctuate up and down.
@@ -181,7 +169,7 @@ Keep in mind that a few restrictions apply to how you define scale-in/scale-out 
 {/* vale off */}
 :::caution[**Limited Access**]
 The high watermark signal is available to enterprise customers.
-If you would like to try it out now, please reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
+If you would like to try it out now, please reach out to the [Unikraft Cloud Discord](https://unikraft.com/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
 :::
 {/* vale on */}
 
@@ -195,19 +183,13 @@ Your metro operator switches that response header on.
 
 To check it's working, list the autoscale properties of the service:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft api /v1/services/<service-uuid>/autoscale -X GET --metro fra
 ```
 
-</CodeTabs>
-
 You should see output like:
 
-<CodeTabs syncKey="cli">
-
-```json title="unikraft"
+```json
 {
   "status": "success",
   "data": {
@@ -264,23 +246,15 @@ You should see output like:
 }
 ```
 
-</CodeTabs>
-
 To list an individual policy:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft api /v1/services/<service-uuid>/autoscale/policies/scale-out-policy -X GET --metro fra
 ```
 
-</CodeTabs>
-
 You should see output like:
 
-<CodeTabs syncKey="cli">
-
-```json title="unikraft"
+```json
 {
   "status": "success",
   "data": {
@@ -311,8 +285,6 @@ You should see output like:
 }
 ```
 
-</CodeTabs>
-
 {/* TODO: add example */}
 
 ## Policy types
@@ -327,9 +299,7 @@ You define up to **4 steps**, each specifying a lower bound, upper bound, and th
 
 You should order steps by lower bound with no gaps between them and no overlaps:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft api /v1/services/<service-uuid>/autoscale/policies -X POST --metro fra \
   '{
     "name": "my-step-policy",
@@ -342,8 +312,6 @@ unikraft api /v1/services/<service-uuid>/autoscale/policies -X POST --metro fra 
     ]
   }'
 ```
-
-</CodeTabs>
 
 The following metrics can drive a step policy:
 

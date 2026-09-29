@@ -13,15 +13,9 @@ The example consists of two services: a Flask web server that increments a page 
 
 To run this example, follow these steps:
 
-1. Install the CLI.
-   Use the [unikraft CLI](/cli/unikraft) or the legacy [kraft CLI](https://unikraft.org/docs/cli/install).
+1. Install the [unikraft CLI](/cli).
    You need a [BuildKit](https://github.com/moby/buildkit) builder. The easiest way to get one is via [Docker](https://docs.docker.com/engine/install/).
    Alternatively, you can also directly set up and use BuildKit, see the [quick start](https://github.com/moby/buildkit#quick-start).
-
-   :::note
-   The unikraft CLI is the current standard, while kraft is the legacy version.
-   Choose one of the CLIs below and only run the commands associated with it for the rest of this guide.
-   :::
 
 2. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/httpserver-flask-redis` directory:
 
@@ -33,29 +27,16 @@ To run this example, follow these steps:
 Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪):
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft login
 ```
-
-```bash title="kraft"
-# Set Unikraft Cloud access token
-export UKC_TOKEN=token
-# Set metro to Frankfurt, DE
-export UKC_METRO=fra
-```
-
-</CodeTabs>
 
 ### Deploy Redis
 
 First, deploy the Redis instance.
 Redis is an internal service (not publicly accessible), reached via the `redis.internal` domain:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft build redis/ --output <my-org>/redis:latest
 unikraft run --metro fra \
   -m 256M \
@@ -64,23 +45,9 @@ unikraft run --metro fra \
   --image <my-org>/redis:latest
 ```
 
-```bash title="kraft"
-kraft cloud deploy \
-  -M 256Mi \
-  --scale-to-zero idle \
-  --scale-to-zero-stateful \
-  --scale-to-zero-cooldown 1s \
-  --domain redis.internal \
-  redis/
-```
-
-</CodeTabs>
-
 The output shows the Redis instance details:
 
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mmetro[22m:         fra
 [1mname[22m:          redis-09p2q
 [1muuid[22m:          0355f93a-7b60-4ade-9359-b01671e812b3
@@ -103,31 +70,12 @@ The output shows the Redis instance details:
 [1mscale-to-zero[22m: policy=idle,stateful=true,cooldown-time=1s
 ```
 
-```ansi title="kraft"
-[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
- [38;5;245m│[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mname[0m: redis-o9abw
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245muuid[0m: 9dd4c7b5-7cc4-4b99-ac70-b10af54ef075
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mstate[0m: [92mstarting[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mdomain[0m: redis.internal
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/redis@sha256:3e35bc6c8048269741a0c0b4b165a10112736c48dbf869c76bb263a237502462
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmemory[0m: 256 MiB
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mservice[0m: sparkling-fire-rnd4o9kb
- [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: redis-o9abw.internal
- [38;5;245m└[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mprivate ip[0m: 10.0.0.41
-```
-
-</CodeTabs>
-
 ### Deploy Flask
 
 Next, deploy the Flask web server.
 It connects to Redis using the `REDIS_HOST` and `REDIS_PORT` environment variables:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft build flask/ --output <my-org>/flask:latest
 unikraft run --metro fra \
   -m 512M \
@@ -138,24 +86,9 @@ unikraft run --metro fra \
   --image <my-org>/flask:latest
 ```
 
-```bash title="kraft"
-kraft cloud deploy \
-  -M 512Mi \
-  -p 443:8000/tls+http \
-  --scale-to-zero on \
-  --scale-to-zero-cooldown 1s \
-  --env REDIS_HOST=redis.internal \
-  --env REDIS_PORT=6379 \
-  flask/
-```
-
-</CodeTabs>
-
 The output shows the Flask instance details:
 
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mmetro[22m:          fra
 [1mname[22m:           flask-q62qa
 [1muuid[22m:           d081ec92-629b-45b3-8caf-059e0a87dffd
@@ -181,23 +114,6 @@ The output shows the Flask instance details:
 [3m  created[23m:      just now
 [1mscale-to-zero[22m:  policy=on,cooldown-time=1s
 ```
-
-```ansi title="kraft"
-[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
- [38;5;245m│[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mname[0m: flask-a06h2
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245muuid[0m: 431f67ed-1f18-4dc1-86db-68dac4edff51
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mstate[0m: [92mstarting[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mdomain[0m: https://withered-cherry-xfcrfp93.fra.unikraft.app
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/flask@sha256:3d29ca3a8a3d434f41acf7c8093435836dcbacca9190c51ec39dbb4ddf1ee45a
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmemory[0m: 512 MiB
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mservice[0m: withered-cherry-xfcrfp93
- [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: flask-a06h2.internal
- [38;5;245m└[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mprivate ip[0m: 10.0.0.53
-```
-
-</CodeTabs>
 
 In this case, the Flask instance address is `https://withered-cherry-xfcrfp93.fra.unikraft.app`.
 It's different for each run.
@@ -225,42 +141,25 @@ This webpage has been viewed 2 time(s)
 
 You can list information about the instances by running:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances list
 ```
-
-```bash title="kraft"
-kraft cloud instance list
-```
-
-</CodeTabs>
 
 ### Clean up
 
 When done, remove the instances:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances delete flask-q62qa
 unikraft instances delete redis-09p2q
 ```
-
-```bash title="kraft"
-kraft cloud instance remove flask-a06h2
-kraft cloud instance remove redis-o9abw
-```
-
-</CodeTabs>
 
 ## Learn more
 
 Use the `--help` option for detailed information on using Unikraft Cloud:
 
 ```bash
-kraft cloud --help
+unikraft --help
 ```
 
 Or visit the [CLI Reference](/cli/overview).

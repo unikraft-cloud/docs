@@ -37,7 +37,6 @@ cid=$(docker create ukc-docs-bootstrap)
 mkdir -p apis pages/cli pages/kraftfile
 docker cp "$cid":/docs/apis/platform.yaml ./apis/platform.yaml
 docker cp "$cid":/docs/pages/cli/unikraft ./pages/cli/unikraft
-docker cp "$cid":/docs/pages/cli/kraft ./pages/cli/kraft
 docker cp "$cid":/docs/pages/cli/unikraft.mdx ./pages/cli/unikraft.mdx
 docker cp "$cid":/docs/pages/kraftfile/v0.7.md ./pages/kraftfile/v0.7.md
 docker rm "$cid"
@@ -74,7 +73,7 @@ docker run --rm -it \
 Open `http://localhost:3131/docs` in your browser.
 Changes under this directory are bind-mounted into the container, and `CHOKIDAR_USEPOLLING=true` enables hot reload reliably from Docker.
 
-The bootstrap step is needed because this repository does not check in the generated `/apis/platform.yaml`, `/cli/unikraft`, `/cli/kraft`, and `/kraftfile/v0.7` source files that Zudoku expects at startup.
+The bootstrap step is needed because this repository does not check in the generated `/apis/platform.yaml`, `/cli/unikraft`, and `/kraftfile/v0.7` source files that Zudoku expects at startup.
 The first run takes longer because Docker builds the bootstrap image, downloads the base Node image, and `pnpm` installs dependencies into the `ukc-docs-node-modules` volume.
 To reset that container-only dependency cache, remove the volume:
 
@@ -94,7 +93,6 @@ To make the contribution process as seamless as possible, please follow these re
   - Follow the **Git Commit Message Guidelines** below.
 - All commits must be signed off (`git commit -s`) by all authors in order to certify that the contributions are published under the [Developer Certificate of Origin (DCO)](https://wiki.linuxfoundation.org/dco).
 - For consistency, you should follow these soft guidelines for writing docs (besides what `make lint` enforces):
-  - Where `unikraft` commands are used, provide `kraft` commands as well, if applicable.
   - All code blocks should have 2 spaces indentation for multi-line code, and the language should be specified for syntax highlighting (for example, `bash` for shell commands).
   - Code blocks used for listing output should have `title=""`, unless context clarifications are needed (e.g., it is tied to a specific CLI in a `CodeTabs`).
   - Header titles should be concise and descriptive, starting with a capital letter on the first word only.

@@ -178,39 +178,18 @@ Your app is now managed from the Kubernetes cluster, but is actually running on 
 
 To check the instances, run:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances list
 ```
 
-```bash title="kraft"
-kraft cloud instance list
-```
-
-</CodeTabs>
-
-<div style={{ marginTop: '0.8em' }} />
-
 Which will return a list of instances created from pods above:
 
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mMETRO[22m  [1mNAME[22m                                         [1mSTATE[22m    [1mIMAGE[22m           [1mARGS[22m  [1mMEMORY[22m  [1mVCPUS[22m  [1mFQDN[22m                                                                   [1mCREATED[22m
 fra    pfCUcp2sg0toDx3N60IerjgiXdqj8BqTzRPfgIX7M8R  [38;2;0;188;125mrunning[0m  <my-org>/nginx        128MiB  1      MFyBmK4Hm5BTcjtMvVTYs2RXn3BzCzSPToyTBvjdVIO-orjlyrac.fra.unikraft.app  2 minutes ago
 fra    N1z7fNY4CmhOP6UhqIQsbeRmu8a5Ti8zzhk20okCTwW  [38;2;0;188;125mrunning[0m  <my-org>/nginx        128MiB  1      MFyBmK4Hm5BTcjtMvVTYs2RXn3BzCzSPToyTBvjdVIO-orjlyrac.fra.unikraft.app  2 minutes ago
 fra    O830nhB9LeT1sLGh3SiqbjiTmM3u26gOZcvA2eKtOVt  [38;2;0;188;125mrunning[0m  <my-org>/nginx        128MiB  1      MFyBmK4Hm5BTcjtMvVTYs2RXn3BzCzSPToyTBvjdVIO-orjlyrac.fra.unikraft.app  2 minutes ago
 ```
-
-```ansi title="kraft"
-[0;1;39mNAME[0m                                         [0;1;39mFQDN[0m                                                                   [0;1;39mSTATE[0m    [0;1;39mSTATUS[0m        [0;1;39mIMAGE[0m                                                            [0;1;39mMEMORY[0m   [0;1;39mVCPUS[0m  [0;1;39mARGS[0m  [0;1;39mBOOT TIME[0m
-pfCUcp2sg0toDx3N60IerjgiXdqj8BqTzRPfgIX7M8R  MFyBmK4Hm5BTcjtMvVTYs2RXn3BzCzSPToyTBvjdVIO-orjlyrac.fra.unikraft.app  [0;32mrunning[0m  since 24secs  oci://unikraft.io/<my-org>/nginx@sha256:49d8fb7a9934a87e93f9...  128 MiB  1            14.06 ms
-N1z7fNY4CmhOP6UhqIQsbeRmu8a5Ti8zzhk20okCTwW  MFyBmK4Hm5BTcjtMvVTYs2RXn3BzCzSPToyTBvjdVIO-orjlyrac.fra.unikraft.app  [0;32mrunning[0m  since 24secs  oci://unikraft.io/<my-org>/nginx@sha256:49d8fb7a9934a87e93f9...  128 MiB  1            14.43 ms
-O830nhB9LeT1sLGh3SiqbjiTmM3u26gOZcvA2eKtOVt  MFyBmK4Hm5BTcjtMvVTYs2RXn3BzCzSPToyTBvjdVIO-orjlyrac.fra.unikraft.app  [0;32mrunning[0m  since 25secs  oci://unikraft.io/<my-org>/nginx@sha256:49d8fb7a9934a87e93f9...  128 MiB  1            15.12 ms
-```
-
-</CodeTabs>
 
 Kraftlet derives every Unikraft Cloud resource name from a hash, so the names carry no trace of the Pod they belong to.
 Use the [tags](#tags) Kraftlet attaches instead to find the instance behind a Pod:
@@ -223,33 +202,14 @@ As you can see, all instances have the same FQDN.
 This is because Kraftlet created a corresponding Unikraft Cloud service for the Kubernetes service defined in YAML above.
 You can check the created service with the following command:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft services list
 ```
 
-```bash title="kraft"
-kraft cloud service list
-```
-
-</CodeTabs>
-
-<div style={{ marginTop: '0.8em' }} />
-
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mMETRO[22m  [1mNAME[22m                                         [1mAUTOSCALE[22m  [1mCREATED[22m        [1mFQDN[22m                                                                   [1mSOURCE[22m  [1mDESTINATION[22m  [1mHANDLERS[22m
 fra    MFyBmK4Hm5BTcjtMvVTYs2RXn3BzCzSPToyTBvjdVIO  false      6 minutes ago  MFyBmK4Hm5BTcjtMvVTYs2RXn3BzCzSPToyTBvjdVIO-orjlyrac.fra.unikraft.app  443     8080         ["tls", "http"]
 ```
-
-```ansi title="kraft"
-[0;1;39mNAME[0m                                         [0;1;39mFQDN[0m                                                                   [0;1;39mSERVICES[0m           [0;1;39mINSTANCES[0m                                                                                                [0;1;39mCREATED AT[0m     [0;1;39mPERSISTENT[0m
-MFyBmK4Hm5BTcjtMvVTYs2RXn3BzCzSPToyTBvjdVIO  MFyBmK4Hm5BTcjtMvVTYs2RXn3BzCzSPToyTBvjdVIO-orjlyrac.fra.unikraft.app  443:8080/tls+http  pfCUcp2sg0toDx3N60IerjgiXdqj8BqTzRPfgIX7M8R N1z7fNY4CmhOP6UhqIQsbeRmu8a5Ti8zzhk20okCTwW O830nhB9LeT1...  6 minutes ago  true
-```
-
-</CodeTabs>
 
 :::tip
 The generated FQDN follows the hashed service name.
@@ -299,17 +259,9 @@ my-claim   Bound    pv-7ab06383-ac03-4a81-968a-1b0cff03c23a   10Mi       RWO    
 
 You can also check the volume on Unikraft Cloud:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft volumes list
 ```
-
-```bash title="kraft"
-kraft cloud volume list
-```
-
-</CodeTabs>
 
 At this point, the volume exists but no instance mounts it, so it reports the `available` state.
 To create an instance that uses the volume, create a Kubernetes Pod that references the PVC:
@@ -652,7 +604,7 @@ Kraftlet supports the following Unikraft Cloud platform features on Kraftlet-man
 {/* vale off */}
 :::caution[**Limited Access**]
 CNI-based networking for Kraftlet is available as part of enterprise plans.
-To enable it for your account, reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
+To enable it for your account, reach out to the [Unikraft Cloud Discord](https://unikraft.com/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
 :::
 {/* vale on */}
 

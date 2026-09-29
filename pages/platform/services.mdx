@@ -35,30 +35,14 @@ See the [JavaScript](/sdks/js), [Python](/sdks/python) and [Go](/sdks/go) SDKs.
 
 If you specify a port mapping in the CLI deployment commands, the platform creates a service for you and attaches the instance to it:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft run --metro fra \
   -m 256M \
   -p 443:8080/http+tls \
   --image <my-org>/nginx:latest
 ```
 
-```bash title="kraft"
-kraft cloud instance create \
-  --start \
-  -M 256Mi \
-  -p 443:8080/http+tls \
-  <my-org>/nginx:latest
-```
-
-</CodeTabs>
-
-<div style={{ marginTop: '0.8em' }} />
-
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mmetro[22m:        fra
 [1mname[22m:         nginx-67zbu
 [1muuid[22m:         8a8bc1b9-0af6-420e-a426-190dc2da9eaa
@@ -80,23 +64,6 @@ kraft cloud instance create \
 [3m  created[23m:    just now
 ```
 
-```ansi title="kraft"
-[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
- [38;5;245m│[0m
- [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245mname[0m: nginx-67zbu
- [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245muuid[0m: 8a8bc1b9-0af6-420e-a426-190dc2da9eaa
- [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
- [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mstate[0m: [92mstarting[0m
- [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mdomain[0m: https://nameless-fog-0tvh1uov.fra.unikraft.app    # <---- service domain
- [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/nginx@sha256:f51ecc121c9ca34abb88a2bc6a69765501304f7893f7e85af15fbec3dc86e2bd
- [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mmemory[0m: 256 MiB
- [38;5;245m├[0m[38;5;245m──────[0m [38;5;245mservice[0m: nameless-fog-0tvh1uov                             # <---- service name
- [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: nginx-67zbu.internal
- [38;5;245m└[0m[38;5;245m───[0m [38;5;245mprivate ip[0m: 10.0.3.3
-```
-
-</CodeTabs>
-
 This ties the service to the lifetime of the instance, so the platform deletes it when you delete the instance.
 
 ## Persistent service groups
@@ -105,27 +72,13 @@ The rest of this guide shows how to create a service first, then use the CLI to 
 
 First, create a new service with the CLI:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft services create --metro fra \
   --name my-service \
   --service 443:8080/http+tls
 ```
 
-```bash title="kraft"
-kraft cloud service create \
-  --name my-service \
-  443:8080/http+tls
-```
-
-</CodeTabs>
-
-<div style={{ marginTop: '0.8em' }} />
-
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mmetro[22m:         fra
 [1mname[22m:          my-service
 [1muuid[22m:          9bfe76ea-2679-482a-954e-577de7d122b3
@@ -143,13 +96,6 @@ kraft cloud service create \
 [3m  handlers[23m:    ["tls", "http"]
 ```
 
-```ansi title="kraft"
-[0;1;39mNAME[0m        [0;1;39mFQDN[0m                                  [0;1;39mSERVICES[0m           [0;1;39mINSTANCES[0m  [0;1;39mCREATED AT[0m    [0;1;39mPERSISTENT[0m
-my-service  my-service-f4744h0c.fra.unikraft.app  443:8080/tls+http             1 second ago  true
-```
-
-</CodeTabs>
-
 This creates a new service named `my-service` listening on port 443.
 Unikraft Cloud terminates TLS and sends HTTP traffic to the app's port 8080.
 This example assumes that the app opens port 8080.
@@ -157,9 +103,7 @@ This example assumes that the app opens port 8080.
 Now use the CLI with the service flag to attach the instance to the `my-service` service.
 For example, from the [Go HTTP server guide](/guides/httpserver-go1.21):
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 git clone https://github.com/unikraft-cloud/examples
 cd examples/httpserver-go1.21/
 unikraft build . --output <my-org>/httpserver-go121:latest
@@ -169,23 +113,10 @@ unikraft run --metro fra \
   --image <my-org>/httpserver-go121:latest
 ```
 
-```bash title="kraft"
-git clone https://github.com/unikraft-cloud/examples
-cd examples/httpserver-go1.21/
-kraft cloud deploy \
-  -M 256Mi \
-  --service my-service \
-  .
-```
-
-</CodeTabs>
-
 This creates a new Go web server instance and immediately attaches it to the `my-service` service.
 The output shows the instance address and other details:
 
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mmetro[22m:        fra
 [1mname[22m:         httpserver-go121-9a2wv
 [1muuid[22m:         8bb34040-9434-4a28-bd1e-c24ee532e2da
@@ -207,24 +138,6 @@ The output shows the instance address and other details:
 [3m  created[23m:    just now
 ```
 
-```ansi title="kraft"
-[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
- [38;5;245m│[0m
- [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245mname[0m: httpserver-go121-9a2wv
- [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245muuid[0m: 8bb34040-9434-4a28-bd1e-c24ee532e2da
- [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
- [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mstate[0m: [92mstarting[0m
- [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mdomain[0m: https://my-service-f4744h0c.fra.unikraft.app
- [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/httpserver-go121@sha256:b16d61bb7898e764d8c11ab5a0b995e8c25a25b5ff89e161fc994ebf25a75680
- [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mmemory[0m: 256 MiB
- [38;5;245m├[0m[38;5;245m──────[0m [38;5;245mservice[0m: my-service
- [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: httpserver-go121-9a2wv.internal
- [38;5;245m└[0m[38;5;245m───[0m [38;5;245mprivate ip[0m: 10.0.3.3
-```
-
-</CodeTabs>
-
-
 In this case, the instance name is `httpserver-go121-9a2wv`.
 Notice that the service ID is the same from the service created earlier, and so is the FQDN, which is `https://my-service-pc4xjplc.fra.unikraft.app`.
 
@@ -242,17 +155,9 @@ That's it.
 
 In the end, if you want to remove a service, use:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft services delete my-service
 ```
-
-```bash title="kraft"
-kraft cloud service remove my-service
-```
-
-</CodeTabs>
 
 ## Handlers
 
@@ -296,25 +201,13 @@ For example, the following creates the service `my-service` with three published
 - Port 80 with the `http` and `redirect` handlers (HTTP mode).
 - Port 10000 with only the `tls` handler (TCP mode).
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft services create --metro fra \
   --name my-service \
   --service 443:8080/tls+http \
   --service 80:8080/http+redirect \
   --service 10000:10000/tls
 ```
-
-```bash title="kraft"
-kraft cloud service create \
-  --name my-service \
-  443:8080/http+tls \
-  80:8080/http+redirect \
-  10000:10000/tls
-```
-
-</CodeTabs>
 
 {/* vale off */}
 ## UDP services
@@ -357,9 +250,7 @@ Setting `soft_limit > hard_limit` returns a `400` error.
 
 You can use the CLI to set the connection limits for a service:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft services create --metro fra \
   --name my-service \
   --service 443:8080/http+tls \
@@ -367,15 +258,5 @@ unikraft services create --metro fra \
   --hard-limit 10
 ```
 
-```bash title="kraft"
-kraft cloud service create \
-  --name my-service \
-  443:8080/http+tls \
-  --soft-limit 5 \
-  --hard-limit 10
-```
-
-</CodeTabs>
-
-* The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
+* The [CLI reference](/docs/cli/unikraft).
 * Unikraft Cloud's [REST API reference](/api/platform/v1), in particular the section on [service groups](/api/platform/v1/servicegroups).

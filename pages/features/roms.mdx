@@ -39,24 +39,9 @@ Ensure you have the CLI installed and configured with your Unikraft Cloud accoun
 Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪):
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft login
 ```
-
-```bash title="kraft"
-# Set Unikraft Cloud access token
-export UKC_TOKEN=token
-export UKC_METRO=fra
-```
-
-</CodeTabs>
-
-:::caution
-The legacy `kraft` CLI only supports packaging ROMs.
-Use the `unikraft` CLI to create instances with ROMs attached.
-:::
 
 ### Base image
 
@@ -201,37 +186,15 @@ See [architectures](/platform/images#architectures) for more detail.
 
 Package and push the base image:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft build . --output <my-org>/http-python:latest
 ```
 
-```bash title="kraft"
-kraft pkg \
-  --plat kraftcloud \
-  --arch x86_64 \
-  --name index.unikraft.io/<my-org>/http-python:latest \
-  --rootfs-type erofs \
-  --push \
-  .
-```
-
-</CodeTabs>
-
 Wait a few seconds for propagation and check that the image is present:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft images list
 ```
-
-```bash title="kraft"
-kraft cloud image ls
-```
-
-</CodeTabs>
 
 ### ROM files
 
@@ -284,45 +247,16 @@ Listing more than one architecture builds the ROM for each of them in one invoca
 
 Package and push the ROMs:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft build rom1/ --output <my-org>/my-rom1:latest
 unikraft build rom2/ --output <my-org>/my-rom2:latest
 ```
 
-```bash title="kraft"
-kraft pkg \
-  --plat kraftcloud \
-  --arch x86_64 \
-  --rom-type erofs \
-  --name index.unikraft.io/<my-org>/my-rom1:latest \
-  --push \
-  rom1/
-kraft pkg \
-  --plat kraftcloud \
-  --arch x86_64 \
-  --rom-type erofs \
-  --name index.unikraft.io/<my-org>/my-rom2:latest \
-  --push \
-  rom2/
-```
-
-</CodeTabs>
-
 Wait a few seconds for upload and check that the ROMs are present:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft images list
 ```
-
-```bash title="kraft"
-kraft cloud image ls
-```
-
-</CodeTabs>
 
 ### Instances
 
@@ -347,6 +281,11 @@ unikraft run --metro fra \
   --scale-to-zero policy=on,cooldown-time=1000,stateful=false \
   --rom name=python_function.py,image=<my-org>/my-rom2:latest,at=/rom \
   --image <my-org>/http-python:latest
+```
+
+```bash
+# Set Unikraft Cloud access token
+export UKC_TOKEN=token
 ```
 
 ```bash title="API"
@@ -430,19 +369,10 @@ The `name` field in the ROM entry is optional, and is heplful for identification
 
 Check that the instances are up:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances get test-http-python-rom1
 unikraft instances get test-http-python-rom2
 ```
-
-```bash title="kraft"
-kraft cloud instance get test-http-python-rom1
-kraft cloud instance get test-http-python-rom2
-```
-
-</CodeTabs>
 
 Note the `roms` array in the instances configurations.
 Each ROM is available as a readable device at `/dev/ukp_rom_python_function.py`, in the form of an EROFS filesystem.
@@ -454,8 +384,8 @@ Query the instances to call the Python function from the ROM.
 You should see different responses:
 
 ```bash
-curl https://test-http-python-rom1.fra.kraft.cloud
-curl https://test-http-python-rom2.fra.kraft.cloud
+curl https://test-http-python-rom1.fra.unikraft.app
+curl https://test-http-python-rom2.fra.unikraft.app
 ```
 ```text
 Hi from 1st ROM!
@@ -466,17 +396,9 @@ Hi from 2nd ROM!
 
 When done, remove the instances:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances delete test-http-python-rom1 test-http-python-rom2
 ```
-
-```bash title="kraft"
-kraft cloud instance rm test-http-python-rom1 test-http-python-rom2
-```
-
-</CodeTabs>
 
 ## Inline ROMs
 
@@ -491,7 +413,7 @@ An inline ROM is ephemeral: it's automatically deleted once the last reference t
 
 To use inline ROMs with `unikraft`, specify a local directory as source:
 
-```bash title="unikraft"
+```bash
 unikraft run --metro fra \
   --name test-http-python-rom-inline \
   -m 512M \
@@ -597,19 +519,11 @@ Since inline ROM data is base64-encoded in the JSON request body, the 8 MB reque
 
 Use the `--help` option for detailed information on using Unikraft Cloud:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft --help
 ```
 
-```bash title="kraft"
-kraft cloud --help
-```
-
-</CodeTabs>
-
-Or visit the [CLI Reference](/docs/cli/unikraft) or the [legacy CLI reference](/docs/cli/kraft/overview).
+Or visit the [CLI Reference](/docs/cli/unikraft).
 For more information on the features used in this use case and how to use them, check out the following documentation:
 
 * Unikraft Cloud's [REST API reference](/api/platform/v1), and in particular the [instances API](/api/platform/v1/instances).

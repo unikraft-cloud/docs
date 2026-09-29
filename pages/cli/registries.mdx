@@ -53,7 +53,7 @@ index.node1.unikraft.cloud/alice/http-python312@sha256:278cb8b1...
 
 </CodeTabs>
 
-The `<my-org>` segment is your Unikraft Cloud organization, available as the `UKC_USER` environment variable in most guides.
+The `<my-org>` segment is your Unikraft Cloud organization.
 Tags are arbitrary strings.
 The platform defaults to `latest` when you don't specify a tag.
 You can also refer to images by digest to pin to an exact version.
@@ -61,41 +61,23 @@ You can also refer to images by digest to pin to an exact version.
 ## Authentication
 
 Registry authentication uses the same API token as the rest of the platform.
-The new CLI uses [profiles](/tutorials/kraftkit-to-unikraft#profile-management), while the legacy CLI reads `UKC_TOKEN` directly.
+The `unikraft` CLI uses [profiles](/tutorials/kraftkit-to-unikraft#profile-management) to manage the token.
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft login
 ```
 
-```bash title="kraft"
-export UKC_TOKEN=<your-token>
-```
-
-</CodeTabs>
-
-The `UKC_TOKEN` and `UKC_METRO` environment variables are only used by the legacy CLI.
-
 When using external registries (e.g. `ghcr.io`), authenticate explicitly:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 docker login ghcr.io -u <user> -p <token>
 ```
-
-```bash title="kraft"
-kraft login -u <user> -t <token> ghcr.io
-```
-
-</CodeTabs>
 
 You don't need to login to the central or node registries.
 
 ## Pushing images
 
-### Via `unikraft build` (recommended)
+### Via `unikraft build`
 
 The simplest way to push an image is to use the CLI to build, package, push, and start an instance in one flow:
 
@@ -122,47 +104,11 @@ unikraft run --metro fra \
 
 </CodeTabs>
 
-### Via `kraft pkg --push`
-
-For the legacy CLI, package using the `--push` flag:
-
-<CodeTabs syncKey="registry">
-
-```bash title="central registry"
-kraft pkg \
-  --plat kraftcloud \
-  --arch x86_64 \
-  --name "index.unikraft.io/${UKC_USER}/my-app:latest" \
-  --push \
-  .
-```
-
-```bash title="local registry"
-kraft pkg \
-  --plat kraftcloud \
-  --arch x86_64 \
-  --name "index.<node-name>.unikraft.cloud/${UKC_USER}/my-app:latest" \
-  --push \
-  .
-```
-
-</CodeTabs>
-
 ## Listing images
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft images list
 ```
-
-```bash title="kraft"
-kraft cloud image ls
-```
-
-</CodeTabs>
-
-<div style={{ marginTop: '0.8em' }} />
 
 <CodeTabs syncKey="registry">
 
@@ -188,17 +134,9 @@ There may be a delay of a few minutes between pushing or removing an image and t
 
 You can remove images with specific tags, or all tags at once:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft images delete <my-org>/<my-app>[:<tag>]
 ```
-
-```bash title="kraft"
-kraft cloud image rm <my-org>/<my-app>[:<tag>]
-```
-
-</CodeTabs>
 
 ## Kernel layer deduplication
 
@@ -216,9 +154,7 @@ Images that boot on the [platform kernel](/platform/images#platform-kernel) carr
 
 When creating an instance directly from an existing image, reference it by tag or digest:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 # By tag
 unikraft run --metro fra \
   -m 256M \
@@ -232,24 +168,8 @@ unikraft run --metro fra \
   --image index.unikraft.io/alice/my-app@sha256:278cb8b1...
 ```
 
-```bash title="kraft"
-# By tag
-kraft cloud instance create \
-  -m 256MiB \
-  -p 443:8080/http+tls \
-  index.unikraft.io/alice/my-app:latest
-
-# By digest (exact version pinning)
-kraft cloud instance create \
-  -m 256MiB \
-  -p 443:8080/http+tls \
-  index.unikraft.io/alice/my-app@sha256:278cb8b1...
-```
-
-</CodeTabs>
-
 ## Learn more
 
 * [Images](/platform/images): build, package, and deploy workflow.
-* The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
+* The [CLI reference](/docs/cli/unikraft).
 * Unikraft Cloud's [REST API reference](/api/platform/v1).

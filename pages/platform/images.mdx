@@ -96,7 +96,7 @@ Be aware that this choice may increase image size, memory use, and boot time.
 {/* vale off */}
 :::caution[**Limited Access**]
 Kernel-less images are available as part of enterprise plans.
-To try out this feature, reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
+To try out this feature, reach out to the [Unikraft Cloud Discord](https://unikraft.com/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
 :::
 {/* vale on */}
 
@@ -112,6 +112,22 @@ Images also get smaller, which shortens image pull times.
 A new kernel on the node applies to the next instance that starts.
 Running instances keep the kernel they booted with until they fully shut down, and an instance resuming from a [snapshot](/features/snapshots) always boots the kernel that snapshot captured.
 
+### Build from a `Dockerfile`
+
+A kernel-less image doesn't need a `Kraftfile`.
+Pass a `Dockerfile` to `unikraft build`, and it builds an image with only the rootfs that the `Dockerfile` describes:
+
+```bash
+unikraft build ./Dockerfile --arch x86_64 --output <my-org>/my-app:latest
+```
+
+The CLI identifies a `Dockerfile` by its filename, so names such as `Dockerfile.prod` also work.
+A directory without a `Kraftfile` builds from its `Dockerfile`.
+If both files are present, the `Kraftfile` takes precedence.
+
+A `Dockerfile` has no targets to take an architecture from, so you must pass `--arch`.
+The image runs only in metros that have a platform kernel installed.
+
 ## Architectures
 
 The Unikraft Cloud platform runs on both `x86_64` and `arm64` hosts, and the hosted platform runs on `x86_64`.
@@ -120,7 +136,7 @@ The architecture of the guest images must match the host architecture.
 {/* vale off */}
 :::caution[**Limited Access**]
 `arm64` hosts are available as part of enterprise plans.
-To deploy to them, reach out to the [Unikraft Cloud Discord](https://kraft.cloud/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
+To deploy to them, reach out to the [Unikraft Cloud Discord](https://unikraft.com/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
 :::
 {/* vale on */}
 
@@ -171,9 +187,7 @@ This guide uses a Python [app](/guides/httpserver-python3.12) as an example to s
 
 Start with the simplest workflow: create an image from a Python app and start an instance from it:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft build . --output <my-org>/httpserver-python312:latest
 unikraft run --metro fra \
   -p 443:8080/http+tls \
@@ -181,20 +195,9 @@ unikraft run --metro fra \
   --image <my-org>/httpserver-python312:latest
 ```
 
-```bash title="kraft"
-kraft cloud deploy \
-  -p 443:8080 \
-  -M 512Mi \
-  .
-```
-
-</CodeTabs>
-
 The output should look like:
 
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mmetro[22m:        fra
 [1mname[22m:         httpserver-python312-ma2i9
 [1muuid[22m:         e7389eee-9808-4152-b2ec-1f3c0541fd05
@@ -216,68 +219,28 @@ The output should look like:
 [3m  created[23m:    just now
 ```
 
-```ansi title="kraft"
-[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
- [38;5;245m│[0m
- [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245mname[0m: httpserver-python312-ma2i9
- [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245muuid[0m: e7389eee-9808-4152-b2ec-1f3c0541fd05
- [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
- [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mstate[0m: [92mstarting[0m
- [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mdomain[0m: https://young-night-5fpf0jj8.fra.unikraft.app
- [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/httpserver-python312@sha256:278cb8b14f9faf9c2702dddd8bfb6124912d82c11b4a2c6590b6e32fc4049472
- [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mmemory[0m: 512 MiB
- [38;5;245m├[0m[38;5;245m──────[0m [38;5;245mservice[0m: young-night-5fpf0jj8
- [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: httpserver-python312-ma2i9.internal
- [38;5;245m└[0m[38;5;245m───[0m [38;5;245mprivate ip[0m: 10.0.3.3
-```
-
-</CodeTabs>
-
-
 This command builds an image named `httpserver-python312@sha256:278cb8b1...` using the `Kraftfile` and `Dockerfile`.
 It then packages it, pushes it to the registry, and starts an instance named `httpserver-python312-ma2i9` from it.
 The platform fetches the image from the registry to start the instance.
 
 You can see your images by running the following command:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft images list
 ```
 
-```bash title="kraft"
-kraft cloud image ls
-```
-
-</CodeTabs>
-
 You should see output like:
 
-<CodeTabs>
-```ansi title="unikraft"
+```ansi
 [1mREF[22m                            [1mDIGEST[22m
 <my-org>/httpserver-python312  sha256:278cb8b14f9faf9c2702dddd8bfb6124912d82c11b4a2c6590b6e32fc4049472
 ```
 
-```ansi title="kraft"
-[0;1;39mNAME[0m                           [0;1;39mVERSION[0m  [0;1;39mSIZE[0m
-<my-org>/httpserver-python312  latest   114 MB
-```
-</CodeTabs>
-
 And you can remove an image from the central registry with the following command:
 
-<CodeTabs>
-```bash title="unikraft"
+```bash
 unikraft images rm httpserver-python312
 ```
-
-```bash title="kraft"
-kraft cloud image rm httpserver-python312
-```
-
-</CodeTabs>
 
 :::note
 There may be a delay of a few minutes between removing an image from the registry and the image list reflecting the change.
@@ -287,9 +250,7 @@ There may be a delay of a few minutes between removing an image from the registr
 
 For the next workflow, start many instances:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft build . --output <my-org>/httpserver-python312:latest
 unikraft run --metro fra \
   -p 443:8080/http+tls \
@@ -298,20 +259,7 @@ unikraft run --metro fra \
   --image <my-org>/httpserver-python312:latest
 ```
 
-```bash title="kraft"
-kraft cloud deploy \
-  -p 443:8080 \
-  -M 512Mi \
-  --replicas 2 \
-  .
-```
-
-</CodeTabs>
-
-<div style={{ marginTop: '0.8em' }} />
-
-<CodeTabs syncKey="cli">
-```ansi title="unikraft"
+```ansi
 [1mmetro[22m:        fra
 [1mname[22m:         httpserver-python312-lscmn
 [1muuid[22m:         1121225d-a678-45a2-a8ce-335a9a6a2683
@@ -373,56 +321,18 @@ kraft cloud deploy \
 [3m  created[23m:    just now
 ```
 
-```ansi title="kraft"
-[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
- [38;5;245m│[0m
- [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245mname[0m: httpserver-python312-lscmn
- [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245muuid[0m: 1121225d-a678-45a2-a8ce-335a9a6a2683
- [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
- [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mstate[0m: [0;32mrunning[0m
- [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mdomain[0m: https://restless-orangutan-1lklj6z5.fra.unikraft.app
- [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/httpserver-python312@sha256:5b922dfa1632af38c476b98fdd9f4314fb9c5e587d3d31255e6479108c057e88
- [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mmemory[0m: 512 MiB
- [38;5;245m├[0m[38;5;245m──────[0m [38;5;245mservice[0m: restless-orangutan-1lklj6z5
- [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: httpserver-python312-lscmn.internal
- [38;5;245m└[0m[38;5;245m───[0m [38;5;245mprivate ip[0m: 10.0.6.37
-```
-
-</CodeTabs>
-
 Check that it worked by listing all instances with:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances list
 ```
 
-```bash title="kraft"
-kraft cloud instance list
-```
-
-</CodeTabs>
-
-<div style={{ marginTop: '0.8em' }} />
-
-<CodeTabs>
-
-```ansi title="unikraft"
+```ansi
 [1mMETRO[22m  [1mNAME[22m                        [1mSTATE[22m    [1mIMAGE[22m                          [1mARGS[22m  [1mMEMORY[22m  [1mVCPUS[22m  [1mFQDN[22m                                          [1mCREATED[22m
 fra    httpserver-python312-7lha2  [38;2;0;188;125mrunning[0m  <my-org>/httpserver-python312        512MiB  1      hidden-silence-l3g520dw.fra.unikraft.app      just now
 fra    httpserver-python312-xfgvc  [38;2;0;188;125mrunning[0m  <my-org>/httpserver-python312        512MiB  1      icy-violet-hce1qwm5.fra.unikraft.app          just now
 fra    httpserver-python312-lscmn  [38;2;0;188;125mrunning[0m  <my-org>/httpserver-python312        512MiB  1      restless-orangutan-1lklj6z5.fra.unikraft.app  just now
 ```
-
-```ansi title="kraft"
-[0;1;39mNAME[0m                        [0;1;39mFQDN[0m                                          [0;1;39mSTATE[0m    [0;1;39mSTATUS[0m       [0;1;39mIMAGE[0m                                [0;1;39mMEMORY[0m   [0;1;39mVCPUS[0m  [0;1;39mARGS[0m  [0;1;39mBOOT TIME[0m
-httpserver-python312-7lha2  hidden-silence-l3g520dw.fra.unikraft.app      [0;32mrunning[0m  since 7mins  <my-org>/httpserver-python312@sh...  512 MiB  1            82.28 ms
-httpserver-python312-xfgvc  icy-violet-hce1qwm5.fra.unikraft.app          [0;32mrunning[0m  since 7mins  <my-org>/httpserver-python312@sh...  512 MiB  1            81.27 ms
-httpserver-python312-lscmn  restless-orangutan-1lklj6z5.fra.unikraft.app  [0;32mrunning[0m  since 7mins  <my-org>/httpserver-python312@sh...  512 MiB  1            84.28 ms
-```
-
-</CodeTabs>
 
 Three instances run—the original plus two replicas.
 
@@ -430,21 +340,11 @@ Three instances run—the original plus two replicas.
 
 In this final workflow, take the existing image and start new instances from it:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft run --metro fra \
   -p 443:8080/http+tls \
   -m 512M \
   --image <my-org>/httpserver-python312@sha256:1b815914eb568a06ca4bbfdfb7d6cf484a9e9a0947ba8e0e0f1664d972a25bca
-```
-
-```bash title="kraft"
-kraft cloud instance create \
-  --start \
-  -p 443:8080 \
-  -M 512Mi \
-  <my-org>/httpserver-python312@sha256:1b815914eb568a06ca4bbfdfb7d6cf484a9e9a0947ba8e0e0f1664d972a25bca
 ```
 
 :::note
@@ -454,13 +354,11 @@ This prevents unexpected behavior if a developer overwrites a standard tag like 
 If you omit the digest, the CLI automatically pulls the newest version of your image.
 :::
 
-</CodeTabs>
-
 You now have a new instance created from the existing image.
 
 ## Learn more
 
-* The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
+* The [CLI reference](/docs/cli/unikraft).
 * Unikraft Cloud's [REST API reference](/api/platform/v1).
 * [Porting an existing container app to Unikraft Cloud](/tutorials/docker-to-ukc).
 * [Tutorial](/tutorials/rootfs-volumes-roms) explaining the difference of storage media on Unikraft Cloud.

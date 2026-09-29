@@ -11,15 +11,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "zudoku/ui/Tabs"
 This guide explains how to create and deploy a Wordpress app with Nginx and MariaDB.
 To run this example, follow these steps:
 
-1. Install the CLI.
-   Use the [unikraft CLI](/cli/unikraft) or the legacy [kraft CLI](https://unikraft.org/docs/cli/install).
+1. Install the [unikraft CLI](/cli).
    You need a [BuildKit](https://github.com/moby/buildkit) builder. The easiest way to get one is via [Docker](https://docs.docker.com/engine/install/).
    Alternatively, you can also directly set up and use BuildKit, see the [quick start](https://github.com/moby/buildkit#quick-start).
-
-   :::note
-   The unikraft CLI is the current standard, while kraft is the legacy version.
-   Choose one of the CLIs below and only run the commands associated with it for the rest of this guide.
-   :::
 
 2. Clone the [`examples` repository](https://github.com/unikraft-cloud/examples) and `cd` into the `examples/wordpress` directory:
 
@@ -31,79 +25,37 @@ To run this example, follow these steps:
 Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪):
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft login
 ```
-
-```bash title="kraft"
-# Set Unikraft Cloud access token
-export UKC_TOKEN=token
-# Set metro to Frankfurt, DE
-export UKC_METRO=fra
-```
-
-</CodeTabs>
 
 ## Create Volumes
 
 Create the volumes for the Wordpress and MariaDB data:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft volume create --metro fra --name wordpress-wordpress-data --size 512M
 unikraft volume create --metro fra --name wordpress-db-data --size 512M
 ```
 
-```bash title="kraft"
-kraft cloud volume create --name wordpress-wordpress-data --size 512Mi
-kraft cloud volume create --name wordpress-db-data --size 512Mi
-```
-
-</CodeTabs>
-
 You can list the created volumes by running:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft volume list
 ```
 
-```bash title="kraft"
-kraft cloud volume list
-```
-
-</CodeTabs>
-
-<div style={{ marginTop: '0.8em' }} />
-
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mMETRO[22m  [1mNAME[22m                      [1mSTATE[22m      [1mSIZE[22m    [1mCREATED[22m
 fra    wordpress-db-data         [38;2;0;188;125mavailable[0m  512MiB  just now
 fra    wordpress-wordpress-data  [38;2;0;188;125mavailable[0m  512MiB  just now
 ```
-
-```ansi title="kraft"
-[0;1;39mNAME[0m                      [0;1;39mCREATED AT[0m  [0;1;39mSIZE[0m     [0;1;39mATTACHED TO[0m  [0;1;39mMOUNTED BY[0m  [0;1;39mSTATE[0m      [0;1;39mPERSISTENT[0m
-wordpress-wordpress-data  now         512 MiB                           available  true
-wordpress-db-data         now         512 MiB                           available  true
-```
-
-</CodeTabs>
 
 ## Deploy MariaDB
 
 Build and deploy the MariaDB instance.
 MariaDB is an internal service (not publicly accessible), reached via the `wordpress-mariadb.internal` domain:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft build ./mariadb --output <my-org>/mariadb:latest
 unikraft run --metro fra \
   --name mariadb \
@@ -115,28 +67,11 @@ unikraft run --metro fra \
   --image <my-org>/mariadb:latest
 ```
 
-```bash title="kraft"
-kraft cloud deploy \
-  --name mariadb \
-  -M 1Gi \
-  --scale-to-zero idle \
-  --scale-to-zero-stateful \
-  --scale-to-zero-cooldown 1s \
-  --domain wordpress-mariadb.internal \
-  --env MARIADB_ROOT_PASSWORD=unikraft \
-  --volume wordpress-db-data:/var/lib/mysql \
-  ./mariadb/
-```
-
-</CodeTabs>
-
 Make sure to replace `<my-org>` with your username / org-name.
 
 The output shows the instance details:
 
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mmetro[22m:                     fra
 [1mname[22m:                      mariadb
 [1muuid[22m:                      3af0eefb-29a8-4634-9b94-abf62d2fb90a
@@ -170,31 +105,12 @@ The output shows the instance details:
 [3m  cooldown-time[23m:           1s
 ```
 
-```ansi title="kraft"
-[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
- [38;5;245m│[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mname[0m: mariadb
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245muuid[0m: 3af0eefb-29a8-4634-9b94-abf62d2fb90a
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mstate[0m: [92mstarting[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mdomain[0m: wordpress-mariadb.internal
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/mariadb@sha256:cf1...
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmemory[0m: 1024 MiB
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mservice[0m: snowy-glitter-3uylzbqk
- [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: mariadb.internal
- [38;5;245m└[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mprivate ip[0m: 10.0.0.73
-```
-
-</CodeTabs>
-
 ## Deploy Wordpress
 
 Build and deploy the Wordpress instance.
 Set `WORDPRESS_DB_HOST` to the same internal domain you assigned to the MariaDB instance (`wordpress-mariadb.internal` in this guide).
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft build ./wordpress --output <my-org>/wordpress:latest
 unikraft run --metro fra \
   --name wordpress \
@@ -206,25 +122,9 @@ unikraft run --metro fra \
   --image <my-org>/wordpress:latest
 ```
 
-```bash title="kraft"
-kraft cloud deploy \
-  --name wordpress \
-  -M 2Gi \
-  -p 443:8080/tls+http \
-  --scale-to-zero on \
-  --scale-to-zero-cooldown 1s \
-  --env WORDPRESS_DB_HOST=wordpress-mariadb.internal \
-  --volume wordpress-wordpress-data:/var/www/html \
-  ./wordpress/
-```
-
-</CodeTabs>
-
 The output shows the instance address and other details:
 
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mmetro[22m:                     fra
 [1mname[22m:                      wordpress
 [1muuid[22m:                      ee9f5599-b33b-44f1-ab57-3871b440e810
@@ -257,89 +157,35 @@ The output shows the instance address and other details:
 [3m  cooldown-time[23m:           1s
 ```
 
-```ansi title="kraft"
-[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
- [38;5;245m│[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mname[0m: wordpress
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245muuid[0m: ee9f5599-b33b-44f1-ab57-3871b440e810
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mstate[0m: [92mstarting[0m
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mdomain[0m: https://damp-lake-n09gzguc.fra.unikraft.app
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/wordpress@sha256:b43...
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mmemory[0m: 2048 MiB
- [38;5;245m├[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mservice[0m: damp-lake-n09gzguc
- [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: wordpress.internal
- [38;5;245m└[0m[38;5;245m─[0m[38;5;245m─[0m[38;5;245m─[0m [38;5;245mprivate ip[0m: 10.0.0.33
-```
-
-</CodeTabs>
-
 Use a browser to access the install page of Wordpress using the URL from the `fqdn` field in the output.
 Fill out the form and complete the Wordpress install.
 
 You can list information about the instances by running:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instance list
 ```
 
-```bash title="kraft"
-kraft cloud instance list
-```
-
-</CodeTabs>
-
-<div style={{ marginTop: '0.8em' }} />
-
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mMETRO[22m  [1mNAME[22m       [1mSTATE[22m    [1mIMAGE[22m               [1mARGS[22m  [1mMEMORY[22m  [1mVCPUS[22m  [1mFQDN[22m                                 [1mCREATED[22m
 fra    mariadb    [38;2;43;127;255mstandby[0m  <my-org>/mariadb          1GiB    1      wordpress-mariadb.internal           5 minutes ago
 fra    wordpress  [38;2;0;188;125mrunning[0m  <my-org>/wordpress        2GiB    1      damp-lake-n09gzguc.fra.unikraft.app  1 minute ago
 ```
 
-```ansi title="kraft"
-[0;1;39mNAME[0m       [0;1;39mFQDN[0m                                 [0;1;39mSTATE[0m    [0;1;39mSTATUS[0m       [0;1;39mIMAGE[0m                                             [0;1;39mMEMORY[0m   [0;1;39mVCPUS[0m  [0;1;39mARGS[0m  [0;1;39mBOOT TIME[0m
-wordpress  damp-lake-n09gzguc.fra.unikraft.app  [0;32mrunning[0m  since 1min   oci://unikraft.io/<my-org>/wordpress@sha256:b...  2.0 GiB  1            6873.49 ms
-mariadb    wordpress-mariadb.internal           [0;32mrunning[0m  since 7mins  oci://unikraft.io/<my-org>/mariadb@sha256:cf1...  1.0 GiB  1            2505.65 ms
-```
-
-</CodeTabs>
-
 When done, you can remove the instances and volumes:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances delete mariadb wordpress
 unikraft volume delete wordpress-wordpress-data wordpress-db-data
 ```
-
-```bash title="kraft"
-kraft cloud instance remove mariadb wordpress
-kraft cloud volume remove wordpress-wordpress-data wordpress-db-data
-```
-
-</CodeTabs>
 
 ## Learn more
 
 Use the `--help` option for detailed information on using Unikraft Cloud:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft --help
 ```
 
-```bash title="kraft"
-kraft cloud --help
-```
-
-</CodeTabs>
-
-Or visit the [CLI Reference](/cli/unikraft) or the [legacy CLI Reference](/cli/kraft/overview).
+Or visit the [CLI Reference](/cli/unikraft).
 {/* vale on */}

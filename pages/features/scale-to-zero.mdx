@@ -208,9 +208,7 @@ To allow the instance to sleep:
 
 You can enable millisecond scale-to-zero with the `--scale-to-zero` flag in relevant CLI subcommands.
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 git clone https://github.com/unikraft-cloud/examples
 cd examples/nginx/
 unikraft build . --output <my-org>/nginx:latest
@@ -221,24 +219,9 @@ unikraft run --metro fra \
   --image <my-org>/nginx:latest
 ```
 
-```bash title="kraft"
-git clone https://github.com/unikraft-cloud/examples
-cd examples/nginx/
-kraft cloud deploy \
-  -M 256Mi \
-  -p 443:8080 \
-  --scale-to-zero on \
-  --scale-to-zero-cooldown 1s \
-  .
-```
-
-</CodeTabs>
-
 This command will create the NGINX instance with scale-to-zero enabled, with a cooldown time of 1 second:
 
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mmetro[22m:           fra
 [1mname[22m:            nginx-67zbu
 [1muuid[22m:            8a8bc1b9-0af6-420e-a426-190dc2da9eaa
@@ -264,77 +247,33 @@ This command will create the NGINX instance with scale-to-zero enabled, with a c
 [3m  cooldown-time[23m: 1s
 ```
 
-```ansi title="kraft"
-[38;5;245m[[0m[92m●[0m[38;5;245m][0m Deployed successfully!
- [38;5;245m│[0m
- [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245mname[0m: nginx-67zbu
- [38;5;245m├[0m[38;5;245m─────────[0m [38;5;245muuid[0m: 8a8bc1b9-0af6-420e-a426-190dc2da9eaa
- [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mmetro[0m: https://api.fra.unikraft.cloud/v1
- [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mstate[0m: [92mstarting[0m
- [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mdomain[0m: https://nameless-fog-0tvh1uov.fra.unikraft.app
- [38;5;245m├[0m[38;5;245m────────[0m [38;5;245mimage[0m: oci://unikraft.io/<my-org>/nginx@sha256:f51ecc121c9ca34abb88a2bc6a69765501304f7893f7e85af15fbec3dc86e2bd
- [38;5;245m├[0m[38;5;245m───────[0m [38;5;245mmemory[0m: 256 MiB
- [38;5;245m├[0m[38;5;245m──────[0m [38;5;245mservice[0m: nameless-fog-0tvh1uov
- [38;5;245m├[0m[38;5;245m─[0m [38;5;245mprivate fqdn[0m: nginx-67zbu.internal
- [38;5;245m└[0m[38;5;245m───[0m [38;5;245mprivate ip[0m: 10.0.3.3
-```
-
-</CodeTabs>
-
 Note that at first the system starts the instance as usual.
 Check the instance's status:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances list
 ```
 
-```bash title="kraft"
-kraft cloud instances list
-```
-
-</CodeTabs>
-
 You should see output like:
 
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mMETRO[0m  [1mNAME[0m         [1mSTATE[0m    [1mIMAGE[0m           [1mARGS[0m  [1mMEMORY[0m  [1mVCPUS[0m  [1mFQDN[0m                                    [1mCREATED[0m
 fra    nginx-67zbu  [38;2;43;127;255mstandby[0m  <my-org>/nginx        256MiB  1      nameless-fog-0tvh1uov.fra.unikraft.app  2 minutes ago
 ```
 
-```ansi title="kraft"
-[1mNAME[0m         [1mFQDN[0m                                    [1mSTATE[0m    [1mSTATUS[0m         [1mIMAGE[0m                                        [1mMEMORY[0m   [1mVCPUS[0m  [1mARGS[0m  [1mBOOT TIME[0m
-nginx-67zbu  nameless-fog-0tvh1uov.fra.unikraft.app  [0;36mstandby[0m  5 minutes ago  oci://unikraft.io/<my-org>/nginx@sha256:...  256 MiB  1            211.13 ms
-```
-
-</CodeTabs>
-
 Notice the state is now set to `standby`?
-At first the deploy or run flow sets the state to `running`.
+At first, `unikraft run` sets the state to `running`.
 Unikraft Cloud then puts the instance to sleep (it stops it, but keeps state to start it again when needed).
 
 You can also check that scale-to-zero gets enabled by grabbing the instance details
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instance get nginx-67zbu
 ```
 
-```bash title="kraft"
-kraft cloud instance get nginx-67zbu
-```
-
-</CodeTabs>
-
 which outputs:
 
-<CodeTabs syncKey="cli">
-
-```ansi title="unikraft"
+```ansi
 [1mmetro[22m:           fra
 [1mname[22m:            nginx-67zbu
 [1muuid[22m:            8a8bc1b9-0af6-420e-a426-190dc2da9eaa
@@ -363,41 +302,6 @@ which outputs:
 [3m  exit-code[23m:     0
 ```
 
-```ansi title="kraft"
-                   uuid: 8a8bc1b9-0af6-420e-a426-190dc2da9eaa
-                   name: nginx-67zbu
-                   fqdn: nameless-fog-0tvh1uov.fra.unikraft.app
-           private fqdn: nginx-67zbu.internal
-             private ip: 10.0.3.3
-                  state: [0;36mstandby[0m
-                created: 2026-06-05T12:16:10Z
-                started: 2026-06-05T12:16:10Z
-                stopped: 2026-06-05T12:16:13Z
-            start count: 1
-          restart count: 0
-       restart attempts:
-           next restart:
-         restart policy: never
-            stop origin:
-            stop reason:
-          app exit code: 0
-                  image: oci://unikraft.io/<my-org>/nginx@sha256:f51ecc121c9ca34abb88a2bc6a69765501304f7893f7e85af15fbec3dc86e2bd
-                 memory: 256 MiB
-                  vcpus: 1
-                   args:
-                    env:
-                volumes:
-                service: nameless-fog-0tvh1uov
-          scale to zero: on
- scale to zero cooldown: 1000
- scale to zero stateful: false
-              boot time: 211.13 ms
-                up time: 3.317s
-```
-
-</CodeTabs>
-
-
 Try using `curl` or your browser to see scale-to-zero (well, *scale-to-one* in this case!) in action:
 
 ```bash
@@ -407,17 +311,9 @@ curl https://nameless-fog-0tvh1uov.fra.unikraft.app
 You should get an NGINX response with no noticeable delay.
 For fun, try to use the following command to see if you can catch the instance's `STATE` field changing from `standby` to `running`:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances list --watch=0.5s
 ```
-
-```bash title="kraft"
-watch --color -n 0.5 kraft cloud instance list
-```
-
-</CodeTabs>
 
 If you `curl` enough, you should see the `STATE` turn to a green `running` from time to time.
 
@@ -430,7 +326,7 @@ You're not charged for the service in this state.
 
 ## Learn more
 
-* The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
+* The [CLI reference](/docs/cli/unikraft).
 * Unikraft Cloud's [REST API reference](/api/platform/v1).
 * Instance [snapshots](/features/snapshots).
 * Service [autoscaling](/features/autoscale).

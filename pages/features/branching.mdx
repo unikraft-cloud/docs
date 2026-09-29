@@ -27,15 +27,11 @@ The source instance's [state](/platform/instances#instance-states) determines ho
 
 To create a branch, pass the source instance to `--branch`:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instance create --metro fra \
   --name my-branch \
   --branch my-instance
 ```
-
-</CodeTabs>
 
 You can also reference the source by its UUID instead of its name.
 Use `unikraft run --branch` instead of `unikraft instance create --branch` to create the branch and follow its logs in one step.

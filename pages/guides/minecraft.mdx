@@ -20,7 +20,7 @@ This example runs a Minecraft Java server on Unikraft Cloud with:
 
 ## Prerequisites
 
-1. Install the [unikraft CLI](/cli/unikraft).
+1. Install the [unikraft CLI](/cli).
    You need a [BuildKit](https://github.com/moby/buildkit) builder. The easiest way to get one is via [Docker](https://docs.docker.com/engine/install/).
    Alternatively, you can also directly set up and use BuildKit, see the [quick start](https://github.com/moby/buildkit#quick-start).
 
@@ -40,7 +40,7 @@ This example runs a Minecraft Java server on Unikraft Cloud with:
 Make sure to log into Unikraft Cloud and pick a [metro](/platform/metros) close to you.
 This guide uses `fra` (Frankfurt, 🇩🇪):
 
-```bash title="unikraft"
+```bash
 unikraft login
 ```
 
@@ -50,7 +50,7 @@ unikraft login
 
 First, package and push the base Minecraft server image:
 
-```bash title="unikraft"
+```bash
 unikraft build . --output <my-org>/minecraft:latest
 ```
 
@@ -68,7 +68,7 @@ The image is built from the Docker image [itzg/minecraft-server](https://hub.doc
 This step is required to enable fast startups from the base image, which is particularly important for a Minecraft server given the long initialization time.
 If you only customized the server using the base [`.env`](./base/.env) file, create the instance with one ROM:
 
-```bash title="unikraft"
+```bash
 unikraft run --metro fra \
   --name minecraft-tpl \
   -m 4096M \
@@ -79,7 +79,7 @@ unikraft run --metro fra \
 
 The output shows the instance details:
 
-```ansi title="unikraft"
+```ansi
 [1mmetro[22m:        fra
 [1mname[22m:         minecraft-tpl
 [1muuid[22m:         d9d7be54-5495-45d0-b5af-48be7f30d1d8
@@ -102,7 +102,7 @@ The output shows the instance details:
 
 If you also have per-config overrides (for example in [`bingo/.env`](./bingo/.env)), create the instance with multiple ROMs:
 
-```bash title="unikraft"
+```bash
 unikraft run --metro fra \
   --name minecraft-tpl \
   -m 4096M \
@@ -120,30 +120,26 @@ The exact moment of snapshotting can be configured in [`patches/start-finalExec`
 
 You can follow the logs of the instance to check the progress:
 
-```bash title="unikraft"
+```bash
 unikraft instances logs minecraft-tpl -f
 ```
 
 Once they stop, the template is ready and you can check it with:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft instances templates list
 ```
 
-```bash title="unikraft"
+```ansi
 [1mMETRO[22m  [1mNAME[22m           [1mSTATE[22m     [1mIMAGE[22m               [1mARGS[22m  [1mMEMORY[22m  [1mVCPUS[22m  [1mCREATED[22m
 fra    minecraft-tpl  [38;2;43;127;255mtemplate[0m  <my-org>/minecraft        4GiB    4      5 seconds ago
 ```
-
-</CodeTabs>
 
 ### Create an instance from the template
 
 You can now create new instances from the template, which will boot much faster than the original base image:
 
-```bash title="unikraft"
+```bash
 unikraft run --metro fra \
   --name minecraft \
   -p 2222:2222/tls \
@@ -154,7 +150,7 @@ unikraft run --metro fra \
 
 The output shows the instance address and other details:
 
-```ansi title="unikraft"
+```ansi
 [1mmetro[22m:         fra
 [1mname[22m:          minecraft
 [1muuid[22m:          56787b5d-14fb-4908-88d0-e9609d1ac1e0
@@ -181,7 +177,7 @@ In this case, the instance name is `minecraft` and the address is `https://hidde
 
 A sample log output of the server getting ready:
 
-```bash title="unikraft"
+```bash
 unikraft instances logs minecraft -f
 ```
 
@@ -268,7 +264,7 @@ Format:
 
 Use the `--help` option for detailed information on using Unikraft Cloud:
 
-```bash title="unikraft"
+```bash
 unikraft --help
 ```
 

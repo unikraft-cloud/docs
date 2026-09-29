@@ -28,9 +28,7 @@ You can create a rootfs with the CLI for both types, for example:
 
 **CPIO**
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 # make sure to specify the cpio format in Kraftfile
 # ...
 # rootfs:
@@ -44,22 +42,9 @@ unikraft run --metro fra \
   --image <my-org>/node-playwright-chromium:latest
 ```
 
-```bash title="kraft"
-kraft cloud deploy \
-  -p 443:8080 \
-  -M 2700Mi \
-  --rootfs-type cpio \
-  <my-org>/node-playwright-chromium \
-  .
-```
-
-</CodeTabs>
-
 **EROFS**
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 # make sure to specify the erofs format in Kraftfile
 # ...
 # rootfs:
@@ -73,18 +58,10 @@ unikraft run --metro fra \
   --image <my-org>/node-playwright-chromium:latest
 ```
 
-```bash title="kraft"
-# the --keep-file-owners flag preserves the file ownership metadata in the EROFS archive, which is required for some workloads
-kraft cloud deploy \
-  -p 443:8080 \
-  -M 900Mi \
-  --rootfs-type erofs \
-  --keep-file-owners \
-  <my-org>/node-playwright-chromium \
-  .
-```
-
-</CodeTabs>
+:::note
+`unikraft build` makes root the owner of every file in the rootfs.
+It has no option to keep the original file owners, which some workloads need.
+:::
 
 ### Volumes
 
@@ -97,62 +74,29 @@ As such you can use them for persistent data, secrets, storage, logs, and more, 
 To create and use a volume, you can use the CLI volume commands.
 For example, you need to first create a volume:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft volumes create --metro fra \
   --name my-volume \
   --size 100
 ```
 
-```bash title="kraft"
-kraft cloud volume create \
-  --name my-volume \
-  --size 100
-```
-
-</CodeTabs>
-
 Then you can optionally populate it with local data:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft volume import \
   my-volume \
   --source my-data/
 ```
 
-```bash title="kraft"
-kraft cloud volume import \
-  --volume my-volume \
-  --source my-data/
-```
-
-</CodeTabs>
-
 Finally, when you deploy an instance you can attach the volume to it:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft run --metro fra \
   -m 512M \
   -p 443:8080/http+tls \
   -v my-volume:/mnt \
   --image <my-org>/my-app:latest
 ```
-
-```bash title="kraft"
-kraft cloud vm create \
-  --start \
-  -M 512Mi \
-  -p 443:8080 \
-  --volume my-volume:/mnt \
-  <my-org>/my-app:latest
-```
-
-</CodeTabs>
 
 ### ROMs
 
@@ -170,9 +114,7 @@ They show up as any other image in the registry, but don't have a kernel.
 Because a ROM has no `runtime` to take architectures from, its `Kraftfile` must name them under `targets`, or you pass `--arch` on the command line.
 To package them you can use the CLI:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 # make sure to specify the rom path and the build targets in the Kraftfile
 # ...
 # targets:
@@ -182,20 +124,6 @@ To package them you can use the CLI:
 # ...
 unikraft build . --output <my-org>/function-hello:latest
 ```
-
-```bash title="kraft"
-# you can override the rom path and type with the kraft pkg command
-kraft pkg \
-  --plat kraftcloud \
-  --arch x86_64 \
-  --rom ./fs \
-  --rom-type erofs \
-  --name index.unikraft.io/<my-org>/function-hello:latest \
-  --push \
-  .
-```
-
-</CodeTabs>
 
 You can then specify ROMs when creating an instance:
 
@@ -251,6 +179,5 @@ ROMs are a flexible way to customize rootfses, but you should also keep them sma
 * [Volumes](/platform/volumes) and how to use them.
 * [Rootfs formats](/tutorials/rootfs-formats) and how to create them.
 * [ROMs](/features/roms) and how to use them.
-* The [CLI reference](/docs/cli/unikraft) and the [legacy CLI reference](/docs/cli/kraft/overview).
-* The `kraft pkg` [command reference](https://unikraft.org/docs/cli/reference/kraft/pkg) for packaging images.
+* The [CLI reference](/docs/cli/unikraft).
 * The `unikraft build` [command reference](/docs/cli/unikraft/build) for building images.

@@ -15,17 +15,9 @@ By default, at present, Unikraft Cloud supports the following metros:
 
 You can list the metros available to your account via the CLI:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft metros list
 ```
-
-```bash title="kraft"
-kraft cloud metro ls
-```
-
-</CodeTabs>
 
 {/* vale off */}
 :::tip[One client, every metro]
@@ -46,7 +38,7 @@ The [Go SDK](/sdks/go) targets one metro per client, so group results across met
 Old metros such as `fra0` are nearing end of life, and aren't available for new deployments.
 
 Unikraft Cloud continues to add new locations worldwide so you can provision services close to your users.
-If there's a metro location you'd need, please contact Unikraft Cloud on [Discord](https://kraft.cloud/discord) or write to [support@unikraft.cloud](mailto:support@unikraft.cloud).
+If there's a metro location you'd need, please contact Unikraft Cloud on [Discord](https://unikraft.com/discord) or write to [support@unikraft.cloud](mailto:support@unikraft.cloud).
 The list of potential metros is:
 
 | IATA code  | | Region                     |
@@ -92,43 +84,19 @@ If you require running solutions in-house or on-premise, either for SOC/ISO/HIPP
 ## Usage
 
 You can set the metro you wish to use by setting the `--metro` flag.
-The legacy CLI also supports the `UKC_METRO` environment variable.
 Use the IATA code descriptor to target the specific metro.
 For example with `fra`:
 
-<CodeTabs syncKey="cli">
-
-```bash title="unikraft"
+```bash
 unikraft run --metro fra \
   -p 443:8080/http+tls \
   --image <my-org>/nginx:latest
 ```
 
-```bash title="kraft"
-# via CLI flag
-kraft cloud vm create --metro fra \
-  -p 443:8080 \
-  <my-org>/nginx:latest
-
-# or via environmental variable
-export UKC_METRO=fra
-kraft cloud vm create \
-  -p 443:8080 \
-  <my-org>/nginx:latest
-```
-
-</CodeTabs>
-
 For on-premise or enterprise users, you need to set the API endpoint of the metro you wish to use.
-With `kraft`, this means setting the `UKC_METRO` environment variable:
+To do this, define a custom [profile](/tutorials/kraftkit-to-unikraft#profile-management) and give an identifier to the metro you wish to use:
 
-```bash title="kraft"
-export UKC_METRO=https://api.example.cloud/v1
-```
-
-With `unikraft`, you need to define a custom [profile](/tutorials/kraftkit-to-unikraft#profile-management) and give an identifier to the metro you wish to use:
-
-```bash title="unikraft"
+```bash
 unikraft profile use <custom-profile>
 unikraft run --metro <custom-metro> ...
 ```
