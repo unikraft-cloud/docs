@@ -1,0 +1,281 @@
+pages/features/custom-network-configuration.mdx
+  h_3a8cdd8dbdd7a3 9,48
+pages/features/cron-jobs.mdx
+  h_3a8cdd8dbdd7a3 255
+pages/platform/services.mdx
+  h_3a8cdd8dbdd7a3 38,45,75,81,106,119,158,204,253,261
+pages/guides/httpserver-python3.12-fastapi-0.121.3.mdx
+  h_3a8cdd8dbdd7a3 14,28,34,45,81,85,92,132,136
+scripts/transform_readme.py
+  h_3a8cdd8dbdd7a3 13,445,473-477,523
+pages/guides/wordpress-all-in-one.mdx
+  h_3a8cdd8dbdd7a3 15,29,35,46,76,80,87,95,99
+pages/features/roms.mdx
+  h_3a8cdd8dbdd7a3 42,189,195,250,257,367,382-383,394,411,517,521
+pages/guides/mcp-server-simple.mdx
+  h_3a8cdd8dbdd7a3 19,33,39,50,103,107,115,197,201
+pages/guides/chromium-cdp-auth.mdx
+  h_3a8cdd8dbdd7a3 22,36,50,56,69,140,146,158,162
+pages/guides/httpserver-lua5.1.mdx
+  h_3a8cdd8dbdd7a3 14,28,34,45,82,86,93,117,121
+pages/guides/wordpress.mdx
+  h_3a8cdd8dbdd7a3 14,28,36,43,47,58,74,113,127,165,169,177,186,190
+pages/cli/registries.mdx
+  h_3a8cdd8dbdd7a3 64,66,72,80,109,137,157,174
+pages/integrations/karpenter.mdx
+  h_3a8cdd8dbdd7a3 10
+pages/guides/httpserver-node22-sveltekit.mdx
+  h_3a8cdd8dbdd7a3 16,30,36,47,91,95,102,205,209
+pages/tutorials/environment-variables.mdx
+  h_3a8cdd8dbdd7a3 30,49,104
+pages/tutorials/docker-to-ukc.mdx
+  h_3a8cdd8dbdd7a3 15,20,96,231,265,312,323
+pages/guides/httpserver-nginx-vite-vanilla.mdx
+  h_3a8cdd8dbdd7a3 17,31,37,48,95,99,106,158,162
+pages/guides/httpserver-gcc13.2.mdx
+  h_3a8cdd8dbdd7a3 14,28,34,45,82,86,93,101,105
+pages/tutorials/scale-to-zero-triggers.mdx
+  h_3a8cdd8dbdd7a3 26,39,85,112
+pages/faq.mdx
+  h_3a8cdd8dbdd7a3 74-76,179,213-214,235
+pages/guides/mongodb.mdx
+  h_3a8cdd8dbdd7a3 15,29,35,46,94,98,105,114,120,141,145
+pages/guides/httpserver-python3.12-django5.0.mdx
+  h_3a8cdd8dbdd7a3 14,28,34,45,105,109,116,163,214,218
+pages/platform/domains.mdx
+  h_3a8cdd8dbdd7a3 24,51,58,69,97,103,132
+pages/features/scale-to-zero.mdx
+  h_3a8cdd8dbdd7a3 211,224,253,259,270,276,314,329
+pages/guides/memcached1.6.mdx
+  h_3a8cdd8dbdd7a3 16,30,36,47,108,112,119,134,138
+pages/guides/caddy2.7-go1.21.mdx
+  h_3a8cdd8dbdd7a3 16,30,36,47,85,89,96,134,138
+pages/guides/mcp-server-arxiv.mdx
+  h_3a8cdd8dbdd7a3 30,44,50,61,105,109,117,125,131,161,165
+pages/guides/redis7.2.mdx
+  h_3a8cdd8dbdd7a3 15,29,35,46,117,121,128,143,147
+pages/guides/httpserver-gpp13.2.mdx
+  h_3a8cdd8dbdd7a3 14,28,34,45,82,86,93,135,139
+pages/platform/images.mdx
+  h_3a8cdd8dbdd7a3 99,120,139,190,200,228,234,241,253,262,326,330,343,361
+pages/guides/httpserver-python3.12-flask3.0.mdx
+  h_3a8cdd8dbdd7a3 14,28,34,45,82,86,93,180,184
+pages/guides/tyk.mdx
+  h_3a8cdd8dbdd7a3 19,33,43,57,90,105,142,146,154,175,179
+pages/guides/visual-studio-code-server.mdx
+  h_3a8cdd8dbdd7a3 21,35,41,60,90,94,101,105,112,119,127,131
+pages/guides/ruby3.2-rails.mdx
+  h_3a8cdd8dbdd7a3 14,28,34,47,90,94,101,171,175
+pages/guides/httpserver-node-vite-ssr-vanilla.mdx
+  h_3a8cdd8dbdd7a3 31,45,51,64,94,98,105,121,125
+pages/guides/node18-agario.mdx
+  h_3a8cdd8dbdd7a3 16,30,36,47,78,82,89,102,106
+pages/guides/httpserver-perl5.42.mdx
+  h_3a8cdd8dbdd7a3 14,28,34,45,82,86,95,105,129,133
+pages/cli/overview.mdx
+  h_3a8cdd8dbdd7a3 93-94
+pages/features/branching.mdx
+  h_3a8cdd8dbdd7a3 30
+pages/guides/httpserver-rust1.75-tokio.mdx
+  h_3a8cdd8dbdd7a3 14,28,34,45,82,86,93,121,125
+pages/features/snapshots.mdx
+  h_3a8cdd8dbdd7a3 16,38
+pages/guides/node-code-execution.mdx
+  h_3a8cdd8dbdd7a3 19,33,43,54,63,83,87,96,105,116,127,131,153,157
+pages/guides/mysql.mdx
+  h_3a8cdd8dbdd7a3 14,28,34,113,117,124,137,158,162
+pages/guides/openclaw.mdx
+  h_3a8cdd8dbdd7a3 17
+pages/guides/postgres.mdx
+  h_3a8cdd8dbdd7a3 18,32,38,50,108,112,119,128,134,162,166
+pages/guides/httpserver-node-express-puppeteer.mdx
+  h_3a8cdd8dbdd7a3 19,33,45,56,89,93,100,115,118
+pages/guides/httpserver-java21.mdx
+  h_3a8cdd8dbdd7a3 15,29,35,46,83,87,94,149,153
+pages/guides/httpserver-node22-react-router.mdx
+  h_3a8cdd8dbdd7a3 15,29,35,46,74,78,85,101,105
+pages/guides/httpserver-go1.21.mdx
+  h_3a8cdd8dbdd7a3 14,28,34,45,82,86,93,121,125
+pages/tutorials/kraftkit-to-unikraft.mdx
+  h_3a8cdd8dbdd7a3 13,393,395-396,398,420
+pages/guides/novnc-browser.mdx
+  h_3a8cdd8dbdd7a3 21,35,41,52,78-81,85,89,96,104,108
+pages/guides/httpserver-node-vite-vanilla.mdx
+  h_3a8cdd8dbdd7a3 35,49,55,67,97,101,108,124,128
+pages/guides/chromium-cdp.mdx
+  h_3a8cdd8dbdd7a3 15,29,35,45,75,79,86,99,103
+scripts/capture_ansi.sh
+  h_3a8cdd8dbdd7a3 13-15
+pages/guides/node-playwright-firefox.mdx
+  h_3a8cdd8dbdd7a3 15,29,35,46,84,88,95,108,112
+pages/guides/build-environments.mdx
+  h_3a8cdd8dbdd7a3 20,34,44,55,64,83,90,94,103,112,124,130,142,148,152,172,181,185
+pages/guides/minio.mdx
+  h_3a8cdd8dbdd7a3 16,30,36,48,78,82,89,104,108
+pages/guides/httpserver-php8.2.mdx
+  h_3a8cdd8dbdd7a3 14,28,34,45,82,86,93,119,123
+pages/sdks/plugin.mdx
+  h_3a8cdd8dbdd7a3 382,390
+pages/guides/httpserver-flask-redis.mdx
+  h_3a8cdd8dbdd7a3 16,30,39,50,78,91,144,152,162
+pages/platform/troubleshooting.mdx
+  h_3a8cdd8dbdd7a3 8,15,57,63,119,129,140,155,157,168-172,174-175,179,187,256-257,273,281,283,291
+pages/guides/vsftpd.mdx
+  h_3a8cdd8dbdd7a3 14,28,34,52,91,95,102,106,113,120,128,132
+pages/guides/httpserver-rust-trunkrs-leptos.mdx
+  h_3a8cdd8dbdd7a3 14,28,34,45,82,86,93,106,110
+pages/features/annotations.mdx
+  h_3a8cdd8dbdd7a3 53,107,185,203,220
+pages/platform/instances.mdx
+  h_3a8cdd8dbdd7a3 43,47,300,308,315,329,382,395,414,450,490,494,513,517,524,530,586,592
+pages/guides/skipper0.18.mdx
+  h_3a8cdd8dbdd7a3 15,29,35,46,83,87,94,106,110
+pages/guides/httpserver-java17-springboot.mdx
+  h_3a8cdd8dbdd7a3 14,28,34,45,82,122,126,133,141,145
+pages/guides/imaginary.mdx
+  h_3a8cdd8dbdd7a3 15,29,35,46,101,105,112,133,137
+pages/guides/dragonflydb.mdx
+  h_3a8cdd8dbdd7a3 15,29,35,46,106,110,117,132,136
+pages/guides/httpserver-bun.mdx
+  h_3a8cdd8dbdd7a3 14,28,34,45,82,86,93,139,143
+pages/guides/httpserver-python3.12-flask3.0-sqlite.mdx
+  h_3a8cdd8dbdd7a3 14,28,34,45,99,103,110,178,182
+pages/guides/httpserver-boost1.74-gpp13.2.mdx
+  h_3a8cdd8dbdd7a3 14,28,34,45,82,86,93,133,137
+pages/guides/grafana.mdx
+  h_3a8cdd8dbdd7a3 15,29,35,46,76,80,87,111,115
+pages/guides/httpserver-elixir1.16.mdx
+  h_3a8cdd8dbdd7a3 14,28,34,45,82,86,93,127,131
+pages/features/checkpoints.mdx
+  h_3a8cdd8dbdd7a3 30,39,77,90,98,104,118,139,145,156,171
+pages/guides/node18-wingsio.mdx
+  h_3a8cdd8dbdd7a3 16,29,35,46,77,81,88,101,105
+pages/guides/phoenix-postgres.mdx
+  h_3a8cdd8dbdd7a3 18,32,40,46,50,57,75,123,136,173,177,185,195,208,212
+pages/guides/node-playwright-chromium.mdx
+  h_3a8cdd8dbdd7a3 15,29,35,46,84,88,95,108,112
+pages/guides/opentelemetry-collector.mdx
+  h_3a8cdd8dbdd7a3 17,31,37,46,74,78,85,100,104
+pages/integrations/kubernetes.mdx
+  h_3a8cdd8dbdd7a3 181,187,205,209,262,607
+pages/guides/httpserver-rust1.91.mdx
+  h_3a8cdd8dbdd7a3 14,28,34,45,82,86,93,101,105
+pages/guides/httpserver-java17-spring-petclinic.mdx
+  h_3a8cdd8dbdd7a3 15,29,35,46,75,79,86,99,103
+zudoku.config.tsx
+  s_4a3d12201bd53a::t_d33657f528f3d5 651
+  h_3a8cdd8dbdd7a3 638
+  s_4a3d12201bd53a::t_5360cf37cb54db 652-654
+  h_3a8cdd8dbdd7a3 639-650,655-704
+pages/platform/certificates.mdx
+  h_3a8cdd8dbdd7a3 26,47,53,61,67,87,95,123,129
+pages/guides/haproxy.mdx
+  h_3a8cdd8dbdd7a3 16,30,36,47,76,80,87,102,106
+pages/guides/neo4j.mdx
+  h_3a8cdd8dbdd7a3 14,28,34,57,107,111,118,127,133,160,164
+pages/guides/httpserver-ruby3.2.mdx
+  h_3a8cdd8dbdd7a3 14,28,34,45,82,86,93,117,121
+pages/guides/nginx-flask-mongo.mdx
+  h_3a8cdd8dbdd7a3 20,34,42,48,52,60,72,108,121,157,169,197,201,225,234,238
+pages/guides/httpserver-go1.22-redis.mdx
+  h_3a8cdd8dbdd7a3 14,28,38,52,84,97,152,156,166,174,178
+pages/guides/hugo0.122.mdx
+  h_3a8cdd8dbdd7a3 15,29,35,46,88,92,99,121,125
+pages/guides/mariadb.mdx
+  h_3a8cdd8dbdd7a3 14,28,34,46,106,110,117,130,136,158,162
+pages/guides/minecraft.mdx
+  h_3a8cdd8dbdd7a3 23,43,53,71,82,105,123,129,133,142,153,180,267
+pages/features/network-shield.mdx
+  h_3a8cdd8dbdd7a3 9
+pages/guides/python-playwright-chromium.mdx
+  h_3a8cdd8dbdd7a3 15,29,35,46,84,88,95,109,113
+pages/guides/node21-websocket.mdx
+  h_3a8cdd8dbdd7a3 16,30,36,47,91,95,102,116,120
+pages/guides/httpserver-node21-nextjs.mdx
+  h_3a8cdd8dbdd7a3 14,28,34,45,84,88,95,149,206,210
+pages/tutorials/rootfs-formats.mdx
+  h_3a8cdd8dbdd7a3 89,103,129,143,180
+pages/guides/github-webhook-node.mdx
+  h_3a8cdd8dbdd7a3 19,33,39,54,94,115,119,126,138,174,178
+pages/features/plugins.mdx
+  h_3a8cdd8dbdd7a3 27,79,127,175
+pages/guides/httpserver-rust1.88-actix-web4.mdx
+  h_3a8cdd8dbdd7a3 14,28,34,45,84,88,95,123,127
+pages/tutorials/rootfs-compression.mdx
+  h_3a8cdd8dbdd7a3 38,45,47,49,58-62,89,112,159
+pages/features/managed-volumes.mdx
+  h_3a8cdd8dbdd7a3 9
+pages/guides/spin-wagi-http.mdx
+  h_3a8cdd8dbdd7a3 17,31,37,48,91,95,102,140,144
+pages/guides/httpserver-expressjs4.18-node21.mdx
+  h_3a8cdd8dbdd7a3 15,29,35,46,83,87,94,145,149
+pages/guides/httpserver-dotnet10.0.mdx
+  h_3a8cdd8dbdd7a3 14,28,34,45,82,86,93,145,149
+README.md
+  h_3a8cdd8dbdd7a3 76
+pages/platform/volumes.mdx
+  h_3a8cdd8dbdd7a3 32,38,54,58,71,79,133,144,172,178,208,228,237,261,283,344,348,362,366,383,387,430,450,498,543,553
+pages/guides/httpserver-python3.12.mdx
+  h_3a8cdd8dbdd7a3 14,28,34,45,82,86,93,142,195,199
+pages/features/autokill.mdx
+  h_3a8cdd8dbdd7a3 28,39,46,57,72,83,94,105
+pages/features/autoscale.mdx
+  h_3a8cdd8dbdd7a3 9,46,58,87,96,116,172,186,192,251,257,302
+pages/guides/traefik.mdx
+  h_3a8cdd8dbdd7a3 14,28,34,46,90,94,101,113,117
+pages/features/load-balancing.mdx
+  h_3a8cdd8dbdd7a3 38,50,74,87,111,117,146,176
+pages/guides/httpserver-rust1.88-rocket0.5.mdx
+  h_3a8cdd8dbdd7a3 14,28,34,45,82,86,93,121,125
+pages/guides/node24-karaoke.mdx
+  h_3a8cdd8dbdd7a3 15,29,35,46,93,97,104,157,161
+pages/guides/prometheus-grafana.mdx
+  h_3a8cdd8dbdd7a3 21,35,71,75,92,106,152,177,229,233,244,304,308
+pages/guides/httpserver-c-debug.mdx
+  h_3a8cdd8dbdd7a3 14,28,34,48,101,105,112,120,124
+pages/guides/debian-ssh.mdx
+  h_3a8cdd8dbdd7a3 14,28,34,46,89,93,100,108,112
+pages/platform/networking.mdx
+  h_3a8cdd8dbdd7a3 37,41,53,64
+pages/platform/metros.mdx
+  h_3a8cdd8dbdd7a3 18,41,90,97,99
+pages/guides/httpserver-node26.mdx
+  h_3a8cdd8dbdd7a3 15,29,35,46,83,87,94,145,149
+pages/guides/httpserver-node21-solid-start.mdx
+  h_3a8cdd8dbdd7a3 14,28,34,45,73,77,84,100,104
+pages/guides/nginx.mdx
+  h_3a8cdd8dbdd7a3 16,30,36,47,92,96,103,141,145
+pages/guides/duckdb-go1.21.mdx
+  h_3a8cdd8dbdd7a3 15,29,35,46,83,87,94,122,126
+pages/guides/wazero-import-go.mdx
+  h_3a8cdd8dbdd7a3 16,30,36,47,85,89,96,129,133
+pages/tutorials/rootfs-volumes-roms.mdx
+  h_3a8cdd8dbdd7a3 31,47,72,80,88,112,177
+pages/guides/httpserver-prisma-expressjs4.19-node18.mdx
+  h_3a8cdd8dbdd7a3 16,30,36,47,86,90,97,340,344
+pages/guides/httpserver-erlang26.2.mdx
+  h_3a8cdd8dbdd7a3 14,28,34,45,82,86,93,117,121
+pages/guides/node-playwright-webkit.mdx
+  h_3a8cdd8dbdd7a3 15,29,35,46,84,88,95,108,112
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "587d40a4edb4b3b3384f2b4241c55ad5acb1df1b",
+  "prompts": {},
+  "humans": {
+    "h_3a8cdd8dbdd7a3": {
+      "author": "aabedraba <abdallah@unikraft.com>"
+    }
+  },
+  "sessions": {
+    "s_4a3d12201bd53a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4de8cd1e-8476-436c-8c44-9a8ec44d2b92",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": null
+    }
+  }
+}
