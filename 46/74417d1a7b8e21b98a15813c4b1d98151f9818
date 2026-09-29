@@ -1,0 +1,42 @@
+pages/tutorials/rootfs-volumes-roms.mdx
+  s_54daac96da1397::t_4faff3a28864da 64
+  h_3a8cdd8dbdd7a3 63,65
+pages/tutorials/rootfs-compression.mdx
+  s_60723ce243f8b2::t_2fd31be6bc5caf 14-15,18-21,24-25
+  s_60723ce243f8b2::t_99f1fc88f128ed 73
+  s_60723ce243f8b2::t_a1e22e6d9531ce 100,107
+  s_60723ce243f8b2::t_dfe62b34b507a7 99,101
+pages/faq.mdx
+  s_60723ce243f8b2::t_cca4e2cdcdc17d 75
+pages/tutorials/rootfs-formats.mdx
+  s_54daac96da1397::t_4faff3a28864da 128
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4674417d1a7b8e21b98a15813c4b1d98151f9818",
+  "prompts": {},
+  "humans": {
+    "h_3a8cdd8dbdd7a3": {
+      "author": "aabedraba <abdallah@unikraft.com>"
+    }
+  },
+  "sessions": {
+    "s_54daac96da1397": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "661afe16-621b-4e7b-be4f-a19d6f015ae5",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": null
+    },
+    "s_60723ce243f8b2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "247eb8a3-b660-47a6-bdc4-43267bc6aa2c",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "aabedraba <abdallah@unikraft.com>"
+    }
+  }
+}
