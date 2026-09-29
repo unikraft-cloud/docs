@@ -1,0 +1,43 @@
+scripts/transform_readme.py
+  s_74590ffc696d65::t_b5371281c04bed 12,65-67,140-148
+pages/tutorials/rootfs-formats.mdx
+  h_3a8cdd8dbdd7a3 126,128-129
+  s_74590ffc696d65::t_e8932c0594e3fb 125,127,130-131
+pages/tutorials/rootfs-volumes-roms.mdx
+  s_74590ffc696d65::t_bfff1af2d0993c 61-65
+pages/tutorials/docker-to-ukc.mdx
+  s_74590ffc696d65::t_90f24e2d1cebcc 18
+pages/guides/build-environments.mdx
+  h_3a8cdd8dbdd7a3 94,152
+pages/guides/httpserver-node-vite-vanilla.mdx
+  h_3a8cdd8dbdd7a3 14-17
+pages/guides/minecraft.mdx
+  h_3a8cdd8dbdd7a3 133
+pages/guides/nginx-flask-mongo.mdx
+  h_3a8cdd8dbdd7a3 72,121,169,201
+pages/guides/node-code-execution.mdx
+  h_3a8cdd8dbdd7a3 87,131
+pages/guides/novnc-browser.mdx
+  h_3a8cdd8dbdd7a3 78-82
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7d55cd1489053166e4a6f249b6d57944883f2d7f",
+  "prompts": {},
+  "humans": {
+    "h_3a8cdd8dbdd7a3": {
+      "author": "aabedraba <abdallah@unikraft.com>"
+    }
+  },
+  "sessions": {
+    "s_74590ffc696d65": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "08ab8486-8a1d-41b7-a3d6-d65a1d65509b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "aabedraba <abdallah@unikraft.com>"
+    }
+  }
+}
