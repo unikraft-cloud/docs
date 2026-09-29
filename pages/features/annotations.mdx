@@ -167,6 +167,11 @@ Only `interfaces[].mac`, `ips[].interface`, `ips[].address`, `ips[].gateway`, an
 `dns`, `mtu`, and `sandbox` do nothing, so you can pass a plugin's full result through untouched.
 Set the resolver with the instance's own `nameserver` field.
 
+The guest doesn't use stateless address autoconfiguration (SLAAC), so it never takes IPv6 addresses or routes from router advertisements.
+The instance's own addresses and `gateway` field are IPv4 only, which leaves the document as the only source of IPv6 addresses.
+List an IPv6 [default route](#default-routes) in the document, or configure one inside the guest, if the workload needs it.
+The guest also skips duplicate address detection, so its IPv6 link-local addresses and the addresses from the document are usable directly after boot.
+
 ### Routes
 
 The guest installs each entry of the document's `routes` array in its own routing table:
