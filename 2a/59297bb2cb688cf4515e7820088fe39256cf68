@@ -1,0 +1,24 @@
+scripts/transform_readme.py
+  s_74590ffc696d65::t_a8d48ed71effc5 12,65-67,140-148
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2a59297bb2cb688cf4515e7820088fe39256cf68",
+  "prompts": {},
+  "humans": {
+    "h_3a8cdd8dbdd7a3": {
+      "author": "aabedraba <abdallah@unikraft.com>"
+    }
+  },
+  "sessions": {
+    "s_74590ffc696d65": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "08ab8486-8a1d-41b7-a3d6-d65a1d65509b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "aabedraba <abdallah@unikraft.com>"
+    }
+  }
+}
