@@ -159,6 +159,9 @@ Only `interfaces[].mac`, `ips[].interface`, and `ips[].address` have any effect.
 `routes`, `gateway`, `dns`, `mtu`, and `sandbox` do nothing, so you can pass a plugin's full result through untouched.
 Set the default gateway and the resolver with the instance's own `gateway` and `nameserver` fields.
 
+The guest doesn't configure IPv6 addresses from router advertisements (SLAAC), so every IPv6 address and IPv6 default route the instance needs has to come from the platform configuration or the document.
+The guest also skips duplicate address detection, so its IPv6 link-local addresses are usable directly after boot.
+
 ### Changing addresses
 
 Running instances pick up updates to their annotations, and reconcile them against what's currently configured, so an address change doesn't require a restart.
