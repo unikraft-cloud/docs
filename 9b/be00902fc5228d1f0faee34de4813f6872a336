@@ -1,0 +1,36 @@
+pages/cli/registries.mdx
+  s_74590ffc696d65::t_336a87f385751d 56
+pages/features/load-balancing.mdx
+  s_74590ffc696d65::t_6ca4e321a42428 35
+pages/features/roms.mdx
+  s_74590ffc696d65::t_80ca70f8ac23d8 46-52
+pages/features/scale-to-zero.mdx
+  s_74590ffc696d65::t_e36f1cb174722e 265
+pages/tutorials/docker-to-ukc.mdx
+  s_74590ffc696d65::t_90f24e2d1cebcc 18
+pages/tutorials/rootfs-formats.mdx
+  s_74590ffc696d65::t_e8932c0594e3fb 125-129
+pages/tutorials/rootfs-volumes-roms.mdx
+  s_74590ffc696d65::t_bfff1af2d0993c 61-65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9bbe00902fc5228d1f0faee34de4813f6872a336",
+  "prompts": {},
+  "humans": {
+    "h_3a8cdd8dbdd7a3": {
+      "author": "aabedraba <abdallah@unikraft.com>"
+    }
+  },
+  "sessions": {
+    "s_74590ffc696d65": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "08ab8486-8a1d-41b7-a3d6-d65a1d65509b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "aabedraba <abdallah@unikraft.com>"
+    }
+  }
+}
