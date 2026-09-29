@@ -1,0 +1,24 @@
+pages/faq.mdx
+  s_60723ce243f8b2::t_cca4e2cdcdc17d 75
+pages/tutorials/rootfs-compression.mdx
+  s_60723ce243f8b2::t_99f1fc88f128ed 73
+  s_60723ce243f8b2::t_dfe62b34b507a7 99,101
+  s_60723ce243f8b2::t_a1e22e6d9531ce 100,107
+  s_60723ce243f8b2::t_2fd31be6bc5caf 14-15,18-21,24-25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1a2a35cd949a5129a8d9035c837dd90a438f2933",
+  "prompts": {},
+  "sessions": {
+    "s_60723ce243f8b2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "247eb8a3-b660-47a6-bdc4-43267bc6aa2c",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "aabedraba <abdallah@unikraft.com>"
+    }
+  }
+}
