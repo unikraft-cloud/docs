@@ -1,0 +1,16 @@
+pages/sdks/plugin.mdx
+  h_3a8cdd8dbdd7a3 390
+pages/tutorials/rootfs-volumes-roms.mdx
+  h_3a8cdd8dbdd7a3 63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8e68053c568235dede5c359a23a714d96093dcc7",
+  "prompts": {},
+  "humans": {
+    "h_3a8cdd8dbdd7a3": {
+      "author": "aabedraba <abdallah@unikraft.com>"
+    }
+  }
+}
