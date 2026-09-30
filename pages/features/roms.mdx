@@ -167,7 +167,7 @@ if __name__ == "__main__":
 
 # Unused in this example, but left here for reference on how to mount ROMs manually if not using automounting.
 /usr/bin/mkdir -p /rom/
-/usr/bin/mount -t erofs /dev/ukp_rom_python_function.py /rom/
+/usr/bin/mount -t erofs /dev/ukp_rom_python_function /rom/
 exec "$@"
 ```
   </TabsContent>
@@ -271,7 +271,7 @@ unikraft run --metro fra \
   -p 443:8080/tls+http \
   --domain test-http-python-rom1 \
   --scale-to-zero policy=on,cooldown-time=1000,stateful=false \
-  --rom name=python_function.py,image=<my-org>/my-rom1:latest,at=/rom \
+  --rom name=python_function,image=<my-org>/my-rom1:latest,at=/rom \
   --image <my-org>/http-python:latest
 unikraft run --metro fra \
   --name test-http-python-rom2 \
@@ -279,7 +279,7 @@ unikraft run --metro fra \
   -p 443:8080/tls+http \
   --domain test-http-python-rom2 \
   --scale-to-zero policy=on,cooldown-time=1000,stateful=false \
-  --rom name=python_function.py,image=<my-org>/my-rom2:latest,at=/rom \
+  --rom name=python_function,image=<my-org>/my-rom2:latest,at=/rom \
   --image <my-org>/http-python:latest
 ```
 
@@ -320,7 +320,7 @@ curl -X POST \
     "autostart": true,
     "roms": [
       {
-        "name": "python_function.py",
+        "name": "python_function",
         "image": "<my-org>/my-rom1:latest",
         "at": "/rom"
       }
@@ -352,7 +352,7 @@ curl -X POST \
     "autostart": true,
     "roms": [
       {
-        "name": "python_function.py",
+        "name": "python_function",
         "image": "<my-org>/my-rom2:latest",
         "at": "/rom"
       }
@@ -364,7 +364,8 @@ curl -X POST \
 </CodeTabs>
 
 :::note
-The `name` field in the ROM entry is optional, and is heplful for identification purposes in the instance configuration.
+The API requires a `name` on each ROM entry, while the `unikraft` CLI derives one from `at` when you omit `name=`.
+See [ROM names and mount points](#rom-names-and-mount-points) for the rules that both fields follow.
 :::
 
 Check that the instances are up:
@@ -375,7 +376,7 @@ unikraft instances get test-http-python-rom2
 ```
 
 Note the `roms` array in the instances configurations.
-Each ROM is available as a readable device at `/dev/ukp_rom_python_function.py`, in the form of an EROFS filesystem.
+Each ROM is available as a readable device at `/dev/ukp_rom_python_function`, in the form of an EROFS filesystem.
 In this example, the platform mounts it automatically at `/rom`, and the app reads `/rom/rom.py` from that mount point.
 
 ### Testing
@@ -514,6 +515,38 @@ The platform enforces the following default limits on inline ROMs:
 No per-file size limit exists.
 The total size limit applies to the combined size of all files in a single inline ROM.
 Since inline ROM data is base64-encoded in the JSON request body, the 8 MB request body limit is the practical upper bound on total data per API call.
+
+## ROM names and mount points
+
+The guest derives each ROM's device node, `/dev/ukp_rom_<name>`, from the ROM's `name`.
+A ROM name has a maximum length of 63 characters and contains only these characters, the same as a [plugin name](/features/plugins#plugin-names):
+
+- Lowercase and uppercase letters (`a`–`z`, `A`–`Z`)
+- Digits (`0`–`9`)
+- Hyphen (`-`) and underscore (`_`)
+
+When a `--rom` flag carries no `name=`, the `unikraft` CLI builds the name from `at`.
+It drops the leading `/`, turns every other `/` into `-`, and removes every character other than a letter, a digit, or `-`, so `at=/rom/base` gives the name `rom-base`.
+
+A ROM can't share its name with a [plugin](/features/plugins) of the same instance, and that includes a name the CLI derives from `at`.
+For example, a ROM at `/sandbox` gets the name `sandbox`, which collides with the [sandbox plugin](/features/plugins#sandbox-plugin).
+
+The `at` field takes an absolute path without `.` or `..` components and without colons (`:`).
+The platform reserves `/uk` and every path below it for its own use in the guest, where it mounts [plugins](/features/plugins#how-it-works), so a ROM can't mount there.
+The same rule applies to the mount points of [volumes](/platform/volumes).
+Two ROMs of the same instance also can't mount at the same path.
+
+| Error message | Cause |
+|---------------|-------|
+| `ROM name must be between 1 and 63 characters long` | The `name` is empty or longer than 63 characters. |
+| `ROM name may only contain the characters 'A'-'Z', 'a'-'z', '0'-'9', '-' and '_'` | The `name` holds another character, such as the `.` of a file extension. |
+| `The mountpoint must not be '/uk' or a path below it` | The `at` path is `/uk` or a path below it. |
+| `Failed to configure roms: EINVAL` or `Failed to configure plugins: EINVAL` | A ROM and a plugin share a name, or two ROMs share a mount point. |
+| `Failed to update roms: EINVAL` or `Failed to update plugins: EINVAL` | A `PATCH` request that the platform applies right away breaks one of these two rules. |
+
+When the platform can't apply a `PATCH` request right away, for example on a running instance, it queues the change.
+It then checks these two rules only when it applies the change.
+A queued change that breaks one of them shows up with `"status": "failed"` in the `updates` array of the instance status.
 
 ## Learn more
 
