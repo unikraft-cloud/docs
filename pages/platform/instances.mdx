@@ -360,6 +360,12 @@ Use `timeout_s` instead.
 The `unikraft` CLI automatically waits for the instance to be running after creation, up until a preconfigured timeout of 10 seconds.
 :::
 
+To wait for an existing instance, pass query parameters to the `wait` endpoint:
+
+```bash
+unikraft api '/v1/instances/<UUID>/wait?state=running&timeout_s=30'
+```
+
 ### Delete on stop
 
 Pass `delete-on-stop` in the features array to automatically delete the instance when it stops:
@@ -579,6 +585,15 @@ For more information, check out this dedicated section on [instance metrics](/pl
 
 Use the [`GET /instances/logs`](/api/platform/v1/instances#get-instances-logs) endpoint to retrieve logs for one or more instances.
 The logs capture the instance's `stdout` and `stderr` output, and they're preserved across restarts and stops.
+
+Read endpoints accept query parameters as an alternative to a JSON body.
+For example, to read the last 4 KiB of an instance's log:
+
+```bash
+unikraft api '/v1/instances/<UUID>/log?offset=-4096&limit=4096'
+```
+
+A request that sends a body can't also give query parameters, including `uuid` or `name`.
 
 With the CLI, you can also follow the logs in real time:
 

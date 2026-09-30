@@ -17,6 +17,7 @@ You can currently only view metrics via the [API](/api/platform/v1/instances#get
 
 ```text
 GET  /instances/{uuid}/metrics
+POST /instances/{uuid}/metrics  # (for clients that must send a body)
 GET  /instances/metrics?uuid=<uuid>[,<uuid>…]
 POST /instances/metrics  # (UUIDs or names in request body)
 ```
