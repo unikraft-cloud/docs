@@ -1,0 +1,355 @@
+---
+title: Audit events
+navigation_icon: scroll-text
+description: |
+  Follow instance state changes live and see who or what caused each one.
+---
+
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "zudoku/ui/Tabs"
+
+{/* vale off */}
+:::caution[**Limited Access**]
+Audit events are a new feature which is available to enterprise customers, and is coming soon to the hosted platform.
+If you would like to try it out now, please reach out to the [Unikraft Cloud Discord](https://unikraft.com/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
+:::
+{/* vale on */}
+
+**Audit events** tell you who or what changed an instance.
+Every `vm.state_change` and `vm.start_failed` event carries an `attribution` that names its source, such as an API request, the guest, or scale-to-zero, and the user behind an API request.
+You can subscribe to these events as a live stream.
+
+Use the stream to:
+
+- Keep an audit trail of who changed what.
+- Alert on specific causes, such as an instance that ran out of quota.
+- Follow instance changes as they happen, without polling the API.
+
+## Subscribing to the stream
+
+Open a `GET` request on `/v1/audit`.
+The response is a [server-sent events](https://html.spec.whatwg.org/multipage/server-sent-events.html) stream that stays open and delivers each event as it happens:
+
+<CodeTabs syncKey="cli">
+
+```bash title="curl"
+curl -N \
+  -H "Authorization: Bearer $UKC_TOKEN" \
+  "https://api.fra.unikraft.cloud/v1/audit"
+```
+
+</CodeTabs>
+
+:::caution
+Use a client that prints the response as it arrives, such as `curl -N`.
+The [`unikraft api`](/cli/unikraft/api) command currently waits for the response to end, so it shows nothing for a stream.
+:::
+
+Any valid API token can subscribe.
+The stream only delivers events for instances that your account owns, and that still holds after you delete the instance.
+
+The stream starts empty and only carries events that happen after you connect.
+When nothing happens for 30 seconds, the platform sends a `: heartbeat` comment line to keep the connection alive.
+Event stream clients ignore comment lines.
+
+## Filtering events
+
+Three optional query parameters narrow down the stream.
+Each takes a comma-separated list:
+
+| Parameter | Matches an event when |
+|---|---|
+| `events` | its type is one of the listed types: `vm.state_change`, `vm.start_failed` |
+| `uuid` | it's about one of the listed instances |
+| `tags` | its instance carries **all** the listed [tags](/platform/tagging) |
+
+An event has to match every parameter you set.
+A parameter you leave out, or leave empty, matches everything.
+If you repeat a parameter, the last one wins.
+
+For example, to follow the state changes of all instances tagged `prod`:
+
+<CodeTabs syncKey="cli">
+
+```bash title="curl"
+curl -N \
+  -H "Authorization: Bearer $UKC_TOKEN" \
+  "https://api.fra.unikraft.cloud/v1/audit?events=vm.state_change&tags=prod"
+```
+
+</CodeTabs>
+
+And to follow two specific instances:
+
+<CodeTabs syncKey="cli">
+
+```bash title="curl"
+curl -N \
+  -H "Authorization: Bearer $UKC_TOKEN" \
+  "https://api.fra.unikraft.cloud/v1/audit?uuid=186ac04c-6ede-46eb-b559-7d6a97792e6b,303575f0-2b1e-4c9d-9d0e-7a1f4e2c8b55"
+```
+
+</CodeTabs>
+
+The platform answers with `400 Bad Request` for an unknown parameter, an invalid UUID or tag, or a request that carries a body.
+The same goes for an unknown event type, or one the stream doesn't carry such as `vm.annotate`.
+It answers with `429 Too Many Requests` when the controller already holds its [limit of subscriptions](#limitations).
+
+## Event format
+
+Each event arrives as an `event:` line with its type, followed by a `data:` line with a JSON document, and a blank line:
+
+```text
+event: vm.state_change
+data: {"type":"vm.state_change","timestamp":"2026-09-28T10:01:22.306418204Z", ...}
+```
+
+Here is the full document of an API request that stopped an instance:
+
+```json
+{
+  "type": "vm.state_change",
+  "timestamp": "2026-09-28T10:01:22.347105522Z",
+  "object": {
+    "type": "i",
+    "uuid": "186ac04c-6ede-46eb-b559-7d6a97792e6b",
+    "owner": "242e0044-7918-462b-b4c7-d3edf94517a4",
+    "tags": ["audit-test"]
+  },
+  "attribution": {
+    "operation": "61fbce49-8a0e-4f5b-9a3c-0d2c7e81f6a4",
+    "kind": "stop",
+    "trigger": "observed",
+    "origin": "api",
+    "user": "242e0044-7918-462b-b4c7-d3edf94517a4"
+  },
+  "data": {
+    "prev": "stopping",
+    "new": "stopped",
+    "stop": {
+      "reason": ["sys-exit", "app-exit", "ukpd", "api"],
+      "code": 33024,
+      "exit_code": 1
+    }
+  }
+}
+```
+
+| Field | Description |
+|---|---|
+| `type` | Event type, the same as the `event:` line |
+| `timestamp` | Time of the change in UTC, [RFC 3339](https://www.rfc-editor.org/rfc/rfc3339) with nine fraction digits |
+| `object.type` | Kind of object: `i` for an instance |
+| `object.uuid` | UUID of the instance |
+| `object.owner` | UUID of the user that owns the instance |
+| `object.tags` | Tags of the instance at the time of the event |
+| `attribution` | Who or what caused the change, see [attribution](#attribution) |
+| `data` | Event-specific payload, see [event types](#event-types) |
+
+A document leaves out a field that has no value, rather than setting it to `null`.
+
+## Event types
+
+### `vm.state_change`
+
+The platform sends `vm.state_change` whenever an instance moves to a different state.
+`data.prev` and `data.new` hold the old and the new state:
+
+{/* vale off */}
+| State | Meaning |
+|---|---|
+| `stopped` | Not running |
+| `standby` | Not running, but starts automatically on incoming requests, for example after [scale-to-zero](/features/scale-to-zero) |
+| `starting` | Booting or resuming |
+| `running` | Running |
+| `draining` | Draining connections before it shuts down |
+| `stopping` | Shutting down |
+| `template` | Serving as a [template](/platform/instances#instance-templates) |
+{/* vale on */}
+
+An instance also changes between `stopped` and `standby` when only its autostart setting changes.
+
+When an instance comes to rest in `stopped` or `standby`, `data.stop` tells why it stopped.
+See [stop information](#stop-information).
+
+### `vm.start_failed`
+
+The platform sends `vm.start_failed` when a start doesn't happen, for example because the start would exceed a quota.
+
+```json
+{
+  "type": "vm.start_failed",
+  "timestamp": "2026-09-28T10:12:40.118302951Z",
+  "object": { "type": "i", "uuid": "...", "owner": "..." },
+  "attribution": { "operation": "...", "kind": "start", "trigger": "requested", "origin": "api", "user": "..." },
+  "data": {
+    "state": "stopped",
+    "error": "EDQUOT",
+    "stop": { "reason": ["ukpd"], "cause": "quota-exceeded" }
+  }
+}
+```
+
+`data.state` holds the state the instance stays in, and `data.error` names the error.
+`data.stop` tells why, if the platform had already recorded a cause.
+A start that the platform turns down before it changes anything produces no `vm.state_change`.
+
+### Stop information
+
+`data.stop` describes why an instance stopped.
+It holds the same information as the [stop reason](/platform/instances#stop-reason) of the instances API, with names in place of bits:
+
+| Field | Description |
+|---|---|
+| `reason` | List of what took part in the stop, see below |
+| `code` | Stop code of the kernel |
+| `exit_code` | Exit code of the app, only present with `app-exit` |
+| `cause` | Why the platform stopped the instance, only present without `sys-exit` |
+
+{/* vale off */}
+| `reason` value | Meaning |
+|---|---|
+| `sys-exit` | The kernel exited |
+| `app-exit` | The app exited |
+| `ukpd` | The platform initiated the stop |
+| `api` | A user initiated the stop through the API |
+| `force` | A force stop |
+| `scale-to-zero` | [Scale-to-zero](/features/scale-to-zero) or a suspend stopped the instance |
+
+| `cause` value | Meaning |
+|---|---|
+| `quota-exceeded` | Starting the instance would exceed a [quota](/platform/quotas) |
+| `no-gpu` | No GPU was free for the instance |
+| `image-unavailable` | The platform couldn't get the image |
+| `branch-failed` | [Branching](/features/branching) the instance failed |
+{/* vale on */}
+
+## Attribution
+
+`attribution` names who or what caused a change:
+
+| Field | Description |
+|---|---|
+| `origin` | Source of the change, see below |
+| `user` | UUID of the requesting user, for changes that an API request caused |
+| `operation` | ID that all the changes of one action share |
+| `kind` | What the operation does: `start`, `stop`, `drain`, `suspend`, or `restart`, absent when the change belongs to no operation or the operation has no kind to name |
+| `trigger` | `requested` for the change that the operation asked for, `observed` for the changes that follow from it |
+
+{/* vale off */}
+| `origin` | Source |
+|---|---|
+| `api` | An API request |
+| `guest` | The instance itself, for example because its app exited |
+| `proxy` | The platform proxy, for example waking up an instance for an incoming request |
+| `scale-to-zero` | [Scale-to-zero](/features/scale-to-zero) putting an idle instance to sleep |
+| `autoscale` | [Autoscale](/features/autoscale) adding or removing instances |
+| `scheduled-op` | A [scheduled operation](/features/cron-jobs) reaching its due time |
+| `restart` | The [restart policy](/platform/instances#restart-policy) of a failed instance |
+| `update` | An update that the platform applies to the instance |
+| `network` | A packet arriving for a stopped instance |
+| `autokill` | [Autokill](/features/autokill) |
+| `mtss` | The [snapshot](/features/snapshots) system |
+| `system` | The platform, with no other cause to name |
+| `unknown` | The platform couldn't tell |
+{/* vale on */}
+
+### Following an operation
+
+One action often causes more than one state change.
+They all share the same `operation`, so you can group them.
+The first one has the trigger `requested`, and the rest have `observed`.
+
+Stopping an instance through the API gives two events:
+
+```text
+running  → stopping   origin=api  kind=stop  trigger=requested  operation=61fbce49…
+stopping → stopped    origin=api  kind=stop  trigger=observed   operation=61fbce49…
+```
+
+An instance with scale-to-zero that goes idle, and then wakes up for an incoming request, gives two operations:
+
+```text
+running  → stopping   origin=scale-to-zero  kind=stop   trigger=requested  operation=9d955682…
+stopping → standby    origin=scale-to-zero  kind=stop   trigger=observed   operation=9d955682…
+standby  → starting   origin=proxy          kind=start  trigger=requested  operation=11b15061…
+starting → running    origin=proxy          kind=start  trigger=observed   operation=11b15061…
+```
+
+A change that the platform can't match to an operation carries the origin `system` and no `operation`.
+
+## Missed events
+
+If your client falls behind the stream, the platform drops the oldest events it holds for you, and sends a `gap` event in their place:
+
+```text
+event: gap
+data: {"dropped":12}
+```
+
+After a gap, read the current state of the instances you follow from the [instances API](/api/platform/v1/instances), since the stream no longer holds the whole history.
+
+## Changes from earlier releases
+
+:::caution
+Release 14 changes the format of instance events in the node event log:
+
+- `vm.state_change` carries the instance UUID in `object.uuid` rather than `data.vm`.
+- Timestamps always have nine fraction digits.
+  Earlier releases wrote fractions below 0.1 seconds incorrectly.
+- A reliable log sink drops an event after a short wait instead of blocking the controller.
+  The sink setting `block_timeout_ms` sets the wait, 50 ms by default, and `0` restores the old blocking behavior.
+  The platform configures log sinks at the node level, so coordinate with Unikraft to change it.
+:::
+
+The same state change before and after release 14:
+
+<Tabs defaultValue="new">
+<TabsList>
+<TabsTrigger value="new">Release 14</TabsTrigger>
+<TabsTrigger value="old">Earlier releases</TabsTrigger>
+</TabsList>
+<TabsContent value="new">
+
+```json
+{
+  "type": "vm.state_change",
+  "timestamp": "2026-09-28T10:01:02.873148018Z",
+  "object": { "type": "i", "uuid": "186ac04c-6ede-46eb-b559-7d6a97792e6b", "owner": "242e0044-7918-462b-b4c7-d3edf94517a4" },
+  "attribution": { "operation": "2990b90d-6f27-411b-bca4-5e26f6b8ab94", "kind": "start", "trigger": "observed", "origin": "api", "user": "242e0044-7918-462b-b4c7-d3edf94517a4" },
+  "data": { "prev": "starting", "new": "running" }
+}
+```
+
+</TabsContent>
+<TabsContent value="old">
+
+```json
+{
+  "type": "vm.state_change",
+  "timestamp": "2026-09-28T10:01:02.873148018Z",
+  "data": { "vm": "186ac04c-6ede-46eb-b559-7d6a97792e6b", "prev": "starting", "new": "running" }
+}
+```
+
+</TabsContent>
+</Tabs>
+
+## Limitations
+
+- A controller accepts at most 64 subscriptions at a time, across all users.
+  Beyond that, a new subscription fails until another one closes.
+- The stream doesn't replay older events.
+- Through the public API endpoint, the stream needs the proxy configuration of release 14.
+- The only audit events are `vm.state_change` and `vm.start_failed`, alongside the [`gap`](#missed-events) control event.
+  Creating or deleting an instance has no event of its own, and you can't subscribe to [`vm.annotate`](/features/annotations#annotation-events).
+- A restart through the CLI shows up as a stop operation followed by a start operation, not as one `restart` operation.
+- [Autokill](/features/autokill) after a set count of requests shows up with the origin `proxy`.
+
+## Learn more
+
+* [Metrics](/platform/metrics): runtime statistics for your instances.
+* [Instances](/platform/instances): instance states and lifecycle.
+* [Tagging](/platform/tagging): label instances to filter the stream.
+* [Scale-to-zero](/features/scale-to-zero) and [autokill](/features/autokill): the platform features that change instance state on their own.
+* [Annotations](/features/annotations#annotation-events): the `vm.annotate` event in the node event log.
+* Unikraft Cloud's [REST API reference](/api/platform/v1).

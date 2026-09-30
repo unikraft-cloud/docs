@@ -274,7 +274,7 @@ Note the following:
 * Scheduled checkpoints need a license that covers checkpointing.
   The platform checks the license when you configure the schedule and again at every occurrence, so an expired or replaced license stops an existing schedule from taking further checkpoints.
 * Scheduled checkpoints only work with block-based volumes (for example, `ext4`) - occurrences fail for other volume types.
-* Full VMs (`"type": "full"`) don't support checkpointing yet, so the action fails on them.
+* Full VMs running on QEMU (`"type": "full"`) don't support checkpointing yet, so the action fails on them.
 * A failing occurrence leaves the schedule in place and doesn't affect the other scheduled operations of the instance.
   Because the instance status reports only the next elapse of a schedule and not the result of past runs, use the checkpoint history to confirm that occurrences produce checkpoints.
 

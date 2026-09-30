@@ -11,21 +11,18 @@ For example, text files often compress by up to 90% and more, whilst already com
 
 ## Getting started
 
-The Unikraft Platform supports both compressed and uncompressed rootfses, but it's highly recommended to use uncompressed ones if size allows.
-Decompressing is a step done by the kernel at boot time (or runtime, with EROFS), resulting in slower access times across the board.
+The Unikraft Platform supports compressed EROFS rootfses, but it's highly recommended to use uncompressed ones if size allows.
+The kernel decompresses the data at runtime, which makes file access slower across the board.
 That's why the first attempt at using the platform should always be with uncompressed rootfses.
 
-Both formats, [CPIO and EROFS](/tutorials/rootfs-formats), support compression.
-CPIO does full file system compression (like running `zip` on the file).
-EROFS does per-block compression meaning that the system decompresses only the accessed blocks on-the-fly.
-Both of them support most compression algorithms, but the recommended ones are those that have fast decompression speeds like `lz4hc`.
+Of the two [rootfs formats](/tutorials/rootfs-formats), only EROFS supports compression.
+Unikraft Cloud doesn't support a compressed CPIO rootfs.
+EROFS does per-block compression, which means that the system decompresses only the blocks that it reads.
+EROFS supports most compression algorithms, but the recommended ones are those that have fast decompression speeds like `lz4hc`.
 
 As presented in the [rootfs formats tutorial](/tutorials/rootfs-formats) and in the [FAQ](/faq#how-does-the-image-size-and-memory-relate-to-boot-times), the performance characteristics of the two formats differ.
-When using compression, the system amplifies these differences further.
-For CPIO, the system must decompress the entire archive first before using it.
-This means that boot times increase further, and memory usage during boot is also higher negating the benefit of using compression in the first place.
-EROFS is better, as the system decompresses only the accessed blocks on-the-fly, meaning that boot times are less affected, and memory usage is also kept lower.
-This has the added downside that Direct Access (`DAX`) isn't possible when using compression, as the host side can't map a compressed image into guest memory.
+With a compressed EROFS rootfs, boot times change less, and memory usage stays low, because the system decompresses only the blocks that it reads.
+Compression has a downside that Direct Access (`DAX`) isn't possible when using compression, as the host side can't map a compressed image into guest memory.
 This caveat results in having to load the entire compressed rootfs into guest memory, increasing memory usage by at least the size of the compressed rootfs.
 Still, if many files aren't accessed in boot, the cold boot time might decrease compared to an uncompressed EROFS rootfs.
 
@@ -33,41 +30,10 @@ Still, if many files aren't accessed in boot, the cold boot time might decrease 
 
 The `unikraft` CLI doesn't support compressing rootfses.
 This choice is deliberate, as the performance downsides aren't worth it most of the time.
-The legacy `kraft` CLI implements CPIO compression directly.
-
 The `unikraft` CLI supports deploying pre-compressed EROFS rootfses.
 
 As a study case, this tutorial uses this [`node` image](https://github.com/unikraft-cloud/examples/tree/main/node-playwright-chromium), which has a big rootfs size.
 A full guide on using this image is available [here](/guides/node-playwright-chromium).
-
-### CPIO compression
-
-To package a compressed CPIO rootfs, use the `--compress` flag of the legacy `kraft pkg` command.
-This uses `gzip` compression to compress the initrd file before packaging it into a `OCI` image and uploading it to the Unikraft Cloud platform.
-Then deploy the image with the `unikraft` CLI:
-
-```bash
-kraft pkg \
-  --plat kraftcloud \
-  --arch x86_64 \
-  --name index.unikraft.io/<my-org>/node-playwright-chromium:cpio-compressed \
-  --rootfs-type cpio \
-  --compress \
-  --push \
-  .
-unikraft run --metro fra \
-  --scale-to-zero policy=on \
-  -p 443:8080/http+tls \
-  -m 2200M \
-  --image <my-org>/node-playwright-chromium:cpio-compressed
-```
-
-:::warning
-It's **not** recommended to use CPIO compression due to the performance downsides mentioned above.
-Moreover, pre-compressed CPIO rootfses aren't officially supported by the CLI.
-:::
-
-### EROFS compression
 
 To package a compressed EROFS rootfs, you need to use the `mkfs.erofs` tool before packaging it with the CLI.
 To do this you will also have to first export the image built from the `Dockerfile` into a `tar` archive:
@@ -104,7 +70,7 @@ unikraft run --metro fra \
 
 ## Performance impact
 
-You can see below the same [`node` image](https://github.com/unikraft-cloud/examples/tree/main/node-playwright-chromium) packaged and deployed four times, with and without compression, and with both CPIO and EROFS formats.
+You can see below the same [`node` image](https://github.com/unikraft-cloud/examples/tree/main/node-playwright-chromium) packaged and deployed three times: as an uncompressed CPIO rootfs, and as an EROFS rootfs with and without compression.
 You can view the results in the table below, which show the image size, boot times, and minimum memory requirements for each case.
 
 To check the image size, you can list your images:
@@ -116,7 +82,6 @@ unikraft images list
 | rootfs Type   | Compression | Image Size | Boot Time  | Instance Memory Required |
 |---------------|-------------|------------|------------|--------------------------|
 | CPIO          | No          | 916 MiB    | 1152.08 ms | 2700 MiB                 |
-| CPIO          | Yes (gzip)  | 400 MiB    | 3479.96 ms | 2200 MiB                 |
 | EROFS         | No          | 924 MiB    | 155.39 ms  | 1000 MiB                 |
 | EROFS         | Yes (lz4hc) | 542 MiB    | 122.10 ms  | 600 MiB                  |
 
@@ -125,23 +90,21 @@ The image sizes reported in the table also contain the `base-compat` kernel laye
 The instance memory required is the minimum memory required to boot the instance, and respond to a simple `curl` request.
 :::
 
-As expected from the previous assumptions, the compressed CPIO rootfs boots slower than the uncompressed one.
-This happens due to the need to decompress the entire archive before use.
 EROFS performs better in both compressed and uncompressed forms, compared to CPIO.
 The compressed EROFS rootfs boots even faster than the uncompressed one.
 This is likely due to the reduced amount of data that the system reads from disk, resulting in faster access times despite the decompression overhead.
 This only happens in the cold boot scenario.
 In [warm boots](/features/snapshots), the uncompressed EROFS rootfs tops the charts as the system needs no decompression at all, and wakeups happen faster.
 
-When it comes to memory usage, you can see that the CPIO images require **a lot** more memory to boot.
-This is because the system needs to decompress the entire archive in memory before using it, resulting in higher memory usage during boot.
-Then, Unikraft Cloud reclaims that memory after boot, but the initial memory overhead is still higher than the uncompressed case.
+When it comes to memory usage, you can see that the CPIO image requires **a lot** more memory to boot.
+This is because the system must unpack the full archive into memory before it can use it.
+Unikraft Cloud reclaims that memory after boot, but the initial memory overhead is still higher than with EROFS.
 With EROFS, you don't see this limitation.
 
 :::tip
 For BYOC or on-prem deployments, Unikraft Cloud offers the option to share the same read-only initrd between instances when using EROFS images.
 This has the added benefit that Unikraft Cloud loads the initrd into host memory only once as read-only.
-Instances only map the pages they need, reducing memory usage and boot times even further.
+Instances only map the pages they need, which reduces memory usage and boot times even further.
 Upon writing, the system performs copy-on-write, meaning that it copies only the modified pages into the instance's memory.
 In this case, the boot time differences between compressed and uncompressed EROFS rootfses are negligible.
 There might still be a difference when handling page faults, when accessing parts of the rootfs for the first time.
@@ -157,5 +120,4 @@ If limited by size constraints, try using compressed EROFS rootfses with a fast 
 * The [rootfs formats tutorial](/tutorials/rootfs-formats) for understanding the differences between CPIO and EROFS.
 * The [`mkfs.erofs` documentation](https://man.archlinux.org/man/extra/erofs-utils/mkfs.erofs.1.en) for more information on creating compressed EROFS file systems.
 * The [CLI reference](/docs/cli/unikraft).
-* The `kraft pkg` [command reference](https://unikraft.org/docs/cli/reference/kraft/pkg) for packaging images.
 * The `Kraftfile` [reference](/kraftfile/v0.7) for specifying rootfs sources and formats.

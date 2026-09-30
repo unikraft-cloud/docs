@@ -200,8 +200,8 @@ Otherwise, a checkpoint request can fail for the following reasons:
 
 - A checkpoint and the instances you load from it must stay in the same metro.
   The CLI catches a cross-metro checkpoint before it sends the request.
-- Checkpointing needs the default `micro` instance type.
-  QEMU-backed full VMs (`type: full`), which [GPU instances](/platform/instances#gpus) require, don't support checkpointing, and a create request can't combine `type` with a checkpoint source.
+- Checkpointing is only supported on `--type=micro` instances running on Firecracker (which is the default).
+  Full VMs running on QEMU, which [GPU instances](/platform/instances#gpus) require, don't support checkpointing yet, so a create request can't combine `--type=full` with `--checkpoint`.
 - Checkpointing builds on [branching](/features/branching), so it only works with block-based volumes (for example, `ext4`).
   The checkpoint clones the source's volume state consistently with its memory snapshot, which isn't supported for other volume types.
 - On BYOC and on-prem installations, checkpointing requires a license that includes the feature.

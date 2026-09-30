@@ -150,6 +150,7 @@ const config: ZudokuConfig = {
             "/platform/images",
             "/platform/quotas",
             "/platform/metrics",
+            "/platform/audit-events",
             "/platform/tagging",
             "/platform/delete-locks",
             "/platform/troubleshooting",

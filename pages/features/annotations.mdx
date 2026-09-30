@@ -92,11 +92,19 @@ Your app parses this JSON and reads the `annotations` object like any other star
 
 ## Guest network configuration with CNI
 
+{/* vale off */}
+:::caution[**Limited Access**]
+CNI networking is only available in BYOC or on-prem Unikraft Cloud installations.
+It relies on TAP devices and networks that you set up on the host.
+To explore such a deal, reach out to the [Unikraft Cloud Discord](https://unikraft.com/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
+:::
+{/* vale on */}
+
 `unikraft.com/cni` is a reserved annotation.
-Its value is a [CNI Result](https://www.cni.dev/docs/spec/#section-5-result-types) document, and the guest applies the addresses it holds to its own network interfaces.
+Its value is a [CNI Result](https://www.cni.dev/docs/spec/#section-5-result-types) document, and the guest applies the addresses and routes it holds to its own network interfaces.
 
 This hands the addressing of an instance to an external [CNI](https://www.cni.dev/) plugin or IPAM system.
-The plugin decides the addresses, writes its result into the annotation, and the guest configures itself from it.
+The plugin decides the addresses and routes, writes its result into the annotation, and the guest configures itself from it.
 Your image needs no agent for it and no boot script of its own.
 
 The annotation pairs with an [interface without an address](/features/custom-network-configuration#interfaces-without-an-address), which reaches the guest as a bare link on a TAP device of your own.
@@ -155,18 +163,88 @@ Give every address a MAC address to land on:
 - The document needs a `cniVersion` of `0.3.1`, `0.4.0`, `1.0.0`, or `1.1.0`, and has to be a result rather than a network configuration.
 - Keep the document on one line, because annotation values reject control characters.
 
-Only `interfaces[].mac`, `ips[].interface`, and `ips[].address` have any effect.
-`routes`, `gateway`, `dns`, `mtu`, and `sandbox` do nothing, so you can pass a plugin's full result through untouched.
-Set the default gateway and the resolver with the instance's own `gateway` and `nameserver` fields.
+Only `interfaces[].mac`, `ips[].interface`, `ips[].address`, `ips[].gateway`, and the [`routes`](#routes) array have any effect.
+`dns`, `mtu`, and `sandbox` do nothing, so you can pass a plugin's full result through untouched.
+Set the resolver with the instance's own `nameserver` field.
 
-### Changing addresses
+### Routes
 
-Running instances pick up updates to their annotations, and reconcile them against what's currently configured, so an address change doesn't require a restart.
+The guest installs each entry of the document's `routes` array in its own routing table:
 
-### When nothing happens
+```json
+{
+  "cniVersion": "1.0.0",
+  "interfaces": [
+    { "name": "eth0", "mac": "0a:58:c0:a8:01:05" }
+  ],
+  "ips": [
+    { "interface": 0, "address": "192.168.1.5/24", "gateway": "192.168.1.1" }
+  ],
+  "routes": [
+    { "dst": "10.2.0.0/16", "gw": "192.168.1.254" },
+    { "dst": "10.3.0.0/16" }
+  ]
+}
+```
 
-A single MAC address that matches no interface stops the whole document from applying, leaving every interface untouched.
-Check that each MAC address in the document matches one on the instance, then read the [instance logs](/platform/instances#instance-logs), which name any document that fails to parse or apply.
+The guest sends traffic for `10.2.0.0/16` through `192.168.1.254`, and traffic for `10.3.0.0/16` through `192.168.1.1`, the `gateway` of the matching `ips` entry.
+
+Each route accepts the following fields:
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `dst` | Yes | The destination in CIDR notation, IPv4 or IPv6, such as `0.0.0.0/0` for a default route. |
+| `gw` | No | The next-hop address in the same IP family as `dst`, with the fallback described under [picking the next hop](#picking-the-next-hop). |
+| `priority` | No | The route metric, where a lower value wins. |
+| `table` | No | The numeric ID of the routing table to add the route to, which defaults to the main table. |
+| `scope` | No | The numeric route scope, such as `0` for global, `253` for link, and `254` for host, which defaults to `0` for a route with a next hop and `253` for a route without one. |
+
+The guest ignores `mtu`, `advmss`, and any other route field.
+A document holds at most 16 routes.
+
+#### Picking the next hop
+
+A route without a `gw` uses the `gateway` of the matching `ips` entry, which is the first entry with an address of the route's IP family and a `gateway` of its own.
+When no entry has a gateway, the route has no next hop, and the guest sends its traffic straight onto the link.
+
+Routes carry no interface of their own, so the guest picks one:
+
+- The interface whose address prefix contains the route's next hop.
+- Otherwise, the interface of the first `ips` entry with an address of the route's IP family.
+
+Every route needs at least one address of its own IP family in the document.
+
+#### Default routes
+
+A `gateway` in `ips` creates no route on its own.
+List the default route explicitly, as `{ "dst": "0.0.0.0/0" }` for IPv4 or `{ "dst": "::/0" }` for IPv6, and the guest uses that gateway as its [next hop](#picking-the-next-hop).
+
+#### Route order
+
+The guest adds routes after it configures the addresses, in the order of the `routes` array.
+List a route that makes a gateway reachable ahead of the routes that use that gateway.
+
+#### Routing tables
+
+A route with a `table` other than the main table only takes effect once a policy routing rule points traffic at that table.
+The guest adds the route but never adds such a rule, so the operator may need to add one inside the guest, for example with `ip rule add from 192.168.1.5 lookup 100`.
+
+### Changing the configuration
+
+The guest applies the document at boot, and again whenever the instance resumes from a [snapshot](/features/snapshots), for example after [scale-to-zero](/features/scale-to-zero).
+A [patched](#patching-annotations) annotation takes effect once the instance stops, so the guest reads the new document on its next boot or resume.
+
+On a resume, the guest drops the addresses and routes it added that the document no longer lists, and adds the new ones, without a reboot.
+The guest never removes an address or a route it didn't add itself.
+
+### When the document fails
+
+At boot, a document that fails to parse or apply stops the instance.
+That covers invalid JSON, a MAC address that matches no interface, a route with no address of its IP family, and a route that the guest kernel rejects.
+When the instance resumes from a snapshot, the same failure leaves the instance running and only logs it.
+
+Check that each MAC address in the document matches one on the instance, and that each route has an address to use.
+Then read the [instance logs](/platform/instances#instance-logs), which name any entry that fails to parse or apply.
 
 ## Patching annotations
 
@@ -279,14 +357,17 @@ The platform's event log carries a `vm.annotate` event, which it emits whenever 
 
 An external system consumes the event to keep track of the instance's annotation values, without polling the instance API.
 The event also gives log processing a way to map an instance UUID back to its annotations.
+The [audit event stream](/platform/audit-events) doesn't carry `vm.annotate`, so read it from the node event log.
 
 ## Limitations
 
 - An instance holds at most 256 annotations.
 - Annotation keys must follow the [Kubernetes key syntax](#annotation-keys), and values are strings with no ASCII control characters in them.
 - A [patched](#patching-annotations) annotation change applies once the instance reaches the `stopped` state.
-- A [`unikraft.com/cni`](#guest-network-configuration-with-cni) document holds at most eight interfaces and 16 addresses, and an `ips[].interface` index stays below eight.
-- The guest applies only `interfaces[].mac`, `ips[].interface` and `ips[].address` from that document, and needs a recent base-compat guest kernel to apply it at all.
+- A [`unikraft.com/cni`](#guest-network-configuration-with-cni) document holds at most eight interfaces, 16 addresses, and 16 routes, and an `ips[].interface` index stays below eight.
+- The guest applies only `interfaces[].mac`, `ips[].interface`, `ips[].address`, `ips[].gateway`, and `routes` from that document.
+- Applying `routes` requires the latest base-compat guest kernel.
+  An instance that resumes from a [snapshot](/features/snapshots) keeps the kernel that the snapshot captured, and applies routes only after it cold-boots on the latest kernel.
 - Dedicated `unikraft` CLI subcommands aren't available yet, so drive annotations through the [API](/api/platform/v1/instances).
 - The platform sets up [log-output](#annotations-in-log-output) forwarding at the node level, not through the instances API.
 - The [`vm.annotate` event](#annotation-events) needs switching on in the node's event configuration.

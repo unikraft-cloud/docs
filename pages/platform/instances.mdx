@@ -278,9 +278,9 @@ Every instance runs as one of two virtual machine types, which you pick with `--
 | `micro` | The default, running on Firecracker. |
 | `full` | Runs on QEMU, which [GPU support](#gpus) requires, and needs a plan with full VM support. |
 
-Full VMs trade platform features for that extra hardware access.
-A QEMU-backed instance supports neither [scale-to-zero](/features/scale-to-zero), [instance templates](#instance-templates), [branching](/features/branching), nor [checkpointing](/features/checkpoints), and works only with block-based volumes rather than [virtiofs](/platform/volumes#filesystems).
-A create request therefore can't combine `--type` with `--template`, `--branch`, or `--checkpoint`.
+Full VMs running on QEMU are required for [GPU support](#gpus).
+They don't support [branching](/features/branching) or [checkpointing](/features/checkpoints) yet, and work only with block-based volumes rather than [virtiofs](/platform/volumes#filesystems).
+A create request therefore can't combine `--type=full` with `--branch` or `--checkpoint`.
 
 ### Replicas
 
@@ -415,8 +415,12 @@ You can also use the CLI to set this up:
 unikraft instance create --feature nested-virt ...
 ```
 
-The guest kernel needs the matching driver to use the extensions.
-A Linux guest needs `CONFIG_KVM` together with `CONFIG_KVM_INTEL` or `CONFIG_KVM_AMD`, and exposes `/dev/kvm` once it loads the module.
+The guest kernel needs the matching driver to use the extensions, and exposes `/dev/kvm` once the driver is active.
+On `x86_64`, a Linux guest needs `CONFIG_KVM` together with `CONFIG_KVM_INTEL` or `CONFIG_KVM_AMD`.
+On `arm64`, a Linux guest needs `CONFIG_KVM`, which the kernel builds in rather than loading as a module.
+
+The host must support nested virtualization itself.
+An instance with `nested-virt` doesn't start on a host without this support.
 
 :::note
 A create request that starts from a snapshot—an [instance template](#instance-templates), a [branch](/features/branching), or a [checkpoint](/features/checkpoints)—can't add `nested-virt`.
@@ -466,11 +470,6 @@ An instance template is a snapshotted instance that acts as a source for cloning
 Cloning a template creates a new instance that resumes from the exact original system state.
 It preserves memory contents, open files, and populated caches to bypass the standard boot sequence.
 Once you convert an instance into a template, you can't reverse the process.
-
-:::note
-Templates need the default `micro` [instance type](#instance-types).
-QEMU-backed full VMs (`--type full`), which [GPU instances](#gpus) require, don't support them.
-:::
 
 To transition an actively running instance into a template, from the guest write the value 1 to `/uk/libukp/template_instance`:
 

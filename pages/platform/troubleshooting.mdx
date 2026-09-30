@@ -257,24 +257,6 @@ Create a TLS tunnel with the [`unikraft instances tunnel`](/cli/unikraft/instanc
 Both open a local endpoint (`localhost` / `127.0.0.1`) and forward the traffic over TLS.
 See the [MariaDB guide](/guides/mariadb) for an example.
 
-
-## "No such file or directory" when building or deploying an image
-
-When building / deploying an image using `kraft`, you may get the error below:
-
-```ansi title=""
- E  unpacking the image: opening layer: open <path_to_home_directory>/.local/share/kraftkit/runtime/oci/digests/sha256/3d30a7ba2a819aec2e73c5df07c24264d66891e926b395b9ef0f66f151db4b49: no such file or directory
-```
-
-This often means the local `kraft` cache is in an inconsistent state.
-
-To solve this, remove the local cache and local packages:
-
-```bash
-kraft pkg rm --all
-rm -fr ~/.local/share/kraftkit
-```
-
 ## Launched app not visible in list
 
 The most common reason is that you deployed an app to one metro but listed a different one.

@@ -136,8 +136,9 @@ An interface that carries a `tap_name` but no `ip` gives the guest a link on you
 This is what a fully customer-managed network needs—an external IPAM, a CNI plugin, or a virtual appliance that handles its own addressing.
 Your side provides the TAP device and decides the addressing on it, and the platform only attaches the guest's interface to that device.
 
-A CNI plugin can also supply the link's addressing without requiring your application or image to configure it.
-Write the plugin's result into the instance's [`unikraft.com/cni` annotation](/features/annotations#guest-network-configuration-with-cni), and the guest matches the addresses in it to this interface by MAC address and configures them itself.
+A CNI plugin can also supply the link's addressing and routes without requiring your app or image to configure them.
+Write the plugin's result into the instance's [`unikraft.com/cni` annotation](/features/annotations#guest-network-configuration-with-cni), and the guest matches the addresses in it to this interface by MAC address.
+It then configures those addresses and the result's [routes](/features/annotations#routes) itself.
 
 Such an interface differs from an addressed one in three ways:
 
@@ -146,7 +147,8 @@ Such an interface differs from an addressed one in three ways:
 - The platform keeps the interface out of the internal DNS and routes no service traffic to it.
 
 The platform also never derives a gateway or nameserver from a custom interface's network.
-Set the instance-level `gateway` and `nameserver` fields, or configure both inside the guest.
+Set the instance-level `nameserver` field, and either set `gateway` or list a default route in the [CNI annotation](/features/annotations#default-routes).
+Otherwise, configure both inside the guest.
 
 ### Autoconfiguration
 
