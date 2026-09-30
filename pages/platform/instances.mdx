@@ -279,8 +279,9 @@ Every instance runs as one of two virtual machine types, which you pick with `--
 | `full` | Runs on QEMU, which [GPU support](#gpus) requires, and needs a plan with full VM support. |
 
 Full VMs running on QEMU are required for [GPU support](#gpus).
-They don't support [branching](/features/branching) or [checkpointing](/features/checkpoints) yet, and work only with block-based volumes rather than [virtiofs](/platform/volumes#filesystems).
+They don't support [branching](/features/branching), [checkpointing](/features/checkpoints), or [vertical scaling](/features/vertical-scaling) yet, and work only with block-based volumes rather than [virtiofs](/platform/volumes#filesystems).
 A create request therefore can't combine `--type=full` with `--branch` or `--checkpoint`.
+An instance cloned from a template inherits the template's type, so a create request can't combine `--template` with `--type` either.
 
 ### Replicas
 
@@ -301,6 +302,13 @@ You can do this with the CLI as well:
 unikraft instance create --replicas 2 ...
 ```
 
+### Vertical scaling
+
+An instance can grow and shrink its memory and vCPUs while it runs.
+Opt in by setting a range in the create request: `min_memory_mb` and `max_memory_mb` for memory, `min_vcpus` and `max_vcpus` for vCPUs.
+The instance boots with the minimum, and the platform adjusts the size within the range based on the instance's memory utilization and CPU pressure.
+See [Vertical scaling](/features/vertical-scaling) for the details, requirements, and limitations.
+
 ### GPUs
 
 :::caution[**Limited Access**]
@@ -310,6 +318,10 @@ The interface described here reflects the current implementation and may change 
 :::
 
 Instances can run with an NVIDIA GPU attached.
+Depending on the host, that GPU is either a whole physical GPU or a vGPU.
+A vGPU is a virtual GPU that the host carves out of a physical GPU, so more than one instance shares the physical GPU.
+A vGPU reports the same model as the physical GPU it comes from, and your workload uses it like any other GPU.
+
 Pass `--gpus` when you create the instance, together with the `full` instance type that GPUs require:
 
 ```bash
@@ -322,16 +334,52 @@ unikraft instance create --metro fra \
 ```
 
 An instance can currently hold at most one GPU, and you can't choose which one.
-The platform picks a free GPU from the host and keeps it assigned for the instance's entire lifetime, releasing it when you delete the instance.
+Build the workload image on a glibc-based distribution rather than Alpine, because the NVIDIA user-space libraries don't run on musl.
+GPU instances share the [limitations of full VMs](#instance-types): they support neither branching nor checkpointing, so a create request can't combine `--gpus` with `--branch` or `--checkpoint`.
 
-To see the GPUs an instance holds, inspect it:
+#### GPU allocation
+
+The platform allocates a GPU when the instance starts, not when you create it, and this includes instances created with autostart.
+On the first start, it picks any free GPU on the host and records that GPU's UUID and model on the instance.
+If no GPU is free, the start fails with an error stating that no GPU matching the instance is currently available.
+
+The instance holds the GPU only while it runs.
+Stopping the instance, or scaling it to zero, returns the GPU to the host's pool so another instance can use it in the meantime.
+On every later start, the platform first tries to reacquire the same GPU, and falls back to any free GPU of the same model if another instance holds that one.
+It never assigns a GPU of a different model, because a resumed guest expects the same hardware as before the suspend.
+To reserve GPU capacity for a set of instances, limit how many of them run at the same time.
+
+To see the GPU an instance holds, inspect it:
 
 ```bash
 unikraft instance get my-inference-app
 ```
 
-The `gpus.*.uuid` and `gpus.*.model` fields report the GPUs themselves, and `resources.gpus` reports how many the instance holds.
-Listings sort and filter on all three like any other [field](/docs/cli/fields).
+The `gpus.*.allocated` field reports whether the instance holds a GPU right now.
+The `gpus.*.uuid` and `gpus.*.model` fields identify that GPU.
+The model is the GPU's vendor and device ID in hexadecimal form, such as `10de:1eb8` for an NVIDIA Tesla T4.
+A stopped instance holds no GPU, so it reports `allocated` as `false` and no UUID, but keeps the model it last ran on.
+`resources.gpus` reports how many GPUs the instance requests.
+Listings sort and filter on these fields like any other [field](/docs/cli/fields).
+
+#### Scale-to-zero and templates for GPU instances
+
+GPU instances backed by a vGPU support [scale-to-zero](/features/scale-to-zero), suspend and resume, and [instance templates](#instance-templates).
+Suspending a GPU instance requires a GPU that can save and restore its device state, which vGPUs support.
+An instance that holds a whole physical GPU can't suspend, so it neither scales to zero nor serves as a template.
+
+When a vGPU instance scales to zero, the platform snapshots the VM together with the state of its GPU, detaches the GPU, and returns it to the pool.
+On the next request, the platform reacquires a GPU as described in [GPU allocation](#gpu-allocation) and resumes the VM from the snapshot with the GPU attached.
+This lets a host serve more GPU instances than it has GPUs.
+An idle instance releases its GPU, and a woken instance resumes on any free GPU of the same model.
+
+A GPU accesses guest memory directly and can't wait for a page the platform hasn't loaded yet.
+Resuming a GPU instance loads its whole memory from the snapshot before the VM continues, so resume time grows with the instance's memory size.
+CPU-only instances load memory on demand instead.
+
+Instances created from a template of a GPU instance inherit its GPU configuration and model.
+A create request that uses such a template can't set `--gpus`.
+The value comes from the template.
 
 ### Wait for running
 
@@ -470,6 +518,12 @@ An instance template is a snapshotted instance that acts as a source for cloning
 Cloning a template creates a new instance that resumes from the exact original system state.
 It preserves memory contents, open files, and populated caches to bypass the standard boot sequence.
 Once you convert an instance into a template, you can't reverse the process.
+
+:::note
+Templates also work for QEMU-backed full VMs (`--type full`), including [GPU instances](#gpus) backed by a vGPU.
+An instance cloned from a template inherits the template's instance type and GPU configuration, so a create request can't combine `--template` with `--type` or `--gpus`.
+See [Scale-to-zero and templates for GPU instances](#scale-to-zero-and-templates-for-gpu-instances).
+:::
 
 To transition an actively running instance into a template, from the guest write the value 1 to `/uk/libukp/template_instance`:
 
