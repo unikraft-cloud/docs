@@ -120,6 +120,7 @@ const config: ZudokuConfig = {
             "/features/load-balancing",
             "/features/snapshots",
             "/features/autoscale",
+            "/features/vertical-scaling",
             "/features/roms",
             "/features/autokill",
             "/features/on-demand-templates",

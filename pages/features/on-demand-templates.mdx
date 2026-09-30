@@ -20,6 +20,12 @@ Currently, there is no unikraft CLI support for on-demand instance template crea
 You must do this by calling the platform [API](/api/platform/v1/instances#create-instance) with `unikraft api` or curl.
 :::
 
+:::note
+Like any [instance template](/platform/instances#instance-templates), on-demand templates also work for QEMU-backed full VMs (`--type full`), including [GPU instances](/platform/instances#gpus) backed by a vGPU.
+Set `type` and `gpus` inside `create_args`, since the clone inherits both from the template and the outer request can't set them.
+See [Scale-to-zero and templates for GPU instances](/platform/instances#scale-to-zero-and-templates-for-gpu-instances).
+:::
+
 ## On-demand template creation
 
 To create a template on demand, add `prepare: true` and a `create_args` object to the `template` block of a normal instance-create request:

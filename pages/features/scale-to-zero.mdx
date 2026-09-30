@@ -24,6 +24,12 @@ This differs from [autoscale](/features/autoscale), in which you *don't* specify
 The platform does this for you based on traffic load.
 :::
 
+:::note
+Scale-to-zero also works for QEMU-backed full VMs (`--type full`), including [GPU instances](/platform/instances#gpus) backed by a vGPU.
+A vGPU instance releases its GPU while in standby and reacquires one when it wakes up, whereas an instance that holds a whole physical GPU can't suspend.
+See [Scale-to-zero and templates for GPU instances](/platform/instances#scale-to-zero-and-templates-for-gpu-instances).
+:::
+
 
 ## Policies
 
