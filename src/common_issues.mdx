@@ -1,0 +1,5 @@
+# Common Issues
+
+- Q17: I am deploying an application and the responses from the instance are buffered. Instead of receiving N messages one-by-one, I receive them all at the end of the conversation. How can I fix this?
+    
+    Set the `X-Accel-Buffering` in the response header. For example, for a streaming response application, this patch would fix things:
