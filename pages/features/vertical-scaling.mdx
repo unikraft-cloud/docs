@@ -1,0 +1,113 @@
+---
+title: Vertical scaling
+navigation_icon: move-vertical
+---
+
+{/* vale off */}
+:::caution[**Limited Access**]
+Vertical scaling is coming soon to the hosted platform.
+Without it, an instance with a range boots and runs at its initial size, and the platform doesn't scale it.
+To try it out, reach out to the [Unikraft Cloud Discord](https://unikraft.com/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
+The interface described here reflects the current implementation and may change before general availability.
+:::
+{/* vale on */}
+
+Vertical scaling lets an instance grow and shrink its memory and its number of vCPUs while it runs.
+Where [autoscale](/features/autoscale) changes the *number of instances* behind a service, vertical scaling changes the *size of a single instance*.
+The platform watches the instance's memory utilization and CPU pressure and adjusts its resources within a range you define.
+You don't have to size the instance for its peak load up front.
+
+## Setting a range
+
+An instance opts in with a range at creation time.
+The guest kernel must support vertical scaling for the range to take effect (see [Requirements and limitations](#requirements-and-limitations)).
+In the [create request](/api/platform/v1/instances#create-instance), set `min_memory_mb` and `max_memory_mb` for memory, or `min_vcpus` and `max_vcpus` for vCPUs.
+Vertical scaling is active only for a resource with at least one bound.
+An instance without a range keeps a fixed size.
+
+{/* vale off */}
+:::caution
+The `unikraft` CLI and the SDKs don't expose the range fields yet.
+In the meantime, set them through the [API](/api/platform/v1/instances#create-instance), which you can invoke with `curl` or the [`unikraft api`](/cli/unikraft/api) command.
+:::
+{/* vale on */}
+
+```bash title="POST /instances"
+unikraft api /v1/instances --metro=fra \
+   '{
+   "name": "my-instance",
+   "image": "nginx:latest",
+   "memory_mb": 512,
+   "min_memory_mb": 256,
+   "max_memory_mb": 2048,
+   "vcpus": 1,
+   "min_vcpus": 1,
+   "max_vcpus": 2,
+   "autostart": true
+}'
+```
+
+The instance boots with the minimum of each resource.
+If you also set `memory_mb` or `vcpus`, the platform grows the instance to that amount right after boot, so the value must lie inside the range.
+The maximum must exceed the minimum by at least one guest memory block size.
+The platform rounds the maximum down to the nearest guest memory block size (128M by default).
+
+If you set only one bound of a resource, the platform fills in the other:
+
+| You set | Minimum | Maximum |
+|---------|---------|---------|
+| Only the minimum | The value you set | Your per-instance limit, `limits.max_memory_mb` or `limits.max_vcpus` in your [quotas](/platform/quotas) |
+| Only the maximum | `memory_mb` or `vcpus`, or the platform default when unset | The value you set |
+
+## How the platform scales an instance
+
+### Memory
+
+The platform samples the memory utilization of each scaling instance at a fixed interval and adjusts the memory in fixed-size blocks:
+
+| Condition | Action |
+|-----------|--------|
+| Utilization stays at or above the scale-up threshold, averaged over recent samples | The platform adds memory until utilization drops a margin below the threshold. |
+| Utilization reaches the urgent threshold | The platform adds memory at once, based on the current utilization rather than the average, and the guest pauses its user space until the memory arrives. |
+| Utilization stays below the scale-down threshold | The platform removes memory until utilization rises a margin above the threshold, and no sooner than a cooldown after the last addition. |
+
+The memory always stays within the instance's range.
+
+### vCPUs
+
+The guest itself decides when to scale its vCPUs.
+It requests another vCPU when its processes spend a notable share of a short window waiting for CPU time.
+It checks its load average at a longer interval and gives vCPUs back when the load is low, starting no sooner than a cooldown after the last addition.
+
+The thresholds, intervals, and cooldowns for both memory and vCPU scaling are configurable by the platform operator.
+
+## Quotas
+
+Added memory and vCPUs count against your account's live limits, `hard.live_memory_mb` and `hard.live_vcpus` in your [quotas](/platform/quotas).
+When that budget runs out, the instance doesn't grow further.
+The range itself must fit the per-instance limits in your quotas: `limits.min_memory_mb` to `limits.max_memory_mb` for memory, and `limits.min_vcpus` to `limits.max_vcpus` for vCPUs.
+
+## Inspecting a scaling instance
+
+The instance status reports the current size in `memory_mb` and `vcpus`.
+For each resource with a range, it also reports the size the instance booted with in `boot_memory_mb` and `boot_vcpus`, and the range in `min_memory_mb`, `max_memory_mb`, `min_vcpus`, and `max_vcpus`.
+
+```bash
+unikraft instance get my-instance
+```
+
+## Requirements and limitations
+
+- Only the default `micro` [instance type](/platform/instances#instance-types) supports vertical scaling, so a request that sets a range for a full VM fails.
+- Vertical scaling is available on `x86_64` only.
+- The guest kernel must support vertical scaling.
+  If the kernel in your image lacks that support, the instance runs at its initial size and the platform can't scale it.
+- You can't change the range after you create the instance.
+- An instance created from an instance template that has a snapshot can't set its own range, because it inherits the range of its template.
+- Instance templates and [autoscale](/features/autoscale) templates accept the same fields and pass the range on to their clones, so for [on-demand templates](/features/on-demand-templates) you set the range inside `create_args`.
+- An instance that resumes from a snapshot, for example after [scale-to-zero](/features/scale-to-zero), keeps its current size.
+
+## Learn more
+
+* Unikraft Cloud's [REST API reference](/api/platform/v1), in particular the [create instance endpoint](/api/platform/v1/instances#create-instance).
+* [Quotas](/platform/quotas), for the limits a range has to fit in.
