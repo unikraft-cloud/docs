@@ -99,6 +99,45 @@ The `relay` object accepts the following fields:
 | `name` | Yes | The name of the interface to relay traffic through, which must belong to another instance in your account. |
 | `relay_dns` | No | Whether the relay forwards DNS requests, `true` by default, with `false` leaving them to the default DNS server. |
 
+### Relay status
+
+The instance status shows the relay of each interface that uses one, and the instance that the relay interface belongs to.
+`unikraft instance get` doesn't show relays, so read the status from the API:
+
+```bash
+unikraft api /v1/instances/<uuid>
+```
+
+```json title="Response (excerpt)"
+{
+  "status": "success",
+  "data": {
+    "instances": [
+      {
+        "name": "my-sandbox",
+        ...
+        "network_interfaces": [
+          {
+            "uuid": "<interface-uuid>",
+            "name": "<interface-name>",
+            ...
+            "relay": {
+              "uuid": "<relay-interface-uuid>",
+              "name": "my-relay-iface",
+              "instance": {
+                "uuid": "<relay-instance-uuid>",
+                "name": "my-relay"
+              },
+              "relay_dns": true
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
 ### Relay notes
 
  - All network traffic passes over the relay.

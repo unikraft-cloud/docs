@@ -180,6 +180,11 @@ You should see output like:
 fra    my-volume  [38;2;0;188;125mmounted[0m  100MiB  2 minutes ago
 ```
 
+:::note
+A volume can't mount at `/uk` or at any path below it, which the platform reserves in the guest for [plugins](/features/plugins#how-it-works).
+Such a mount point fails the request with `The mountpoint must not be '/uk' or a path below it`, whether you set it when you create the instance or when you attach the volume.
+:::
+
 ### Testing
 
 The Flask server writes the time and date to `/mnt/log.txt` for each request.
