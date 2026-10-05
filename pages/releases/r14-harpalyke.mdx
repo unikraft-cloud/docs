@@ -323,7 +323,7 @@ IPv6 addresses and default routes must come from the platform configuration or C
 ### Other platform changes
 
 - The default snapshot prefetch size is now 32 KiB instead of 1 MiB, shortening resumes.
-- The plugin field `rom` is renamed to `image`. `rom` still works, but the response contains a deprecation warning.
+- The plugin field changes from `rom` to `image`. `rom` still works, but the response contains a deprecation warning.
 - ROM names can contain at most 63 characters, and ROMs and volumes can't mount at `/uk` or below it.
 - The instance status now shows which instance owns a relay interface.
 - The controller starts on hosts that can't create IPv6 sockets and uses IPv4 for its API.
