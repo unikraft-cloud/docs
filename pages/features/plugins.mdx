@@ -119,11 +119,32 @@ The `--plugin` column shows which of them the CLI flag can set:
 | Field | Required | `--plugin` | Description |
 |-------|----------|------------|-------------|
 | `name` | Yes | Yes | The plugin name. It becomes the `<plugin_name>` segment in the plugin endpoint. See [Plugin names](#plugin-names) for the allowed format. |
-| `image` | Yes | Reference string only | The plugin's ROM image, given as an image reference string such as `user/myplugin:latest`, or as an image object with a `url` and optional `headers` and `pull_policy`, the same as elsewhere in the API. The deprecated `rom` field still works in its place. |
+| `image` | Yes | Reference string only | The plugin's ROM image, given as an image reference string such as `user/myplugin:latest`, or as an image object with a `url` and optional `headers` and `pull_policy`, the same as elsewhere in the API. The [deprecated `rom` field](#the-deprecated-rom-field) still works in its place. |
 | `config` | No | Yes | Arbitrary JSON that the platform passes to the plugin's `init` on `STDIN`. Any JSON value works, including a string, a number, or an object. |
 | `authorization` | No | No | How the platform authorizes requests to this plugin, as described under [authorization](#authorization). |
 
 You can attach up to 8 plugins to an instance.
+
+### The deprecated `rom` field
+
+The API used to call the `image` field `rom`.
+It still accepts `rom`, but a response to a request that uses it carries a deprecation warning:
+
+```json title="Response"
+{
+  "status": "success",
+  ...
+  "warnings": [
+    {
+      "type": "deprecated_migration",
+      "message": "The plugin `rom` field is deprecated. Use the `image` field instead"
+    }
+  ]
+}
+```
+
+A plugin entry takes only one of the two fields, and a request that sets both fails with `Only one of 'rom' and 'image' may be set`.
+The `--plugin` flag still accepts `rom=` as an alias for `image=`.
 
 ## Authorization
 
@@ -192,6 +213,8 @@ A plugin name has a maximum length of 63 characters and contains only these char
 - Lowercase and uppercase letters (`a`–`z`, `A`–`Z`)
 - Digits (`0`–`9`)
 - Hyphen (`-`) and underscore (`_`)
+
+A plugin can't share its name with a [ROM](/features/roms#rom-names-and-mount-points) of the same instance.
 
 ## Changing plugins on an existing instance
 

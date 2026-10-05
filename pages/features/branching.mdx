@@ -73,8 +73,8 @@ Otherwise, a branch request can fail for the following reasons:
 
 - A branch must stay in the metro of its source.
   The CLI catches a cross-metro source before it sends the request.
-- Branching needs the default `micro` instance type.
-  QEMU-backed full VMs (`type: full`), which [GPU instances](/platform/instances#gpus) require, don't support branching, and a create request can't combine `type` with a branch source.
+- Branching is only supported on `--type=micro` instances running on Firecracker (which is the default).
+  Full VMs running on QEMU, which [GPU instances](/platform/instances#gpus) require, don't support branching yet, so a create request can't combine `--type=full` with `--branch`.
 - Branching only works with block-based volumes (for example, `ext4`).
   The branch clones the source's volume state consistently with its memory snapshot, which isn't supported for other volume types.
 - On BYOC and on-prem installations, branching requires a license that includes the feature.

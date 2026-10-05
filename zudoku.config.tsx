@@ -120,6 +120,7 @@ const config: ZudokuConfig = {
             "/features/load-balancing",
             "/features/snapshots",
             "/features/autoscale",
+            "/features/vertical-scaling",
             "/features/roms",
             "/features/autokill",
             "/features/on-demand-templates",
@@ -150,6 +151,7 @@ const config: ZudokuConfig = {
             "/platform/images",
             "/platform/quotas",
             "/platform/metrics",
+            "/platform/audit-events",
             "/platform/tagging",
             "/platform/delete-locks",
             "/platform/troubleshooting",
@@ -588,6 +590,7 @@ const config: ZudokuConfig = {
       icon: "tag",
       items: [
         "/releases/index",
+        "/releases/r14-harpalyke",
         "/releases/r13-adrastea",
         "/releases/r12-thebe",
         "/releases/r11-metis",

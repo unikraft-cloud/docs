@@ -296,6 +296,72 @@ spec:
 Once the Pod runs, the same volume reports the `mounted` state and names the instance that attached it.
 Every Pod that references the same `ukc-volume` claim mounts the same Unikraft Cloud volume.
 
+### Running commands with `kubectl exec`
+
+Kraftlet serves `kubectl exec` through the [sandbox plugin](/features/plugins#sandbox-plugin), which runs inside the instance next to your app.
+
+Exec needs chart version 0.10.0 or later, and stays off until you give Kraftlet the plugin image.
+Set it by upgrading your existing Kraftlet release:
+
+```bash
+helm upgrade kraftlet \
+  --namespace kraftlet \
+  --reuse-values \
+  --set kraftlet.env.KRAFTLET_EXEC_PLUGIN_IMAGE=plugins/sandbox:latest \
+  oci://ghcr.io/unikraft-cloud/helm-charts/kraftlet
+```
+
+On a fresh install, add the same `--set` flag to the [`helm install`](#getting-started) command instead.
+
+Exec needs Kraftlet to authenticate requests to its kubelet API.
+The chart sets this up by default with the cluster CA.
+Without it, Kraftlet refuses to start with exec on.
+
+Each Pod opts in with the `cloud.unikraft.v1.instances/enable-exec` annotation.
+Kraftlet adds the plugin only to instances whose Pod carries it:
+
+```yaml title="exec.yaml"
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-exec
+  annotations:
+    cloud.unikraft.v1.instances/enable-exec: "true"
+spec:
+  tolerations:
+    - key: "virtual-kubelet.io/provider"
+      operator: "Equal"
+      value: "ukc"
+      effect: "NoSchedule"
+  nodeSelector:
+    kubernetes.io/hostname: kraftlet
+  containers:
+    - name: nginx
+      image: nginx:latest
+      ports:
+        - containerPort: 8080
+```
+
+Apply it, and once the Pod runs, run a command inside its instance:
+
+```bash
+kubectl apply -f exec.yaml
+kubectl exec nginx-exec -- nginx -T
+```
+
+The command runs inside the instance, and `kubectl` prints its output and returns its exit code.
+Kraftlet passes the arguments straight to the plugin without a shell, so the program must exist in the image.
+To use pipes or globs, call a shell the image ships, for example `kubectl exec nginx-exec -- sh -c 'ls /etc | wc -l'`.
+
+A few details differ from a regular kubelet:
+
+* Commands run without a real terminal.
+  `kubectl exec -it` still forwards your input, but full-screen programs and line editing don't work.
+* Kraftlet collects output by polling the plugin, so each line shows up after a short delay.
+  Set `KRAFTLET_EXEC_POLL_INTERVAL` through `kraftlet.env` to change that delay from its `250ms` default.
+* An instance created before you enabled exec has no plugin.
+  Recreate its Pod to add one.
+
 ## Kraftlet internals
 
 This section describes how Kraftlet translates Kubernetes objects into Unikraft Cloud resources.
@@ -467,6 +533,10 @@ An image without a registry host, such as `nginx:latest`, and an image on `docke
 ### Pod status
 
 Kraftlet refreshes the status of every Pod it manages from the platform on the `kraftlet.podStatusUpdateInterval`, which defaults to 15 seconds.
+Kraftlet reads instance state through an instance cache instead of asking the platform once per Pod.
+The cache merges the lookups that arrive together into shared requests, and remembers newly created instances so their first status updates need no extra request.
+As a result, the time from creating a Pod to seeing it `Running` stays flat as the node grows.
+
 It derives the Pod phase from the state of the backing instances:
 
 | Instance state | Pod phase |
@@ -635,6 +705,7 @@ Kraftlet reads the following annotations from Pod and Service objects to configu
 | `cloud.unikraft.v1.instances/autostart` | boolean | `true` | Whether the instance starts automatically when Kraftlet schedules the Pod. |
 | `cloud.unikraft.v1.instances/template` | string | — | Name of a pre-existing Unikraft Cloud instance template to use instead of the container image. |
 | `cloud.unikraft.v1.instances/ignore` | string | — | Comma-separated container names that Kraftlet leaves out of Unikraft Cloud. |
+| `cloud.unikraft.v1.instances/enable-exec` | boolean | `false` | Adds the sandbox plugin so [`kubectl exec`](#running-commands-with-kubectl-exec) reaches the instance. Needs exec turned on in Kraftlet. |
 | `cloud.unikraft.v1.instances/plugins` | string | — | ConfigMap holding the plugin list, written as `<configmap>` or `<configmap>/<key>`. |
 | `cloud.unikraft.v1.instances/plugins.<container>` | string | — | Same as above, for a single container of a multi-container Pod. |
 | `cloud.unikraft.v1.instances/scale_to_zero.policy` | `on` \| `off` \| `idle` | `on` | Enables or disables scale-to-zero for instances that back a service or carry plugins. |
@@ -714,7 +785,8 @@ The values below cover the settings most deployments touch.
 
 A Kraftlet node is a virtual kubelet in front of a remote platform, so a few kubelet behaviors have no counterpart:
 
-* `kubectl exec` and `kubectl attach` don't reach an instance.
+* `kubectl attach` doesn't reach an instance.
+  Use [`kubectl exec`](#running-commands-with-kubectl-exec) to run commands inside it instead.
 * `kubectl top pod` returns nothing, since Kraftlet serves no stats summary.
   Read [instance metrics](/platform/instances#instance-metrics) instead.
 * Liveness, readiness, and startup probes never run.

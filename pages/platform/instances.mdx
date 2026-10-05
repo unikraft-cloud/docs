@@ -235,6 +235,11 @@ For example, an out-of-memory (OOM) situation triggers a page fault `PGFAULT(4)`
 In that case the `stop_code` is `0x000C7F04=818948` and the `stop_reason` is `-----K (1)` if the stop occurred during app execution.
 :::
 
+By default, a guest that runs out of memory stops the whole instance instead of killing a single process.
+The workload then doesn't continue in a partial state.
+A process can opt in to the out-of-memory killer by setting its `/proc/self/oom_score_adj` to `0`.
+The kernel may then kill that process alone and keep the instance running, so the rest of the workload has to cope with losing it.
+
 
 ### Restart policy
 
@@ -278,9 +283,9 @@ Every instance runs as one of two virtual machine types, which you pick with `--
 | `micro` | The default, running on Firecracker. |
 | `full` | Runs on QEMU, which [GPU support](#gpus) requires, and needs a plan with full VM support. |
 
-Full VMs trade platform features for that extra hardware access.
-A QEMU-backed instance supports neither [scale-to-zero](/features/scale-to-zero), [instance templates](#instance-templates), [branching](/features/branching), nor [checkpointing](/features/checkpoints), and works only with block-based volumes rather than [virtiofs](/platform/volumes#filesystems).
-A create request therefore can't combine `--type` with `--template`, `--branch`, or `--checkpoint`.
+Full VMs running on QEMU are required for [GPU support](#gpus).
+They don't support [branching](/features/branching), [checkpointing](/features/checkpoints), or [vertical scaling](/features/vertical-scaling) yet, and work only with block-based volumes rather than [virtiofs](/platform/volumes#filesystems).
+A create request therefore can't combine `--type=full` with `--branch` or `--checkpoint`.
 
 ### Replicas
 
@@ -301,6 +306,13 @@ You can do this with the CLI as well:
 unikraft instance create --replicas 2 ...
 ```
 
+### Vertical scaling
+
+An instance can grow and shrink its memory and vCPUs while it runs.
+Opt in by setting a range in the create request: `min_memory_mb` and `max_memory_mb` for memory, `min_vcpus` and `max_vcpus` for vCPUs.
+The instance boots with the minimum, and the platform adjusts the size within the range based on the instance's memory utilization and CPU pressure.
+See [Vertical scaling](/features/vertical-scaling) for the details, requirements, and limitations.
+
 ### GPUs
 
 :::caution[**Limited Access**]
@@ -310,6 +322,10 @@ The interface described here reflects the current implementation and may change 
 :::
 
 Instances can run with an NVIDIA GPU attached.
+Depending on the host, that GPU is either a whole physical GPU or a vGPU.
+A vGPU is a virtual GPU that the host carves out of a physical GPU, so more than one instance shares the physical GPU.
+A vGPU reports the same model as the physical GPU it comes from, and your workload uses it like any other GPU.
+
 Pass `--gpus` when you create the instance, together with the `full` instance type that GPUs require:
 
 ```bash
@@ -322,16 +338,50 @@ unikraft instance create --metro fra \
 ```
 
 An instance can currently hold at most one GPU, and you can't choose which one.
-The platform picks a free GPU from the host and keeps it assigned for the instance's entire lifetime, releasing it when you delete the instance.
+Build the workload image on a glibc-based distribution rather than Alpine, because the NVIDIA user-space libraries don't run on musl.
 
-To see the GPUs an instance holds, inspect it:
+#### GPU allocation
+
+The platform allocates a GPU when the instance starts, not when you create it, and this includes instances created with autostart.
+On the first start, it picks any free GPU on the host and records that GPU's UUID and model on the instance.
+If no GPU is free, the start fails with an error stating that no GPU matching the instance is currently available.
+
+The instance holds the GPU only while it runs.
+Stopping the instance, or scaling it to zero, returns the GPU to the host's pool so another instance can use it in the meantime.
+On every later start, the platform first tries to reacquire the same GPU, and falls back to any free GPU of the same model if another instance holds that one.
+It never assigns a GPU of a different model, because a resumed guest expects the same hardware as before the suspend.
+To reserve GPU capacity for a set of instances, limit how many of them run at the same time.
+
+To see the GPU an instance holds, inspect it:
 
 ```bash
 unikraft instance get my-inference-app
 ```
 
-The `gpus.*.uuid` and `gpus.*.model` fields report the GPUs themselves, and `resources.gpus` reports how many the instance holds.
-Listings sort and filter on all three like any other [field](/docs/cli/fields).
+The `gpus.*.allocated` field reports whether the instance holds a GPU right now.
+The `gpus.*.uuid` and `gpus.*.model` fields identify that GPU.
+The model is the GPU's vendor and device ID in hexadecimal form, such as `10de:1eb8` for an NVIDIA Tesla T4.
+A stopped instance holds no GPU, so it reports `allocated` as `false` and no UUID, but keeps the model it last ran on.
+`resources.gpus` reports how many GPUs the instance requests.
+Listings sort and filter on these fields like any other [field](/docs/cli/fields).
+
+#### Scale-to-zero and templates for GPU instances
+
+GPU instances backed by a vGPU support [scale-to-zero](/features/scale-to-zero), suspend and resume, and [instance templates](#instance-templates).
+Suspending a GPU instance requires a GPU that can save and restore its device state, which vGPUs support.
+
+When a vGPU instance scales to zero, the platform snapshots the VM together with the state of its GPU, detaches the GPU, and returns it to the pool.
+On the next request, the platform reacquires a GPU as described in [GPU allocation](#gpu-allocation) and resumes the VM from the snapshot with the GPU attached.
+This lets a host serve more GPU instances than it has GPUs.
+An idle instance releases its GPU, and a woken instance resumes on any free GPU of the same model.
+
+A GPU accesses guest memory directly and can't wait for a page the platform hasn't loaded yet.
+Resuming a GPU instance loads its whole memory from the snapshot before the VM continues, so resume time grows with the instance's memory size.
+CPU-only instances load memory on demand instead.
+
+Instances created from a template of a GPU instance inherit its GPU configuration and model.
+A create request that uses such a template can't set `--gpus`.
+The value comes from the template.
 
 ### Wait for running
 
@@ -359,6 +409,12 @@ Use `timeout_s` instead.
 :::note
 The `unikraft` CLI automatically waits for the instance to be running after creation, up until a preconfigured timeout of 10 seconds.
 :::
+
+To wait for an existing instance, pass query parameters to the `wait` endpoint:
+
+```bash
+unikraft api '/v1/instances/<UUID>/wait?state=running&timeout_s=30'
+```
 
 ### Delete on stop
 
@@ -415,8 +471,12 @@ You can also use the CLI to set this up:
 unikraft instance create --feature nested-virt ...
 ```
 
-The guest kernel needs the matching driver to use the extensions.
-A Linux guest needs `CONFIG_KVM` together with `CONFIG_KVM_INTEL` or `CONFIG_KVM_AMD`, and exposes `/dev/kvm` once it loads the module.
+The guest kernel needs the matching driver to use the extensions, and exposes `/dev/kvm` once the driver is active.
+On `x86_64`, a Linux guest needs `CONFIG_KVM` together with `CONFIG_KVM_INTEL` or `CONFIG_KVM_AMD`.
+On `arm64`, a Linux guest needs `CONFIG_KVM`, which the kernel builds in rather than loading as a module.
+
+The host must support nested virtualization itself.
+An instance with `nested-virt` doesn't start on a host without this support.
 
 :::note
 A create request that starts from a snapshot—an [instance template](#instance-templates), a [branch](/features/branching), or a [checkpoint](/features/checkpoints)—can't add `nested-virt`.
@@ -466,11 +526,6 @@ An instance template is a snapshotted instance that acts as a source for cloning
 Cloning a template creates a new instance that resumes from the exact original system state.
 It preserves memory contents, open files, and populated caches to bypass the standard boot sequence.
 Once you convert an instance into a template, you can't reverse the process.
-
-:::note
-Templates need the default `micro` [instance type](#instance-types).
-QEMU-backed full VMs (`--type full`), which [GPU instances](#gpus) require, don't support them.
-:::
 
 To transition an actively running instance into a template, from the guest write the value 1 to `/uk/libukp/template_instance`:
 
@@ -580,6 +635,15 @@ For more information, check out this dedicated section on [instance metrics](/pl
 
 Use the [`GET /instances/logs`](/api/platform/v1/instances#get-instances-logs) endpoint to retrieve logs for one or more instances.
 The logs capture the instance's `stdout` and `stderr` output, and they're preserved across restarts and stops.
+
+Read endpoints accept query parameters as an alternative to a JSON body.
+For example, to read the last 4 KiB of an instance's log:
+
+```bash
+unikraft api '/v1/instances/<UUID>/log?offset=-4096&limit=4096'
+```
+
+A request that sends a body can't also give query parameters, including `uuid` or `name`.
 
 With the CLI, you can also follow the logs in real time:
 

@@ -104,6 +104,45 @@ unikraft run --metro fra \
 
 </CodeTabs>
 
+### External registries
+
+`unikraft build` can also push to an external OCI registry, meaning registries other than `index.unikraft.io` or a node's local registry.
+
+{/* vale off */}
+:::caution[**Limited Access**]
+External registries are only available in BYOC or on-prem Unikraft Cloud installations.
+Each host supports one external registry at a time through host-level configuration.
+To explore such a deal - reach out to the [Unikraft Cloud Discord](https://unikraft.com/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
+:::
+{/* vale on */}
+
+To work with Unikraft Cloud, a registry must:
+
+* Support the [Docker Registry HTTP API V2](https://distribution.github.io/distribution/spec/api/).
+* Support bearer token authentication.
+* Accept custom fields in the OCI manifest, which Unikraft Cloud uses to store image metadata.
+
+Unikraft Cloud works with the following popular registries:
+
+* Docker Hub
+* GitHub Container Registry
+* Amazon ECR
+* Google Cloud Artifact Registry
+* DigitalOcean Container Registry
+* CNCF Distribution
+
+Registries based on [CNCF Distribution](https://distribution.github.io/distribution/), such as Harbor, also work.
+
+If you run into issues with a registry or want support for one not listed here, contact the Unikraft Cloud team.
+
+Log in to the registry first, as shown in [Authentication](#authentication), then pass the full image reference.
+For example, with GitHub Container Registry and a personal access token that has the `write:packages` scope:
+
+```bash title=""
+echo <token> | docker login ghcr.io -u <github-username> --password-stdin
+unikraft build . --output ghcr.io/<github-username>/my-app:latest
+```
+
 ## Listing images
 
 ```bash
