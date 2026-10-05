@@ -58,7 +58,8 @@ Instances without a range aren't affected.
 **Requirements and limitations:** Requires a license with the vertical scaling feature and a guest kernel built with vertical scaling support.
 Supports microVMs on x86-64 only.
 You can't change the range after creating the instance.
-You also can't set a range for branches, checkpoints, or clones of a template that has a snapshot; they inherit the range from their source.
+You also can't set a range for branches, checkpoints, or clones of a template that has a snapshot.
+They inherit the range from their source.
 
 **Why it matters:** An instance no longer has to use resources sized for its peak load.
 It uses the resources its workload needs at that moment and returns them when demand falls, without a restart.
@@ -121,7 +122,7 @@ GPU images need a kernel that supports NVIDIA vGPU.
 Instances still support at most one GPU.
 
 **Why it matters:** GPUs are the most expensive resource on a node.
-An idle GPU instance no longer blocks its GPU, and vGPU lets one physical GPU serve several smaller instances.
+An idle GPU instance no longer blocks its GPU, and vGPU lets smaller instances share the physical GPU.
 
 **Enterprise only.**
 
@@ -161,7 +162,7 @@ See [audit events](/platform/audit-events).
 Event timestamps now always contain nine fractional digits.
 Earlier releases wrote the wrong fraction for timestamps below 0.1 seconds.
 A reliable log sink now drops an event after a short wait, configured by `block_timeout_ms` and defaulting to 50 milliseconds, instead of blocking the controller.
-Set the timeout to `0` to restore the previous behavior.
+A timeout of `0` restores the previous behavior.
 
 **Requirements and limitations:** Each controller supports at most 64 subscriptions.
 The stream doesn't replay earlier events.
@@ -195,7 +196,7 @@ The address, gateway, and name server come from the request or a CNI annotation:
 }
 ```
 
-The operator provides routing, NAT, and firewall rules, for example through firewall hook scripts.
+The operator provides routing, network address translation (NAT), and firewall rules, for example through firewall hook scripts.
 The default `isolates` mode doesn't change.
 
 See [custom network configuration](/features/custom-network-configuration).
@@ -207,7 +208,8 @@ This release removes the old `subnets` mode, and the platform rejects a configur
 The TAP device must exist before the instance starts.
 Managed mode doesn't support autoscale, relay interfaces, internal service groups, or internal DNS for instance names.
 
-**Why it matters:** Operators can connect instances directly to networks they already manage, such as VPNs, overlay networks, or routed data-center networks, without the platform's address pool and NAT in the way.
+**Why it matters:** Operators can connect instances directly to networks they already manage, such as VPNs, overlay networks, or routed data-center networks.
+This keeps the platform's address pool and NAT out of the way.
 
 **Enterprise only.**
 
@@ -255,7 +257,8 @@ See [guest network configuration with CNI](/features/annotations#guest-network-c
 An invalid document or a route the guest can't apply now stops the instance at boot.
 
 **Requirements and limitations:** Each document supports at most 16 routes.
-A gateway alone creates no route; list the default route explicitly.
+A gateway alone creates no route.
+List the default route explicitly.
 Requires the guest kernel from this release.
 
 **Why it matters:** An external CNI plugin or IP address management system can set an instance's addresses and routes without custom boot scripts.
@@ -264,7 +267,7 @@ Requires the guest kernel from this release.
 
 ### Query parameters for read requests
 
-Endpoints that read state now accept their parameters in the URL as an alternative to a JSON body:
+Endpoints that read state now accept their parameters in the query string as an alternative to a JSON body:
 
 ```text
 GET /v1/instances/<UUID>/wait?state=running&timeout_s=30
@@ -275,14 +278,14 @@ The `wait` and `metrics` endpoints for a single instance also accept `POST`, for
 
 See [instances](/platform/instances).
 
-**Breaking changes:** A request can no longer supply `uuid` or `name` in the URL and also send a body.
+**Breaking changes:** A request can no longer supply `uuid` or `name` in the query string and also send a body.
 A request to a single-instance endpoint with an empty body array now fails instead of returning every instance owned by the user.
 
-**Why it matters:** Shell scripts, monitoring probes, and browsers can wait for an instance or read its log with one URL.
+**Why it matters:** Shell scripts, monitoring probes, and browsers can wait for an instance or read its log with one request.
 
 ### Unpin images by image reference
 
-`DELETE /v1/images` now accepts an image URL, so you don't need to find the image UUID first:
+`DELETE /v1/images` now accepts an image reference, so you don't need to find the image UUID first:
 
 ```json
 {
@@ -298,7 +301,7 @@ See [images](/platform/images).
 **Requirements and limitations:** Requires the `image_manager` permission, as before.
 If a tag moved after you pinned it, unpin the old image by digest or UUID.
 
-**Why it matters:** Deployment pipelines can pin and unpin images with the same URL.
+**Why it matters:** Deployment pipelines can pin and unpin images with the same reference.
 
 **Enterprise only.**
 
@@ -313,7 +316,7 @@ IPv6 link-local addresses are available immediately after boot.
 
 See [instances](/platform/instances).
 
-**Breaking changes:** Workloads that relied on the out-of-memory killer now stop completely.
+**Breaking changes:** Workloads that relied on the out-of-memory killer now stop.
 IPv6 addresses and default routes must come from the platform configuration or CNI document.
 
 **Requirements and limitations:** Applies to instances using the guest kernel from this release.
@@ -372,7 +375,7 @@ The copy, read, and write commands transfer one regular file at a time and don't
 
 #### Dockerfile builds
 
-Now that the platform supports kernel-less images, a Kraftfile is no longer required to build one.
+Kernel-less images no longer need a Kraftfile.
 `unikraft build` accepts a Dockerfile directly and builds an image containing the root filesystem it describes:
 
 ```sh
@@ -443,7 +446,8 @@ This provides the same shell access as `unikraft instance shell` without leaving
 
 The new **New instance** page creates an instance from an official image or your own registry.
 Choose the metro, name, memory, vCPUs, arguments, environment variables, and restart policy.
-The form stores its values in the URL, so you can bookmark or share a partially completed configuration.
+The form stores its values in the page address.
+You can bookmark or share an unfinished configuration.
 
 The dashboard can also delete, lock, and unlock an instance.
 
