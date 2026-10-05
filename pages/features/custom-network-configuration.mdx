@@ -139,6 +139,7 @@ Your side provides the TAP device and decides the addressing on it, and the plat
 A CNI plugin can also supply the link's addressing and routes without requiring your app or image to configure them.
 Write the plugin's result into the instance's [`unikraft.com/cni` annotation](/features/annotations#guest-network-configuration-with-cni), and the guest matches the addresses in it to this interface by MAC address.
 It then configures those addresses and the result's [routes](/features/annotations#routes) itself.
+The guest doesn't use stateless address autoconfiguration (SLAAC), so IPv6 addresses and routes on the link have to come from that document or from inside the guest.
 
 Such an interface differs from an addressed one in three ways:
 

@@ -235,6 +235,11 @@ For example, an out-of-memory (OOM) situation triggers a page fault `PGFAULT(4)`
 In that case the `stop_code` is `0x000C7F04=818948` and the `stop_reason` is `-----K (1)` if the stop occurred during app execution.
 :::
 
+By default, a guest that runs out of memory stops the whole instance instead of killing a single process.
+The workload then doesn't continue in a partial state.
+A process can opt in to the out-of-memory killer by setting its `/proc/self/oom_score_adj` to `0`.
+The kernel may then kill that process alone and keep the instance running, so the rest of the workload has to cope with losing it.
+
 
 ### Restart policy
 
