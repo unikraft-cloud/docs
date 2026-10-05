@@ -196,7 +196,7 @@ The address, gateway, and name server come from the request or a CNI annotation:
 }
 ```
 
-The operator provides routing, network address translation (NAT), and firewall rules, for example through firewall hook scripts.
+The operator provides routing, network address translation, and firewall rules, for example through firewall hook scripts.
 The default `isolates` mode doesn't change.
 
 See [custom network configuration](/features/custom-network-configuration).
@@ -209,7 +209,7 @@ The TAP device must exist before the instance starts.
 Managed mode doesn't support autoscale, relay interfaces, internal service groups, or internal DNS for instance names.
 
 **Why it matters:** Operators can connect instances directly to networks they already manage, such as VPNs, overlay networks, or routed data-center networks.
-This keeps the platform's address pool and NAT out of the way.
+This keeps the platform's address pool and network address translation out of the way.
 
 **Enterprise only.**
 
