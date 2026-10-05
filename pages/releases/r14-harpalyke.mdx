@@ -1,0 +1,553 @@
+---
+title: "Release 14: Harpalyke"
+description: Unikraft Cloud Release 14 (Harpalyke) release notes.
+date: "2026-10-05"
+---
+**Released:** 2026-10-05
+
+:::note
+Read the [Release 14: Harpalyke announcement](https://unikraft.com/blog/harpalyke-14-release) on the Unikraft blog.
+:::
+
+---
+
+Release 14 lets instances grow and shrink their memory and vCPUs while they run, and frees GPUs whenever their instances stop, suspend, or scale-to-zero.
+Full VMs gain templates, ROMs, plugins, and scale-to-zero, while NVIDIA vGPU support lets instances share a physical GPU.
+The CLI adds sandboxes, plugins, Dockerfile builds, and autokill controls.
+The dashboard can create instances, manage named API tokens, take checkpoints, and show services and quotas.
+Kraftlet gains faster instance updates and `kubectl exec`, and the JavaScript SDK adds a high-level sandbox API.
+
+---
+
+## Platform
+
+### Vertical scaling of memory and vCPUs
+
+MicroVMs can now grow and shrink their memory and number of vCPUs while they run.
+The platform adds memory when the guest's memory use is high and removes it when use falls.
+The guest asks for another vCPU when its processes wait for CPU time and returns idle vCPUs later.
+
+Enable vertical scaling per instance by setting a range:
+
+```json
+{
+  "memory_mb": 512,
+  "min_memory_mb": 256,
+  "max_memory_mb": 2048,
+  "min_vcpus": 1,
+  "max_vcpus": 4
+}
+```
+
+Vertical scaling is active for a resource when you set at least one bound.
+If you set only one bound, the other defaults to the initial size for the minimum or the per-instance limit for the maximum.
+The instance boots with the minimum and grows to `memory_mb` or `vcpus` directly after boot when you set those fields.
+Memory changes in steps of 128 MiB by default.
+Instance templates and autoscale templates accept the same fields, and their clones inherit the range.
+
+The instance status reports the current size in `memory_mb` and `vcpus`, and the range in `min_memory_mb`, `max_memory_mb`, `min_vcpus`, and `max_vcpus`.
+An instance that resumes from a snapshot, including after scale-to-zero, keeps its current size.
+Added memory and vCPUs count against your quotas.
+The instance stops growing when it reaches a quota.
+
+See [vertical scaling](/features/vertical-scaling).
+
+**Breaking changes:** None.
+Instances without a range aren't affected.
+
+**Requirements and limitations:** Requires a license with the vertical scaling feature and a guest kernel built with vertical scaling support.
+Supports microVMs on x86-64 only.
+You can't change the range after creating the instance.
+You also can't set a range for branches, checkpoints, or clones of a template that has a snapshot; they inherit the range from their source.
+
+**Why it matters:** An instance no longer has to use resources sized for its peak load.
+It uses the resources its workload needs at that moment and returns them when demand falls, without a restart.
+
+**Enterprise only.**
+
+### Templates, scale-to-zero, ROMs, and plugins for full VMs
+
+Full VMs (`"type": "full"`) can now suspend and resume, and they can scale-to-zero in stateful and stateless modes.
+On resume, the platform loads the instance's memory on demand.
+
+Templates, ROMs, plugins, and startdata are also available for full VMs, using the same API as microVMs:
+
+```json
+{
+  "type": "full",
+  "roms": [
+    {
+      "name": "models",
+      "image": "user/models:latest",
+      "at": "/models"
+    }
+  ]
+}
+```
+
+A full VM now reports `RUNNING` only after its guest boots.
+The platform forwards traffic to a port only after the guest starts listening on it, matching microVM behavior.
+
+**Breaking changes:** None.
+
+**Requirements and limitations:** Full VMs don't yet support branching or checkpoints.
+
+**Why it matters:** Full VMs run workloads such as headful browsers and GPU inference, which often sit idle between requests.
+With scale-to-zero, an idle full VM releases its node resources and resumes for the next request.
+
+**Enterprise only.**
+
+### GPU snapshots and NVIDIA vGPU
+
+A GPU is now assigned to an instance only while that instance runs.
+When a GPU instance stops, suspends, or scales to zero, its GPU becomes available to other instances.
+The snapshot saves the GPU state.
+On resume, the instance gets the same GPU when it's free or another free GPU of the same model when one is available.
+
+Operators can now also offer NVIDIA vGPUs.
+A vGPU is a virtual GPU on a physical GPU, allowing instances to share one physical GPU.
+The operator lists vGPUs in the controller's GPU device list with `"type": "vgpu-mdev"`.
+Existing entries continue to work as passthrough GPUs.
+
+The controller reports the number of available and allocated GPUs through the `gpu_available` and `gpu_allocated` metrics.
+
+See [GPUs](/platform/instances#gpus).
+
+**Breaking changes:** A GPU is no longer reserved while an instance isn't running.
+Starting an instance can fail when all GPUs are in use.
+
+**Requirements and limitations:** Suspending a GPU instance requires a GPU host driver that can save device state.
+GPU images need a kernel that supports NVIDIA vGPU.
+Instances still support at most one GPU.
+
+**Why it matters:** GPUs are the most expensive resource on a node.
+An idle GPU instance no longer blocks its GPU, and vGPU lets one physical GPU serve several smaller instances.
+
+**Enterprise only.**
+
+### Event attribution and event stream
+
+Instance events now report who or what caused a change.
+`vm.state_change` and the new `vm.start_failed` event carry an `attribution` object:
+
+```json
+{
+  "attribution": {
+    "operation": "4f0c9a1e-...",
+    "kind": "stop",
+    "trigger": "requested",
+    "origin": "api",
+    "user": "e2a4a5b0-..."
+  }
+}
+```
+
+`origin` names the source, such as `api`, `guest`, `proxy`, `autoscale`, `scale-to-zero`, `scheduled-op`, `restart`, or `system`.
+For API requests, `user` identifies the requesting user, and every change from one request shares the same `operation`.
+When an instance stops, the event also reports the cause, such as `api`, `scale-to-zero`, `app-exit`, `quota-exceeded`, or `no-gpu`.
+`vm.start_failed` reports a failed start and its error.
+
+You can subscribe to events as a server-sent event stream:
+
+```text
+GET /v1/audit?events=vm.state_change&tags=prod
+```
+
+Use the optional `events`, `uuid`, and `tags` filters to select which events to receive.
+
+See [audit events](/platform/audit-events).
+
+**Breaking changes:** The instance UUID moved from `data.vm` to `object.uuid` in `vm.state_change`.
+Event timestamps now always contain nine fractional digits.
+Earlier releases wrote the wrong fraction for timestamps below 0.1 seconds.
+A reliable log sink now drops an event after a short wait, configured by `block_timeout_ms` and defaulting to 50 milliseconds, instead of blocking the controller.
+Set the timeout to `0` to restore the previous behavior.
+
+**Requirements and limitations:** Each controller supports at most 64 subscriptions.
+The stream doesn't replay earlier events.
+The public API endpoint requires the proxy configuration from this release.
+
+**Why it matters:** Customers can keep an audit trail of who changed what, alert on specific causes, and follow instance changes as they happen without polling the API.
+
+**Enterprise only.**
+
+### Managed network mode
+
+Operators can now run a node in managed network mode:
+
+```sh
+NET_MODE="managed"
+```
+
+In this mode, the platform creates no network devices and assigns no IP addresses.
+Each network interface uses a TAP device that the operator created on the host.
+The address, gateway, and name server come from the request or a CNI annotation:
+
+```json
+{
+  "network_interfaces": [
+    {
+      "tap_name": "tap-web0",
+      "ip": "10.20.0.5"
+    }
+  ],
+  "gateway": "10.20.0.1"
+}
+```
+
+The operator provides routing, NAT, and firewall rules, for example through firewall hook scripts.
+The default `isolates` mode doesn't change.
+
+See [custom network configuration](/features/custom-network-configuration).
+
+**Breaking changes:** None for the default mode.
+This release removes the old `subnets` mode, and the platform rejects a configuration that still names it.
+
+**Requirements and limitations:** Requires the `net_manager` permission and a license with the custom network configuration feature.
+The TAP device must exist before the instance starts.
+Managed mode doesn't support autoscale, relay interfaces, internal service groups, or internal DNS for instance names.
+
+**Why it matters:** Operators can connect instances directly to networks they already manage, such as VPNs, overlay networks, or routed data-center networks, without the platform's address pool and NAT in the way.
+
+**Enterprise only.**
+
+### Nested virtualization on ARM64
+
+The `nested-virt` feature flag now works on ARM64 hosts.
+The guest can use the virtualization extensions and run its own hypervisor, and the instance can suspend and resume.
+Before this release, ARM64 hosts accepted the flag without enabling nested virtualization.
+
+**Breaking changes:** An ARM64 instance with `nested-virt` no longer starts on a host without nested virtualization support.
+
+**Requirements and limitations:** The host needs a CPU with FEAT_NV2 and Linux 6.16 or later, booted with `kvm-arm.mode=nested`.
+The feature requires the `nested_virt` permission, as it does on x86-64.
+
+**Why it matters:** Software that runs its own VMs, such as Android emulators, can now use ARM64 capacity.
+
+**Enterprise only.**
+
+### Routes in the CNI network configuration
+
+The guest now applies the `routes` from the CNI result document in the `unikraft.com/cni` annotation:
+
+```json
+{
+  "routes": [
+    {
+      "dst": "0.0.0.0/0",
+      "gw": "10.1.0.1"
+    },
+    {
+      "dst": "10.2.0.0/16",
+      "gw": "10.1.0.254"
+    }
+  ]
+}
+```
+
+A route can also set `priority`, `table`, and `scope`.
+A route without `gw` uses the `gateway` from the matching `ips` entry.
+The guest applies the document at boot and again after resuming from a snapshot.
+
+See [guest network configuration with CNI](/features/annotations#guest-network-configuration-with-cni).
+
+**Breaking changes:** The guest ignored routes before this release.
+An invalid document or a route the guest can't apply now stops the instance at boot.
+
+**Requirements and limitations:** Each document supports at most 16 routes.
+A gateway alone creates no route; list the default route explicitly.
+Requires the guest kernel from this release.
+
+**Why it matters:** An external CNI plugin or IP address management system can set an instance's addresses and routes without custom boot scripts.
+
+**Enterprise only.**
+
+### Query parameters for read requests
+
+Endpoints that read state now accept their parameters in the URL as an alternative to a JSON body:
+
+```text
+GET /v1/instances/<UUID>/wait?state=running&timeout_s=30
+GET /v1/instances/<UUID>/log?offset=-4096&limit=4096
+```
+
+The `wait` and `metrics` endpoints for a single instance also accept `POST`, for clients that must send a body.
+
+See [instances](/platform/instances).
+
+**Breaking changes:** A request can no longer supply `uuid` or `name` in the URL and also send a body.
+A request to a single-instance endpoint with an empty body array now fails instead of returning every instance owned by the user.
+
+**Why it matters:** Shell scripts, monitoring probes, and browsers can wait for an instance or read its log with one URL.
+
+### Unpin images by image reference
+
+`DELETE /v1/images` now accepts an image URL, so you don't need to find the image UUID first:
+
+```json
+{
+  "url": "user/image:latest"
+}
+```
+
+A tag selects the image that the tag currently resolves to.
+A digest selects one exact image.
+
+See [images](/platform/images).
+
+**Requirements and limitations:** Requires the `image_manager` permission, as before.
+If a tag moved after you pinned it, unpin the old image by digest or UUID.
+
+**Why it matters:** Deployment pipelines can pin and unpin images with the same URL.
+
+**Enterprise only.**
+
+### Guest defaults for out-of-memory and IPv6
+
+When the guest runs out of memory, the guest kernel now stops the instance instead of killing one process.
+The workload no longer continues in a partial state.
+A process that must remain eligible for the out-of-memory killer can set `/proc/self/oom_score_adj` to `0`.
+
+The guest no longer configures IPv6 automatically from router advertisements, and it skips duplicate address detection.
+IPv6 link-local addresses are available immediately after boot.
+
+See [instances](/platform/instances).
+
+**Breaking changes:** Workloads that relied on the out-of-memory killer now stop completely.
+IPv6 addresses and default routes must come from the platform configuration or CNI document.
+
+**Requirements and limitations:** Applies to instances using the guest kernel from this release.
+
+**Enterprise only.**
+
+### Other platform changes
+
+- The default snapshot prefetch size is now 32 KiB instead of 1 MiB, shortening resumes.
+- The plugin field `rom` is renamed to `image`. `rom` still works, but the response contains a deprecation warning.
+- ROM names can contain at most 63 characters, and ROMs and volumes can't mount at `/uk` or below it.
+- The instance status now shows which instance owns a relay interface.
+- The controller starts on hosts that can't create IPv6 sockets and uses IPv4 for its API.
+- This release updates the guest kernel to Linux 6.12.110.
+
+---
+
+## Tooling
+
+### CLI
+
+#### Sandboxes and plugins
+
+Sandboxes extend standard Unikraft Cloud instances through the plugin API, adding file access, and remote command execution.
+Load the sandbox plugin with `--plugin` on `create`, `run`, or `edit`:
+
+```sh
+unikraft instance run \
+  --metro fra \
+  --image my-app:latest \
+  --plugin 'name=sandbox,image=plugins/sandbox:latest,config={"persist_path":"/data"}'
+```
+
+Plugins behave like other instance fields.
+You can list, filter, sort, and inspect `plugins.*.name`, `plugins.*.image`, and `plugins.*.config`.
+
+An instance with the sandbox plugin gains five commands:
+
+- `unikraft instance exec my-instance -- ls -la /var/log` runs a command on the remote instance. `--dir` and `--env` control the command's environment, and the CLI returns its exit status.
+- `unikraft instance shell my-instance` opens an interactive shell. The shell runs locally while each command runs on the instance, preserving local shell state while resolving paths against the instance.
+- `unikraft instance copy ./config.json my-instance:/etc/app.json` copies one file in either direction. Use `<metro>/<instance>:<path>` to select a metro. `cp` is an alias.
+- `unikraft instance write my-instance ./data.bin /var/lib/app.bin --parents` uploads a file. Use `--append` to add to the remote file instead of replacing it.
+- `unikraft instance read my-instance /var/log/app.log` downloads a file. The local path is optional and defaults to the remote file's base name.
+
+See [plugins](/features/plugins).
+
+**Breaking changes:** None.
+The plugin option and sandbox commands are new.
+
+**Requirements and limitations:** The sandbox commands require the sandbox plugin on the target instance.
+The shell is experimental and doesn't support terminal emulation, full-screen programs such as `vim`, `top`, or `less`, password prompts, or job control.
+The copy, read, and write commands transfer one regular file at a time and don't preserve permissions.
+`exec` forwards standard input only from a redirected file or pipe.
+
+**Why it matters:** You can inspect and debug a running instance without adding tools to its image and redeploying it.
+
+#### Dockerfile builds
+
+Now that the platform supports kernel-less images, a Kraftfile is no longer required to build one.
+`unikraft build` accepts a Dockerfile directly and builds an image containing the root filesystem it describes:
+
+```sh
+unikraft build ./Dockerfile --arch x86_64 --output my-org/my-app:latest
+```
+
+The input can be a project directory, Kraftfile, or Dockerfile.
+Its filename identifies the type, so names such as `Dockerfile.prod` work.
+A directory without a Kraftfile builds from its `Dockerfile`.
+When both files are present, the Kraftfile takes precedence.
+Passing a Kraftfile path directly now works, with relative sources resolved from the Kraftfile's directory.
+
+See [`unikraft build`](/cli/unikraft/build).
+
+**Breaking changes:** None.
+Directories containing a Kraftfile build as they did before.
+
+**Requirements and limitations:** A Dockerfile-only build has no target or runtime from which to infer an architecture, so you must pass `--arch`.
+The resulting image has no kernel and only runs in metros with a default kernel installed.
+
+**Why it matters:** Most applications already have a Dockerfile.
+That file is now enough to get from source to a running instance.
+
+#### Autokill
+
+The CLI can now configure the platform to delete resources automatically after they're no longer needed.
+Use `--autokill` on `create` and `edit` for instances, service groups, instance templates, and instance checkpoints:
+
+```sh
+unikraft instance run \
+  --metro fra \
+  --image my-app:latest \
+  --autokill time=5m,num-requests=100
+```
+
+The triggers depend on the resource:
+
+- Instances accept `time`, measured from when the instance stops, and `num-requests`, the maximum requests served before deletion.
+- Service groups accept `time`, measured from when the group becomes empty.
+- Templates accept `time`, measured from the last clone.
+- Checkpoints accept `time`, measured from the last restore.
+
+The fields `autokill.time` and `autokill.num-requests` work in list, filter, sort, and inspect output like other resource fields.
+
+See [autokill](/features/autokill).
+
+**Breaking changes:** None.
+The option is new, and the platform deletes nothing unless you set it.
+
+**Requirements and limitations:** The CLI doesn't yet support autokill for image pins because it has no image pin command.
+
+**Why it matters:** Short-lived workloads such as CI jobs, preview environments, one-shot tasks, branches, and checkpoints no longer need manual cleanup when you set their lifetime in advance.
+
+### Dashboard
+
+#### Plugins and sandboxes
+
+The dashboard can dynamically add the official sandbox plugin to a running microVM and open a shell into it.
+This provides the same shell access as `unikraft instance shell` without leaving the instance page.
+
+**Breaking changes:** None.
+
+**Requirements and limitations:** The shell has the same limitations as the CLI: no terminal emulation for complex terminal applications, no job control, and no process suspend or resume.
+
+**Why it matters:** The dashboard now provides direct access to workloads running inside an instance.
+
+#### Create and delete instances
+
+The new **New instance** page creates an instance from an official image or your own registry.
+Choose the metro, name, memory, vCPUs, arguments, environment variables, and restart policy.
+The form stores its values in the URL, so you can bookmark or share a partially completed configuration.
+
+The dashboard can also delete, lock, and unlock an instance.
+
+**Breaking changes:** None.
+
+**Requirements and limitations:** The dashboard doesn't yet expose every instance creation API field.
+
+**Why it matters:** You can now create and manage the full instance lifecycle without switching to the API or CLI.
+
+#### Named API tokens
+
+Organizations can now create more than one API token, give each token a unique name, and revoke one token without affecting the others.
+
+**Breaking changes:** None.
+This release migrates each organization's existing token as a named token.
+
+**Requirements and limitations:** Token names must be unique within an organization.
+
+**Why it matters:** Separate tokens for laptops, CI pipelines, and teammates make credentials independently traceable and revocable.
+
+#### Services page
+
+The service detail page shows traffic volume, connected instances, and per-instance information such as requests per second.
+
+**Breaking changes:** None.
+
+**Requirements and limitations:** The dashboard doesn't yet expose every service field, and autoscale configuration remains available through the API only.
+
+**Why it matters:** A service provides one view of the resources behind it, making it easier to identify pressure.
+
+#### Checkpoints
+
+The dashboard can now create a checkpoint from an instance and show every checkpoint for that instance.
+
+**Breaking changes:** None.
+
+**Requirements and limitations:** You can't yet roll back to a checkpoint from the dashboard.
+
+**Why it matters:** Core platform checkpointing is now available directly from the instance page.
+
+#### Quota management
+
+An organization's default quotas now appear in the **Quotas** tab on the organization settings page.
+The page includes every quota reported by each metro, including service groups, services, volumes, minimum volume size, memory, and vCPUs.
+
+**Breaking changes:** None.
+
+**Requirements and limitations:** The dashboard reports limits as conflicting when the organization uses both self-hosted and managed metros.
+
+**Why it matters:** Users can see the resource limits available to their organization in one place.
+
+---
+
+## Integrations
+
+### Kraftlet instance cache
+
+Kraftlet uses an instance cache when updating pod status in the Kubernetes API.
+Before this release, polling the platform directly made instance creation and status updates slower as the number of instances grew.
+The cache removes that scale-dependent delay for deployments with thousands of pods on one node.
+
+**Breaking changes:** None.
+Kraftlet configuration doesn't change.
+
+**Why it matters:** Kraftlet deploys new instances and updates pod status faster at large scale.
+
+**Enterprise only.**
+
+### Kraftlet support for `kubectl exec`
+
+Kraftlet now implements `kubectl exec` through Unikraft [plugins](/features/plugins), so commands work with Unikraft-backed pods as they do with other runtimes.
+
+See [Kubernetes integration](/integrations/kubernetes).
+
+**Breaking changes:** None.
+
+**Requirements and limitations:** Start Kraftlet with `exec-plugin-image` to select the plugin image.
+Each pod that needs command execution must set the `cloud.unikraft.v1.instances/enable-exec: "true"` annotation.
+
+**Why it matters:** Unikraft-backed pods now support the standard Kubernetes command-execution workflow.
+
+**Enterprise only.**
+
+### Sandboxes in the JavaScript SDK
+
+The JavaScript SDK now provides a high-level sandbox API.
+It starts a Unikraft Cloud microVM, attaches the sandbox plugin, runs your task, and cleans up the resources:
+
+```typescript
+import { Sandbox } from "@unikraft/cloud";
+
+// `await using` cleans up the sandbox when the script finishes.
+await using sandbox = await Sandbox.create();
+
+const { stdout } = await sandbox.exec("echo hello");
+console.log(stdout); // hello
+```
+
+Attach a volume to persist work across sandbox sessions and use scale-to-zero to release resources while the sandbox is idle.
+
+See [JavaScript SDK sandboxes](/sdks/js/sandboxes).
+
+**Why it matters:** Applications can run untrusted or isolated work in short-lived microVMs through a small, typed API.
+
+---
+
+[Back to all releases](/releases)
