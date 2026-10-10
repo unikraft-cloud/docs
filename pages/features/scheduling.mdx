@@ -1,0 +1,60 @@
+---
+title: Scheduling Priority
+navigation_icon: gauge
+---
+
+Unikraft Cloud assigns a scheduling priority to each instance that affects how the host allocates CPU time.
+Under contention, higher-priority instances receive proportionally more CPU time.
+
+## Priority levels
+
+Four priority levels are available:
+
+| Level | Value | Description |
+|-------|-------|-------------|
+| `normal` | 0 | Default priority. The instance receives CPU time only when no higher-priority work is pending. |
+| `medium` | 1 | Slightly elevated priority. |
+| `high` | 2 | High priority. |
+| `admin` | 3 | Highest assignable priority. |
+
+On a host with low load, priority has little effect because all instances get the CPU time they need.
+Priority matters when many instances compete for the same CPU cores.
+
+## Setting the priority
+
+Set the priority at instance creation or update it on a running instance via the `schedprio_policy` field.
+
+### At creation
+
+```json title="POST /v1/instances"
+{
+  "image": "myorg/myapp:latest",
+  "schedprio_policy": "high"
+}
+```
+
+### On a running instance
+
+```json title="PATCH /v1/instances/{name}"
+{
+  "schedprio_policy": "medium"
+}
+```
+
+The change takes effect immediately on the running instance.
+
+## Permissions
+
+Setting `schedprio_policy` requires the `override_vm_priority` permission on the user account.
+Without this permission, the platform ignores the field and the instance uses the default `normal` priority.
+
+## Startup boost
+
+When an instance starts, Unikraft Cloud temporarily boosts its priority for the first few seconds.
+This reduces boot latency by giving the instance more CPU time during initialization.
+After the boost period expires, the instance returns to its assigned priority level.
+
+## Learn more
+
+* The `kraft cloud` [command-line tool reference](/cli/)
+* Unikraft Cloud's [REST API reference](/api/platform/v1)
