@@ -33,21 +33,18 @@ unikraft instance checkpoint create my-instance
 
 The CLI doesn't name the checkpoint, so the platform derives a name from the source instance's name plus a random suffix.
 
-Checkpoint creation is asynchronous, so the new checkpoint reports `starting` until its snapshot completes.
-Either wait for it afterward, or have the create call wait for you:
+A new checkpoint reports `starting` until its snapshot completes.
+`unikraft instance checkpoint create` waits for that, up to the platform's API timeout (60 seconds by default), and prints a warning if the checkpoint isn't ready yet when the wait ends.
+To wait for an existing checkpoint to become ready:
 
 ```bash
-# wait for an existing checkpoint to become ready
 unikraft instance checkpoint wait my-checkpoint --until state==checkpoint
-
-# or wait during creation, for up to 60 seconds
-unikraft instance checkpoint create my-instance --set wait-timeout=60s
 ```
 
 To choose the name yourself, call [`POST /instances/checkpoints`](/api/platform/v1/instances) directly—the CLI doesn't cover it:
 
 ```bash title="POST /instances/checkpoints"
-unikraft api /v1/instances/checkpoints \
+unikraft api /v1/instances/checkpoints --metro fra \
   '{
     "name": "my-checkpoint",
     "from": {

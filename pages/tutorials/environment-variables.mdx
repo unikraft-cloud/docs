@@ -71,7 +71,9 @@ export MY_ENV_VAR="my_value"
 exec /entrypoint.sh "$@"
 ```
 
-Then you change either your `Dockerfile` or `Kraftfile` to use this wrapper script as the entrypoint:
+Then you change either your `Dockerfile` or `Kraftfile` to start this wrapper script.
+Unikraft Cloud starts the image's `CMD` (or the Kraftfile `cmd`) and ignores the Dockerfile `ENTRYPOINT`, so set the wrapper as the command.
+To pass arguments on to the app, list them after the wrapper, for example `CMD ["/wrapper.sh", "--port", "8080"]`:
 
 <Tabs defaultValue="dockerfile">
     <TabsList>
@@ -83,7 +85,7 @@ Then you change either your `Dockerfile` or `Kraftfile` to use this wrapper scri
     # ...
     COPY wrapper.sh /wrapper.sh
     RUN chmod +x /wrapper.sh
-    ENTRYPOINT ["/wrapper.sh"]
+    CMD ["/wrapper.sh"]
     ```
     </TabsContent>
     <TabsContent value="kraftfile">

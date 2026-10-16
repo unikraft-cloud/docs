@@ -198,14 +198,14 @@ The following set of constraints apply when publishing ports:
 
 For example, the following creates the service `my-service` with three published ports:
 - Port 443 with both `http` and `tls` handlers (HTTP mode).
-- Port 80 with the `http` and `redirect` handlers (HTTP mode).
+- Port 80 with the `http` and `redirect` handlers, redirecting to port 443 (HTTP mode).
 - Port 10000 with only the `tls` handler (TCP mode).
 
 ```bash
 unikraft services create --metro fra \
   --name my-service \
   --service 443:8080/tls+http \
-  --service 80:8080/http+redirect \
+  --service 80:443/http+redirect \
   --service 10000:10000/tls
 ```
 

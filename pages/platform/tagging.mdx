@@ -400,7 +400,7 @@ Only resources that have _all_ the specified tags appear in the results.
   <TabsContent value="instance">
   <CodeTabs syncKey="cli">
 ```bash title="unikraft"
-unikraft instance list --filter 'tags==production,customer_A'
+unikraft instance list --field +tags --filter 'tags.*==production,tags.*==customer_A'
 ```
 ```bash title="API"
 curl -H "Authorization: Bearer ${UKC_TOKEN}" \
@@ -411,7 +411,7 @@ curl -H "Authorization: Bearer ${UKC_TOKEN}" \
   <TabsContent value="instance-tpl">
   <CodeTabs syncKey="cli">
 ```bash title="unikraft"
-unikraft instance template list --filter 'tags==production,customer_A'
+unikraft instance template list --field +tags --filter 'tags.*==production,tags.*==customer_A'
 ```
 ```bash title="API"
 curl -H "Authorization: Bearer ${UKC_TOKEN}" \
@@ -422,7 +422,7 @@ curl -H "Authorization: Bearer ${UKC_TOKEN}" \
   <TabsContent value="volume">
   <CodeTabs syncKey="cli">
 ```bash title="unikraft"
-unikraft volume list --filter 'tags==production,customer_A'
+unikraft volume list --field +tags --filter 'tags.*==production,tags.*==customer_A'
 ```
 ```bash title="API"
 curl -H "Authorization: Bearer ${UKC_TOKEN}" \
@@ -433,7 +433,7 @@ curl -H "Authorization: Bearer ${UKC_TOKEN}" \
   <TabsContent value="volume-tpl">
   <CodeTabs syncKey="cli">
 ```bash title="unikraft"
-unikraft volume template list --filter 'tags==production,customer_A'
+unikraft volume template list --field +tags --filter 'tags.*==production,tags.*==customer_A'
 ```
 ```bash title="API"
 curl -H "Authorization: Bearer ${UKC_TOKEN}" \
@@ -443,7 +443,10 @@ curl -H "Authorization: Bearer ${UKC_TOKEN}" \
   </TabsContent>
 </Tabs>
 
-When filtering, separate tags by commas (`,`).
+In the API, separate tags by commas (`,`) in the `tags` query parameter.
+In the CLI, write one `tags.*==<tag>` selector per tag inside a single `--filter`, separated by commas: every selector must match.
+`tags==production,customer_A` doesn't work: the comma starts a second selector, so the CLI prints an empty list without an error.
+The default list table doesn't show tags, so `--field +tags` adds the column.
 Elsewhere, pass one tag per `--tag` flag—the CLI no longer splits a flag value on commas.
 
 ## Learn more

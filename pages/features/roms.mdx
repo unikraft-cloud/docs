@@ -455,7 +455,7 @@ curl -X POST \
         "at": "/rom/my-rom"
       }
     ]
-  }
+  }'
 ```
 
 Each file in the `files` array has three fields:
@@ -483,22 +483,22 @@ curl -X POST \
     "roms": [
       {
         "name": "app-code",
-      "image": "<my-org>/my-rom:latest",
-      "at": "/app"
-    },
-    {
-      "name": "instance-config",
-      "files": [
-        {
-          "path": "config.json",
-          "encoding": "text",
-          "data": "{\"instance_id\": \"abc-123\"}"
-        }
-      ],
-      "at": "/config"
-    }
-  ]
-}
+        "image": "<my-org>/my-rom:latest",
+        "at": "/app"
+      },
+      {
+        "name": "instance-config",
+        "files": [
+          {
+            "path": "config.json",
+            "encoding": "text",
+            "data": "{\"instance_id\": \"abc-123\"}"
+          }
+        ],
+        "at": "/config"
+      }
+    ]
+  }'
 ```
 
 ### Limits

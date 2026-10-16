@@ -239,8 +239,10 @@ You should see output like:
 And you can remove an image from the central registry with the following command:
 
 ```bash
-unikraft images rm httpserver-python312
+unikraft images rm <my-org>/httpserver-python312:latest
 ```
+
+Use the full `<my-org>/<name>` reference: a bare name such as `httpserver-python312` resolves to the `official/` namespace, not to your images.
 
 :::note
 There may be a delay of a few minutes between removing an image from the registry and the image list reflecting the change.
