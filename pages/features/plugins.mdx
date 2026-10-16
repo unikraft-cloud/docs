@@ -48,7 +48,7 @@ unikraft instance read my-instance /var/log/app.log
 ```
 
 The commands use the plugin named `sandbox` by default.
-Pass `--plugin <name>` to use a sandbox plugin that you loaded under a different name.
+Pass `--plugin-name <name>` to use a sandbox plugin that you loaded under a different name.
 
 A few limitations apply:
 
@@ -170,9 +170,10 @@ With `"type": "bearer"` the platform compares the supplied token against the plu
 Send the request with [`unikraft api`](/cli/unikraft/api), because the `--plugin` flag can't set `authorization`:
 
 ```bash
-unikraft api /v1/instances \
+unikraft api /v1/instances --metro fra \
   '{
     "name": "my-instance",
+    "image": "official/alpine:latest",
     "plugins": [
       {
         "name": "my-plugin",
@@ -198,7 +199,7 @@ The token opens that one plugin on that one instance, and nothing else of the AP
 
 The instance status in the API echoes a non-default `type` back in the plugin's `authorization` object, and never echoes the token.
 A plugin on the default method reports no `authorization` object at all.
-`unikraft instance get` doesn't show `authorization`, so read it from the API with `unikraft api /v1/instances/<uuid>`.
+`unikraft instance get` doesn't show `authorization`, so read it from the API with `unikraft api /v1/instances/<uuid> --metro fra`.
 
 Two consequences follow from `bearer` consulting no user account:
 

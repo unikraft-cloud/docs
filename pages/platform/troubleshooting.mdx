@@ -259,11 +259,13 @@ See the [MariaDB guide](/guides/mariadb) for an example.
 
 ## Launched app not visible in list
 
-The most common reason is that you deployed an app to one metro but listed a different one.
-Use the `--metro` flag to select the metro for each command:
+`unikraft instances list` shows instances from every metro in the current profile.
+The most common reason is that you deployed the app with a different profile, or to a metro that isn't in this profile.
+`instances list` has no `--metro` flag, because `--metro` only selects where `create` and `run` deploy.
+To show only one metro, filter on it:
 
 ```bash
-unikraft instances list --metro <metro_name>
+unikraft instances list --filter metro==<metro_name>
 ```
 
 

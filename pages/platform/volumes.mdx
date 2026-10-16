@@ -228,12 +228,13 @@ If you try to detach a volume while the instance is running, the platform will q
 The detach operation will trigger when the instance goes into `stopped`.
 :::
 
-Now start another instance:
+Now start another instance with the same volume:
 
 ```bash
 unikraft run --metro fra \
   -m 512M \
   -p 443:8080/http+tls \
+  -v my-volume:/mnt \
   --image <my-org>/httpserver-python312-flask30:latest
 ```
 
@@ -253,6 +254,10 @@ This should output something like:
 [3m  name[23m:       winter-field-v6m37jgs
 [3m  domains[23m:
 [3m  - fqdn[23m:     winter-field-v6m37jgs.fra.unikraft.app
+[1mvolumes[22m:
+[3m- name[23m:       my-volume
+[3m  uuid[23m:       4d5576f7-315a-4eab-98b8-6c18fec076e0
+[3m  at[23m:         /mnt
 [1mnetworks[22m:
 [3m- uuid[23m:       935ba4ef-39c2-07e7-d2ae-8cd3c9aae07c
 [3m  private-ip[23m: 10.0.6.5
@@ -261,13 +266,11 @@ This should output something like:
 [3m  created[23m:    just now
 ```
 
-Attach the volume to the new instance:
-
-```bash
-unikraft volumes attach my-volume \
-  --to httpserver-python312-flask30-0s9c7 \
-  --at /mnt
-```
+:::note
+Mount the volume when you create the instance, as shown above.
+`unikraft volumes attach` on a running instance doesn't mount the volume right away.
+The platform queues the attach and applies it when the instance next stops, so the volume only appears after a restart.
+:::
 
 Run one final `curl` to this new address.
 You should see the previous contents plus a new entry at the bottom:

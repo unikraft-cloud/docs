@@ -70,11 +70,11 @@ When you clone an instance from a template, the new instance inherits the autoki
 Automatically kill an instance template if nobody clones it within a given time:
 
 ```bash
-unikraft instance template create --metro fra \
-  --autokill time=24h ...
+unikraft instance template create my-instance \
+  --autokill time=24h
 ```
 
-This example removes the template after 24 hours without a clone.
+This example converts the existing instance `my-instance` into a template, in that instance's metro, and removes the template after 24 hours without a clone.
 
 ## Checkpoint autokill
 
