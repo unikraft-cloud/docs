@@ -13,7 +13,7 @@ specification at https://github.com/unikraft-cloud/openapi.
 go get unikraft.com/cloud/sdk
 ```
 
-Requires Go 1.25 or later.
+Requires Go 1.27 or later.
 
 ## Quickstart
 
@@ -30,26 +30,26 @@ import (
 func main() {
   ctx := context.Background()
 
-  // Create a new client. The token and default metro are automatically
-  // read from environment variables (UKC_TOKEN and UKC_METRO).
-  client := platform.NewClient()
+  // Create a new client. NewClientFromEnv reads the token and default metro
+  // from environment variables (UKC_TOKEN and UKC_METRO).
+  client := platform.NewClientFromEnv()
 
   // List all instances
-  resp, err := client.GetInstances(ctx, nil, nil)
+  resp, err := client.GetInstances(ctx, nil, platform.GetInstancesOpts{})
   if err != nil {
     panic(err)
   }
 
   // Check for API-level errors
-  if resp.Status != "success" {
+  if resp.Status != platform.ResponseStatusSuccess {
     panic(resp.Message)
   }
 
   for _, inst := range resp.Data.Instances {
-    fmt.Printf("Name:  %s\n", *inst.Name)
-    fmt.Printf("UUID:  %s\n", *inst.Uuid)
-    fmt.Printf("State: %s\n", *inst.State)
-    fmt.Printf("Image: %s\n", *inst.Image)
+    fmt.Printf("Name:  %s\n", inst.Name)
+    fmt.Printf("UUID:  %s\n", inst.Uuid)
+    fmt.Printf("State: %s\n", inst.State)
+    fmt.Printf("Image: %s\n", inst.Image)
     fmt.Println("---")
   }
 }
@@ -65,19 +65,22 @@ client := platform.NewClient(
 )
 ```
 
-Or set one of the following environment variables.
-`NewClient` reads them automatically in order of preference:
+`NewClient` uses only the options you pass and doesn't read the environment.
+
+To configure the client from the environment, use `NewClientFromEnv`.
+It reads the token from the first of these environment variables that's set:
 
 1. `UKC_TOKEN`
 2. `UNIKRAFT_CLOUD_TOKEN`
 3. `KRAFTCLOUD_TOKEN` (legacy name)
 
-You can also set the default metro via the `UKC_METRO` environment variable.
+It also reads the default metro from the `UKC_METRO` environment variable.
 If not specified, the SDK defaults to `fra`.
+Options you pass to `NewClientFromEnv` take precedence over the environment.
 
 ```go
-// No WithToken/WithDefaultMetro needed, NewClient reads the environment automatically
-client := platform.NewClient()
+// Reads UKC_TOKEN (or a fallback) and UKC_METRO from the environment
+client := platform.NewClientFromEnv()
 ```
 
 ## Client options
@@ -96,9 +99,30 @@ Use `WithDefaultMetro("fra")` as a shorthand for `WithDefaultEndpoint("https://a
 
 The base address is `https://api.<metro>.unikraft.cloud`.
 
+An existing client also has methods that return a client with one setting changed:
+
+| Method                        | Description                                                    |
+| ----------------------------- | -------------------------------------------------------------- |
+| `WithMetro(string)`           | Use a different metro                                          |
+| `WithTimeout(time.Duration)`  | Set the request timeout                                        |
+| `WithHTTPClient(...)`         | Use a different HTTP client                                    |
+
+```go
+// Query another metro with the same token
+resp, err := client.WithMetro("sfo").GetInstances(ctx, nil, platform.GetInstancesOpts{})
+```
+
 ## Resources
 
 The `platform.Client` interface covers the full Unikraft Cloud REST API surface.
+
+In the examples below:
+
+- `ids` is a `[]platform.NameOrUUID` that selects resources by name or UUID.
+  Passing `nil` to a list method, such as `GetInstances` or `GetVolumes`, returns all resources.
+  The autoscale read methods are the exception and need at least one service group.
+- `req` is the request type that the method takes, for example `platform.CreateInstanceRequest` or `[]platform.StartInstancesRequestItem`.
+- `platform.<Method>Opts{}` holds the optional query parameters, for example `platform.GetInstancesOpts{Details: &details, Tags: []string{"production"}}`.
 
 ### Instances
 
@@ -109,16 +133,18 @@ client.CreateInstance(ctx, req)
 
 ```go
 // Read
-client.GetInstances(ctx, ids, details)
-client.GetInstanceByUUID(ctx, uuid, details)
+client.GetInstances(ctx, ids, platform.GetInstancesOpts{})
+client.GetInstanceByUUID(ctx, uuid, platform.GetInstanceByUUIDOpts{})
 ```
 
 ```go
-// Start / Stop
-client.StartInstanceByUUID(ctx, uuid)
-client.StartInstances(ctx, ids)
-client.StopInstanceByUUID(ctx, uuid, req)
+// Start / Stop / Suspend
+client.StartInstanceByUUID(ctx, uuid, platform.StartInstanceByUUIDRequestBody{})
+client.StartInstances(ctx, req)
+client.StopInstanceByUUID(ctx, uuid, platform.StopInstanceByUUIDRequestBody{})
 client.StopInstances(ctx, req)
+client.SuspendInstanceByUUID(ctx, uuid, platform.SuspendInstanceByUUIDRequestBody{})
+client.SuspendInstances(ctx, req)
 ```
 
 ```go
@@ -129,22 +155,28 @@ client.UpdateInstances(ctx, req)
 
 ```go
 // Delete
-client.DeleteInstanceByUUID(ctx, uuid)
-client.DeleteInstances(ctx, ids)
+client.DeleteInstanceByUUID(ctx, uuid, platform.DeleteInstanceByUUIDRequestBody{})
+client.DeleteInstances(ctx, req)
 ```
 
 ```go
 // Logs and metrics
-client.GetInstanceLogsByUUID(ctx, uuid, req)
-client.GetInstanceLogs(ctx, req)
+client.GetInstanceLogsByUUID(ctx, uuid, platform.GetInstanceLogsByUUIDRequestBody{})
+client.GetInstanceLogs(ctx, req, platform.GetInstanceLogsOpts{})
 client.GetInstanceMetricsByUUID(ctx, uuid)
-client.GetInstanceMetrics(ctx, ids)
+client.GetInstanceMetrics(ctx, ids, platform.GetInstanceMetricsOpts{})
+```
+
+```go
+// History
+client.GetInstanceHistoryByUUID(ctx, uuid)
+client.GetInstanceHistory(ctx, ids, platform.GetInstanceHistoryOpts{})
 ```
 
 ```go
 // Wait for a target state
 client.WaitInstanceByUUID(ctx, uuid, req)
-client.WaitInstances(ctx, req)
+client.WaitInstances(ctx, req, platform.WaitInstancesOpts{})
 ```
 
 ### Instance templates
@@ -156,8 +188,8 @@ client.CreateTemplateInstances(ctx, req)
 
 ```go
 // Read
-client.GetTemplateInstances(ctx, ids, details, count, tags)
-client.GetTemplateInstanceByUUID(ctx, uuid, details)
+client.GetTemplateInstances(ctx, ids, platform.GetTemplateInstancesOpts{})
+client.GetTemplateInstanceByUUID(ctx, uuid, platform.GetTemplateInstanceByUUIDOpts{})
 ```
 
 ```go
@@ -172,6 +204,37 @@ client.DeleteTemplateInstanceByUUID(ctx, uuid)
 client.DeleteTemplateInstances(ctx, ids)
 ```
 
+### Instance checkpoints
+
+```go
+// Create
+client.CreateCheckpointInstances(ctx, req)
+```
+
+```go
+// Read
+client.GetCheckpointInstances(ctx, ids, platform.GetCheckpointInstancesOpts{})
+client.GetCheckpointInstanceByUUID(ctx, uuid, platform.GetCheckpointInstanceByUUIDOpts{})
+```
+
+```go
+// History
+client.GetCheckpointHistoryByUUID(ctx, uuid)
+client.GetCheckpointHistory(ctx, ids, platform.GetCheckpointHistoryOpts{})
+```
+
+```go
+// Update
+client.UpdateCheckpointInstanceByUUID(ctx, uuid, req)
+client.UpdateCheckpointInstances(ctx, req)
+```
+
+```go
+// Delete
+client.DeleteCheckpointInstanceByUUID(ctx, uuid)
+client.DeleteCheckpointInstances(ctx, ids)
+```
+
 ### Service groups
 
 ```go
@@ -181,8 +244,8 @@ client.CreateServiceGroup(ctx, req)
 
 ```go
 // Read
-client.GetServiceGroups(ctx, ids, details)
-client.GetServiceGroupByUUID(ctx, uuid, details)
+client.GetServiceGroups(ctx, ids, platform.GetServiceGroupsOpts{})
+client.GetServiceGroupByUUID(ctx, uuid, platform.GetServiceGroupByUUIDOpts{})
 ```
 
 ```go
@@ -209,7 +272,7 @@ client.DeleteAutoscaleConfigurationsByServiceGroupUUID(ctx, uuid)
 ```go
 // Configuration (batch)
 client.CreateAutoscaleConfigurations(ctx, req)
-client.GetAutoscaleConfigurations(ctx, ids)
+client.GetAutoscaleConfigurations(ctx, ids, platform.GetAutoscaleConfigurationsOpts{})
 client.DeleteAutoscaleConfigurations(ctx, ids)
 ```
 
@@ -231,8 +294,8 @@ client.CreateVolume(ctx, req)
 
 ```go
 // Read
-client.GetVolumes(ctx, ids, details)
-client.GetVolumeByUUID(ctx, uuid, details)
+client.GetVolumes(ctx, ids, platform.GetVolumesOpts{})
+client.GetVolumeByUUID(ctx, uuid, platform.GetVolumeByUUIDOpts{})
 ```
 
 ```go
@@ -261,6 +324,31 @@ client.DeleteVolumeByUUID(ctx, uuid)
 client.DeleteVolumes(ctx, ids)
 ```
 
+### Volume templates
+
+```go
+// Create a template from existing volumes
+client.CreateTemplateVolume(ctx, ids)
+```
+
+```go
+// Read
+client.GetTemplateVolumes(ctx, ids, platform.GetTemplateVolumesOpts{})
+client.GetTemplateVolumeByUUID(ctx, uuid, platform.GetTemplateVolumeByUUIDOpts{})
+```
+
+```go
+// Update
+client.UpdateTemplateVolumeByUUID(ctx, uuid, req)
+client.UpdateTemplateVolumes(ctx, req)
+```
+
+```go
+// Delete
+client.DeleteTemplateVolumeByUUID(ctx, uuid)
+client.DeleteTemplateVolumes(ctx, ids)
+```
+
 ### Certificates
 
 ```go
@@ -270,8 +358,14 @@ client.CreateCertificate(ctx, req)
 
 ```go
 // Read
-client.GetCertificates(ctx, ids, details)
+client.GetCertificates(ctx, ids, platform.GetCertificatesOpts{})
 client.GetCertificateByUUID(ctx, uuid)
+```
+
+```go
+// Update
+client.UpdateCertificateByUUID(ctx, uuid, req)
+client.UpdateCertificates(ctx, req)
 ```
 
 ```go
@@ -282,9 +376,18 @@ client.DeleteCertificates(ctx, ids)
 
 ### Images
 
+In the image methods, `req` is a list of image references (`[]platform.GetImagesRequestTagOrDigest`, `[]platform.PinImageRequestItem` or `[]platform.UnpinImageRequestItem`).
+
 ```go
 // Read
-client.GetImages(ctx, req, namespace)
+client.GetImages(ctx, req, platform.GetImagesOpts{})
+client.GetImageStore(ctx, req, platform.GetImageStoreOpts{})
+```
+
+```go
+// Pin / Unpin
+client.PinImages(ctx, req)
+client.UnpinImages(ctx, req)
 ```
 
 ### Users and quotas
@@ -295,9 +398,18 @@ client.GetUser(ctx)
 client.GetUserByUUID(ctx, uuid)
 ```
 
+### Audit events
+
+`SubscribeAuditEvents` streams [audit events](/platform/audit-events) on a channel:
+
 ```go
-// Create users
-client.AddUsers(ctx)
+events, err := client.SubscribeAuditEvents(ctx, platform.SubscribeAuditEventsOpts{})
+if err != nil {
+    panic(err)
+}
+for event := range events {
+    fmt.Println(event)
+}
 ```
 
 ### Health
