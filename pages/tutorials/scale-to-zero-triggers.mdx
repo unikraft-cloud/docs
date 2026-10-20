@@ -34,11 +34,12 @@ unikraft run \
 When enabling this trigger, the platform will consider all active connections to your instance, so all traffic going to them.
 The instance will scale down if you make no new network connections and all existing connections have been idle for the configured duration.
 
+The `idle` policy requires stateful scale-to-zero, so set `stateful=true` together with it.
 You can enable this trigger using the CLI as follows:
 
 ```bash
 unikraft run \
-  --scale-to-zero policy=idle,cooldown-time=5000 \
+  --scale-to-zero policy=idle,stateful=true,cooldown-time=5000 \
   ...
 ```
 
@@ -70,8 +71,8 @@ export UKC_METRO=fra
 
 Then invoke the following `curl` command to scale down an instance named `my-instance`:
 
-```bash title="POST /instances/suspend"
-curl -X POST https://api.fra.unikraft.cloud/v1/instances/suspend \
+```bash title="PUT /instances/suspend"
+curl -X PUT https://api.fra.unikraft.cloud/v1/instances/suspend \
   -H "Authorization: Bearer ${UKC_TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{

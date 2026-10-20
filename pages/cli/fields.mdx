@@ -437,6 +437,7 @@ nested.*.*==true             # double wildcard
 **Negation semantics with wildcards:** positive operators (`==`, `~=`) match if
 **any** entry meets the condition.
 Negated operators (`!=`, `!~=`) match only if **all** entries meet the condition (that is, no entry matches the negated pattern).
+An empty map or array has no entries, so a wildcard selector, negated or not, doesn't match it: `tags.*!=temporary` excludes instances without tags.
 
 ### Indexed access
 
@@ -470,15 +471,15 @@ When you specify `--filter` several times, the filter includes a resource if it 
 The two mechanisms compose:
 
 ```bash
---filter 'state==running,metro==fra0' --filter 'state==stopped,metro==was1'
+--filter 'state==running,metro==fra' --filter 'state==stopped,metro==was'
 ```
 
-This matches resources that are (running in fra0) **or** (stopped in was1).
+This matches resources that are (running in fra) **or** (stopped in was).
 
 ### Special fields
 
 The `metro` field receives special handling: when present in a filter, it restricts which metros the CLI queries rather than filtering results after the fact.
-This means `--filter metro==fra0` avoids fetching data from other metros entirely.
+This means `--filter metro==fra` avoids fetching data from other metros entirely.
 
 ### Examples
 
@@ -504,18 +505,19 @@ unikraft instances wait my-instance --until state==running
 # Delete all stopped instances (with confirmation)
 unikraft instances delete --filter state==stopped
 
-# Combine filters: running instances in fra0, OR stopped in was1
-unikraft instances list --filter 'state==running,metro==fra0' \
-                       --filter 'state==stopped,metro==was1'
+# Combine filters: running instances in fra, OR stopped in was
+unikraft instances list --filter 'state==running,metro==fra' \
+                       --filter 'state==stopped,metro==was'
 
 # Filter on nested fields
-unikraft instances list --filter 'settings.autoscale==true'
+unikraft instances list --filter 'scale-to-zero.enabled==true'
 
 # Filter using array wildcard
 unikraft instances list --filter 'volumes.*.name==data'
 
-# Check that no label matches a pattern (all must satisfy !=)
-unikraft instances list --filter 'labels.*!=temporary'
+# Check that no tag equals a value (all must satisfy !=; instances without tags don't match)
+# `tags` isn't in the default table, so add the column with --field +tags
+unikraft instances list --field +tags --filter 'tags.*!=temporary'
 
 # Instances with more than 2 vCPUs
 unikraft instances list --filter 'resources.vcpus>2'

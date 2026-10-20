@@ -129,7 +129,7 @@ Write operations require an explicit metro selection with `--metro`:
 ```bash title="unikraft"
 unikraft run --metro fra \
   -p 443:8080/http+tls \
-  -m 512Mi \
+  -m 512M \
   --image <my-org>/my-app:latest
 ```
 
@@ -304,6 +304,7 @@ kraft cloud deploy \
 </CodeTabs>
 
 `unikraft` only accepts units in the binary system, for example, `512M` or `512MiB` for Mebibytes.
+It rejects the `kraft`-style `Mi` and `Gi` suffixes, so `-m 512Mi` fails with `invalid suffix: 'mi'`.
 The legacy `kraft cloud` works with the decimal system as well—so `512M` would mean 512 Megabytes, which is about 488 Mebibytes, while `512Mi` would mean 512 Mebibytes, which is about 536 Megabytes.
 
 ### Scale-to-zero

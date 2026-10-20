@@ -209,7 +209,7 @@ unikraft build . --output <my-org>/nginx:latest
 unikraft run --metro fra \
   -m 256M \
   -p 443:8080/http+tls \
-  --scale-to-zero policy=on,cooldown-time=1000
+  --scale-to-zero policy=on,cooldown-time=1000 \
   --image <my-org>/nginx:latest
 ```
 
