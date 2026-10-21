@@ -16,7 +16,7 @@
     "react": ">=19.0.0",
     "react-dom": ">=19.0.0",
     "regex-utilities": "^2.3.0",
-    "zudoku": "^0.88.0"
+    "zudoku": "^0.93.0"
   },
   "devDependencies": {
     "@types/react": "^19",
