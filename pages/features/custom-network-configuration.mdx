@@ -46,7 +46,7 @@ Leaving out `network_interfaces` is the same as requesting a single pool-allocat
 Add a `network_interfaces` array to your [`POST /instances`](/api/platform/v1/instances#create-instance) request:
 
 ```bash
-unikraft api /v1/instances \
+unikraft api /v1/instances --metro fra \
   '{
     "name": "my-instance",
     "image": "nginx:latest",

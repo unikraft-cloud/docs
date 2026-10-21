@@ -62,9 +62,10 @@ To use a relay, reference another interface by name inside a `relay` object:
 <CodeTabs syncKey="cli">
 
 ```bash title="Relay instance"
-unikraft api /v1/instances \
+unikraft api /v1/instances --metro fra \
   '{
     "name": "my-relay",
+    "image": "<my-org>/my-relay:latest",
     "network_interfaces": [
       {
         "name": "my-relay-iface"
@@ -74,9 +75,10 @@ unikraft api /v1/instances \
 ```
 
 ```bash title="Sandbox instance (relay client)"
-unikraft api /v1/instances \
+unikraft api /v1/instances --metro fra \
   '{
     "name": "my-sandbox",
+    "image": "official/alpine:latest",
     "network_interfaces": [
       {
         "relay": {
@@ -105,7 +107,7 @@ The instance status shows the relay of each interface that uses one, and the ins
 `unikraft instance get` doesn't show relays, so read the status from the API:
 
 ```bash
-unikraft api /v1/instances/<uuid>
+unikraft api /v1/instances/<uuid> --metro fra
 ```
 
 ```json title="Response (excerpt)"

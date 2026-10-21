@@ -171,11 +171,15 @@ There may be a delay of a few minutes between pushing or removing an image and t
 
 ## Removing images
 
-You can remove images with specific tags, or all tags at once:
+Remove an image by its tag:
 
 ```bash
-unikraft images delete <my-org>/<my-app>[:<tag>]
+unikraft images delete <my-org>/<my-app>:<tag>
 ```
+
+If you omit the tag, the CLI deletes `<my-org>/<my-app>:latest`.
+If the image has no `latest` tag, the command deletes nothing and fails with `references not found`.
+Each reference deletes one image, so pass every tag you want to remove, for example `unikraft images delete <my-org>/<my-app>:v1 <my-org>/<my-app>:v2`.
 
 ## Kernel layer deduplication
 
