@@ -1,0 +1,77 @@
+---
+title: Instance Templates
+navigation_icon: copy
+---
+
+Instance templates allow creating pre-initialized snapshots that serve as a base for cloning new instances.
+Instead of cold-booting from an image, Unikraft Cloud clones the template's snapshot, and the new instance inherits its memory state.
+
+This reduces start time and ensures all cloned instances begin with identical state: warm caches, initialized connections, and loaded code.
+
+## How templates work
+
+A template is an instance that Unikraft Cloud has snapshotted and marked as a template.
+The autoscale system uses templates: the autoscale master instance acts as a template, and scale-out events clone it.
+
+## Template creation modes
+
+Two modes exist for creating a template:
+
+| Mode | Description |
+|------|-------------|
+| **Non-prepare (cold)** | The instance transitions from stopped to template state without starting. Unikraft Cloud doesn't produce a snapshot. |
+| **Prepare (hot)** | The instance starts and initializes. The guest signals that initialization is complete, which triggers snapshot creation. The template includes full memory state. |
+
+Use prepare templates when the template needs warm state (loaded code, initialized caches, established connections).
+
+## Named and anonymous templates
+
+| Type | Description |
+|------|-------------|
+| **Named** | You provide a name. The template persists and you can reuse it. Concurrent requests for the same name converge to a single template. |
+| **Anonymous** | No name. The template is ephemeral and Unikraft Cloud frees it after cloning the child instance. |
+
+## Template chains
+
+Unikraft Cloud supports nesting templates up to **4 levels** deep.
+You can create a template from another template, forming a chain.
+
+Specify a template chain via nested `template.create_args.template` fields in the instance creation request.
+Each level of nesting creates an intermediate template.
+
+## Template autokill
+
+The `template_autokill_time_ms` field controls automatic deletion of idle templates.
+Unikraft Cloud bases autokill on `last_clone_time`.
+If a template hasn't received a clone request within the autokill timeout, the platform deletes it.
+
+Unikraft Cloud reference-counts templates.
+A template that active instances still reference isn't deleted, even if the autokill timer has expired.
+
+## Creating a template
+
+Create templates in two ways:
+
+1. **Nested creation**: specify template parameters in the instance creation request (`POST /v1/instances`).
+2. **Direct conversion**: convert an existing instance via `POST /v1/instances/templates/create`.
+
+From within the guest, write to `/uk/libukp/template_instance` to signal that initialization is complete and the platform should create the template snapshot.
+
+## Instance limits
+
+| Limit | Value |
+|-------|-------|
+| Max template chain depth | 4 |
+| Max auxiliary ROMs per instance | 8 |
+| Max volumes per instance | 4 |
+| Max vCPUs per instance | 32 |
+
+Templates count against the user's instance quota.
+No dedicated template limit exists.
+
+## Learn more
+
+* The `kraft cloud` [command-line tool reference](/cli/)
+* Unikraft Cloud's [REST API reference](/api/platform/v1)
+* [Autoscale](/features/autoscale): autoscale uses templates for scale-out
+* [Snapshots](/features/snapshots): templates use the snapshot mechanism
