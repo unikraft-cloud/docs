@@ -51,8 +51,9 @@ This means each shield:
 - Is fully flexible and extensible in the capabilities it provides.
   The image it uses determines its behavior.
 
-The official shield runs the `netshield` plugin, which serves a REST API for its policies.
-A policy allows traffic by host (wildcards included), network, port, or protocol, and can intercept TLS, rate-limit requests and connections, and inject secrets into outgoing headers, so a sandbox sends `{{GITHUB_TOKEN}}` and never sees the real value.
+The official shield runs the `netshield` plugin, which serves an API for its policies.
+A policy allows traffic by host (wildcards included), network, port, or protocol.
+It can also intercept TLS, rate-limit requests and connections, and inject secrets into outgoing headers, so a sandbox sends `{{GITHUB_TOKEN}}` and never sees the real value.
 The shield needs a certificate authority in `CA_CERT` and `CA_KEY` for TLS interception, which every sandbox behind it has to trust.
 It starts closed, and a shield whose policy fails to apply stays closed, so replace it.
 On Kubernetes, Kraftlet [creates a shield per Pod](/integrations/kubernetes#egress-filtering-with-a-network-shield) from a PodTemplate.
