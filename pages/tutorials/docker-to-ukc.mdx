@@ -80,7 +80,7 @@ In this first-pass `Kraftfile`:
 
 * `runtime: base-compat:latest` selects the generic compatibility runtime.
 * `targets: kraftcloud/x86_64` specifies the platform and architecture pairs to build for.
-  No architecture is the default, so add `kraftcloud/arm64` to the list to also build for ARM hosts.
+  Without `targets`, the build produces `x86_64` only, so add `kraftcloud/arm64` to the list to also build for ARM hosts.
 * `rootfs: ./Dockerfile` tells the CLI to build the root filesystem from the `Dockerfile`.
 * `cmd: [...]` explicitly sets the process arguments that should run inside the instance.
 
@@ -290,6 +290,7 @@ The [Environment Variables](/tutorials/environment-variables) tutorial describes
 Container images often include a `USER` directive to avoid running as `root`.
 On Unikraft Cloud, that directive only affects subsequent `RUN` steps while building the root filesystem.
 It doesn't automatically change the user that runs `ENTRYPOINT` or `CMD` at instance boot.
+File owners set with `COPY --chown` or `RUN chown` survive the build.
 
 In practice, this means the deployed process runs as `root` unless you switch users explicitly inside your startup command or wrapper script.
 
