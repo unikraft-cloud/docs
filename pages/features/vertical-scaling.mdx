@@ -20,7 +20,7 @@ You don't have to size the instance for its peak load up front.
 ## Setting a range
 
 An instance opts in with a range at creation time.
-The guest kernel must support vertical scaling for the range to take effect (see [Requirements and limitations](#requirements-and-limitations)).
+The guest kernel must support vertical scaling, or the instance won't start (see [Requirements and limitations](#requirements-and-limitations)).
 In the [create request](/api/platform/v1/instances#create-instance), set `min_memory_mb` and `max_memory_mb` for memory, or `min_vcpus` and `max_vcpus` for vCPUs.
 Vertical scaling is active only for a resource with at least one bound.
 An instance without a range keeps a fixed size.
@@ -101,7 +101,8 @@ unikraft instance get my-instance
 - Only the default `micro` [instance type](/platform/instances#instance-types) supports vertical scaling, so a request that sets a range for a full VM fails.
 - Vertical scaling is available on `x86_64` only.
 - The guest kernel must support vertical scaling.
-  If the kernel in your image lacks that support, the instance runs at its initial size and the platform can't scale it.
+  If the image lacks that support (for vCPUs, this includes ACPI), the platform refuses to start the instance.
+  The create or start request fails with `the image does not support vertical scaling of memory` (or `of vCPUs`), and the stop cause is `no-mem-vscaling` or `no-cpu-vscaling`.
 - You can't change the range after you create the instance.
 - An instance created from an instance template that has a snapshot can't set its own range, because it inherits the range of its template.
 - Instance templates and [autoscale](/features/autoscale) templates accept the same fields and pass the range on to their clones, so for [on-demand templates](/features/on-demand-templates) you set the range inside `create_args`.
