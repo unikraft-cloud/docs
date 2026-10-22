@@ -187,7 +187,6 @@ Otherwise, a checkpoint request can fail for the following reasons:
 
 | Error message | Cause |
 |---------------|-------|
-| `Insufficient license. Please make sure your license is valid and includes checkpointing` | Your account's license doesn't include the checkpointing feature. |
 | `A checkpoint with the name '<name>' already exists` | A checkpoint with the requested name already exists. Choose a different name. |
 | `Failed to create instance from checkpoint: ...` | The referenced checkpoint isn't ready yet. Wait until it reaches the `checkpoint` state before loading it. |
 | `Deletion protection enabled` | The checkpoint has a [delete lock](/platform/delete-locks) set. Remove the lock before deleting. |
@@ -201,7 +200,6 @@ Otherwise, a checkpoint request can fail for the following reasons:
   Full VMs running on QEMU, which [GPU instances](/platform/instances#gpus) require, don't support checkpointing yet, so a create request can't combine `--type=full` with `--checkpoint`.
 - Checkpointing builds on [branching](/features/branching), so it only works with block-based volumes (for example, `ext4`).
   The checkpoint clones the source's volume state consistently with its memory snapshot, which isn't supported for other volume types.
-- On BYOC and on-prem installations, checkpointing requires a license that includes the feature.
 
 ## Learn more
 

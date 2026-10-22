@@ -67,7 +67,6 @@ Otherwise, a branch request can fail for the following reasons:
 | `Cannot specify '<field>' when branching from an existing instance` | The request sets a field the branch inherits from its source (`args`, `env`, `memory_mb`, or `vcpus`). |
 | `Cannot branch from VM with pending snapshot` | The source already has a snapshot in progress. Retry once it completes. |
 | `Cannot branch from VM in state '<state>'` | The source is in a state that branching doesn't support. |
-| `Insufficient license. Please make sure your license is valid and includes branching` | Your account's license doesn't include the branching feature. |
 
 ## Limitations
 
@@ -77,7 +76,6 @@ Otherwise, a branch request can fail for the following reasons:
   Full VMs running on QEMU, which [GPU instances](/platform/instances#gpus) require, don't support branching yet, so a create request can't combine `--type=full` with `--branch`.
 - Branching only works with block-based volumes (for example, `ext4`).
   The branch clones the source's volume state consistently with its memory snapshot, which isn't supported for other volume types.
-- On BYOC and on-prem installations, branching requires a license that includes the feature.
 
 ## Learn more
 
