@@ -532,7 +532,11 @@ An image without a registry host, such as `nginx:latest`, and an image on `docke
 
 ### Pod status
 
-Kraftlet refreshes the status of every Pod it manages from the platform on the `kraftlet.podStatusUpdateInterval`, which defaults to 15 seconds.
+Kraftlet subscribes to the platform's [event stream](/platform/audit-events) and updates a Pod as soon as its instance stops, fails, or errors.
+It also keeps refreshing the status of every Pod it manages on the `kraftlet.podStatusUpdateInterval`, which defaults to 15 seconds, to catch changes the stream misses.
+When the stream drops events, it re-syncs every Pod on the node.
+A move into `running` or `standby` triggers no refresh, so scale-to-zero churn doesn't flood the Kubernetes API.
+Set `KRAFTLET_ENABLE_INSTANCE_EVENTS=false` through `kraftlet.env` to go back to polling only.
 Kraftlet reads instance state through an instance cache instead of asking the platform once per Pod.
 The cache merges the lookups that arrive together into shared requests, and remembers newly created instances so their first status updates need no extra request.
 As a result, the time from creating a Pod to seeing it `Running` stays flat as the node grows.
@@ -768,7 +772,7 @@ The values below cover the settings most deployments touch.
 | `kraftlet.enablePvcWatcher` | `false` | Manage the lifecycle of `ukc-volume` claims. |
 | `kraftlet.enableInstanceFqdnAnnotations` | `false` | Annotate Pods with the FQDNs of their instances. |
 | `kraftlet.enableFailedPodReclaim` | `true` | Delete a Pod that fails because the live memory quota is full, so its controller replaces it. |
-| `kraftlet.podStatusUpdateInterval` | `15s` | How often Kraftlet refreshes Pod status from the platform. |
+| `kraftlet.podStatusUpdateInterval` | `15s` | How often Kraftlet refreshes Pod status from the platform, alongside the event stream. |
 | `kraftlet.podSyncWorkers` | `1` | Number of Pod reconcile workers. |
 | `kraftlet.logLevel` and `kraftlet.logType` | `info` and `json` | Log verbosity and format. |
 | `kraftlet.port` | `10250` | Port for the kubelet API that serves logs and Pod listings. |
