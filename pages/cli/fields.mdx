@@ -154,8 +154,7 @@ This lets you fine-tune the output without listing every field you want.
 ```
 
 The `networks` field is absent because `-networks` removed it, and `timing` appears at the end because `+timing` added it.
-Besides `uptime`, `boot-time`, and `net-time`, `timing` holds the whole start sequence of the instance, from the start prerequisites through loading the VMM to ready.
-The CLI leaves out the fields the platform doesn't report, so an older platform shows fewer of them.
+Besides `uptime`, `boot-time`, and `net-time`, `timing` holds the whole start sequence of the instance, from the start prerequisites to ready.
 Checkpoints and templates carry their own `timing` field.
 
 The same syntax works with `list`:
