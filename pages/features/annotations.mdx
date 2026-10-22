@@ -163,13 +163,18 @@ Give every address a MAC address to land on:
 - The document needs a `cniVersion` of `0.3.1`, `0.4.0`, `1.0.0`, or `1.1.0`, and has to be a result rather than a network configuration.
 - Keep the document on one line, because annotation values reject control characters.
 
-Only `interfaces[].mac`, `ips[].interface`, `ips[].address`, `ips[].gateway`, and the [`routes`](#routes) array have any effect.
-`dns`, `mtu`, and `sandbox` do nothing, so you can pass a plugin's full result through untouched.
-Set the resolver with the instance's own `nameserver` field.
+Only `interfaces[].mac`, `ips[].interface`, `ips[].address`, `ips[].gateway`, the [`routes`](#routes) array, and `dns` have any effect.
+`mtu` and `sandbox` do nothing.
 
-The guest doesn't use stateless address autoconfiguration (SLAAC), so it never takes IPv6 addresses or routes from router advertisements.
+If the document has a `dns` object, the guest writes its `nameservers`, `domain`, `search`, and `options` to `/etc/resolv.conf`.
+This replaces the resolver from the instance's own `nameserver` field.
+The guest falls back to the `nameserver` field only when `dns` sets other values but no `nameservers`.
+To keep the instance's `nameserver`, remove `dns` before you pass a plugin's result through.
+
+The guest doesn't use stateless address autoconfiguration (SLAAC), so router advertisements never give it IPv6 addresses.
+It does accept the default router and the MTU from a router advertisement on the link.
 The instance's own addresses and `gateway` field are IPv4 only, which leaves the document as the only source of IPv6 addresses.
-List an IPv6 [default route](#default-routes) in the document, or configure one inside the guest, if the workload needs it.
+For an IPv6 [default route](#default-routes), list one in the document, rely on a router advertisement on the link, or configure one inside the guest.
 The guest also skips duplicate address detection, so its IPv6 link-local addresses and the addresses from the document are usable directly after boot.
 
 ### Routes
