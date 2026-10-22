@@ -26,9 +26,10 @@ jobs:
     steps:
     - uses: actions/checkout@v5
 
-    - uses: errata-ai/vale-action@v2.1.1
+    - uses: errata-ai/vale-action@v3.0.0
       with:
         reporter: github-pr-review
         token: ${{ github.token }}
         files: pages
-        fail_on_error: true
+        min_alert_level: warning
+        fail_level: error
