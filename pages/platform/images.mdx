@@ -207,6 +207,28 @@ Multi-platform builds need a correctly configured BuildKit builder on the host.
 Learn more [here](https://docs.docker.com/build/building/multi-platform/)
 :::
 
+### Local outputs
+
+`--output` names an image reference unless it looks like a path.
+A local path starts with `./`, `../`, or `/`, and the build saves the image there as an OCI archive or an OCI layout instead of pushing it:
+
+```bash
+unikraft build . --arch x86_64 -o ./app.tar
+```
+
+```text title=""
+│ saved image output=oci-archive://./app.tar
+```
+
+The build prints where the image went.
+Add the `oci-archive://` or `oci-layout://` prefix to make the choice explicit.
+The same rule applies to `image get`, `image delete`, and `image copy`.
+
+:::caution
+An output such as `app.tar` or `dist/` is an image reference, so the build pushes it to the registry instead of writing it locally.
+Add `./` to keep writing to a local path.
+:::
+
 ## Example workflows
 
 This guide uses a Python [app](/guides/httpserver-python3.12) as an example to show three workflows:
