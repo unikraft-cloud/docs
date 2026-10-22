@@ -145,7 +145,7 @@ A Pod that no longer fits goes back to its controller and lands on a node with r
 
 The provider needs the following objects in the cluster:
 
-1. **A `UnikraftNodeClass`** describes the machine behind a node: its image, where it runs, how it gets its DNS records and certificate, and the Kraftlet release that fronts it.
+1. **A `UnikraftNodeClass`** describes the machine behind a node: its image, where it runs, how it gets its DNS records and certificate (or skips DNS altogether), and the Kraftlet release that fronts it.
 
 2. **A `NodePool`** specifies which machine sizes to pick, how many nodes to allow, and when to remove the ones that empty.
 
@@ -163,4 +163,7 @@ The enterprise documentation covers the configuration in full.
 * Machines launch as on-demand instances, so a NodePool that asks for `karpenter.sh/capacity-type: spot` gets none.
 * A node advertises the platform quotas of its machine rather than the size of the machine underneath.
   You can cap the total vCPUs, memory, and volume storage a node advertises, and [scale-to-zero](/features/scale-to-zero) lets you overcommit those caps by a wide margin.
+* A nodeclass with `spec.box.dns.skip: true` creates no DNS records, and the cluster reaches each machine at the internal hostname of the cloud provider instead.
+  Those machines serve a self-signed certificate, so the controller needs `controller.allowInsecure` and Kraftlet needs `KRAFTLET_ALLOW_INSECURE`, and both have to run inside the machines' VPC.
 * Changing a nodeclass replaces the machines made from it rather than reconfiguring them in place.
+  The exception is `dns.skip`, which can't change after creation.

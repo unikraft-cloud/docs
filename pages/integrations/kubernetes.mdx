@@ -686,7 +686,7 @@ The [Container Network Interface](https://www.cni.dev/) (CNI) configures the net
 This split lets vendors such as AWS, Tigera and Isovalent each ship their own plugin for configuring networking.
 Kubernetes builds on the same interface, and the kubelet invokes the installed CNI plugins on every node of the cluster.
 
-Kraftlet takes that role for Pods that land on the Kraftlet node.
+Kraftlet takes that role for Pods on its node that opt in with the `cloud.unikraft.v1.instances/cni-enabled` annotation.
 It invokes the CNI plugins of your cluster and passes the resulting interfaces and addresses to Unikraft Cloud.
 The platform then creates the instance with [custom network interfaces](/features/custom-network-configuration) rather than with interfaces from its own address pool.
 Instances join the same networks as native Pods and follow the same address management as the rest of the cluster.
@@ -698,6 +698,25 @@ Therefore, the Kraftlet hands the rest of a plugin result—IPv6 addresses, in p
 Kraftlet does this for the Pod's default network, a secondary network contributes its IPv4 addresses alone.
 You can write the same annotation yourself on an instance you create through the API, for an [interface without an address](/features/custom-network-configuration#interfaces-without-an-address) whose addressing an IPAM system owns.
 
+A CNI Pod can bring its own resolvers.
+Kraftlet passes the Pod's `spec.dnsConfig`, its nameservers, search domains, and options, to the instance, and falls back to the DNS from the CNI result when the Pod sets none:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-pod
+  annotations:
+    cloud.unikraft.v1.instances/cni-enabled: "true"
+spec:
+  dnsPolicy: None
+  dnsConfig:
+    nameservers: ["2001:4860:4860::8888"]
+    searches: ["svc.example.internal"]
+```
+
+`dnsPolicy` itself has no effect, and a Pod without CNI keeps the platform's resolver.
+
 ## Annotations
 
 Kraftlet reads the following annotations from Pod and Service objects to configure Unikraft Cloud resources.
@@ -707,6 +726,7 @@ Kraftlet reads the following annotations from Pod and Service objects to configu
 | Annotation | Type | Default | Description |
 |---|---|---|---|
 | `cloud.unikraft.v1.instances/autostart` | boolean | `true` | Whether the instance starts automatically when Kraftlet schedules the Pod. |
+| `cloud.unikraft.v1.instances/cni-enabled` | boolean | `false` | Configures the Pod's networking through the CNI plugins of the cluster, as [custom networking with CNI](#custom-networking-with-cni) describes. |
 | `cloud.unikraft.v1.instances/template` | string | — | Name of a pre-existing Unikraft Cloud instance template to use instead of the container image. |
 | `cloud.unikraft.v1.instances/ignore` | string | — | Comma-separated container names that Kraftlet leaves out of Unikraft Cloud. |
 | `cloud.unikraft.v1.instances/enable-exec` | boolean | `false` | Adds the sandbox plugin so [`kubectl exec`](#running-commands-with-kubectl-exec) reaches the instance. Needs exec turned on in Kraftlet. |
