@@ -145,7 +145,7 @@ A Pod that no longer fits goes back to its controller and lands on a node with r
 
 The provider needs the following objects in the cluster:
 
-1. **A `UnikraftNodeClass`** describes the machine behind a node: its image, where it runs, how it gets its DNS records and certificate (or skips DNS altogether), and the Kraftlet release that fronts it.
+1. **A `UnikraftNodeClass`** describes the machine behind a node: its image, where it runs, its DNS and certificate setup, and the Kraftlet release that fronts it.
 
 2. **A `NodePool`** specifies which machine sizes to pick, how many nodes to allow, and when to remove the ones that empty.
 
