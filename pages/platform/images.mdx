@@ -198,7 +198,7 @@ How the build resolves architectures depends on what the `Kraftfile` declares:
 
 | `Kraftfile` | Architectures used |
 |-------------|--------------------|
-| `runtime` with no `targets` or `--arch` | Every architecture the runtime provides. |
+| `runtime` with no `targets` or `--arch` | `x86_64` only, even when the runtime provides more. |
 | `runtime` with `targets` or `--arch` | Only the architectures listed in both `targets` and `--arch`, which must be ones the runtime provides. |
 | [`roms`](/features/roms) with no `runtime` | Only the architectures listed in both `targets` and `--arch`, and the build fails when you supply neither. |
 

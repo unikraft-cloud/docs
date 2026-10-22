@@ -123,10 +123,10 @@ unikraft run --metro fra \
 ```
 
 :::note
-unikraft build makes root the owner of every file in the rootfs.
-It has no option to keep the original file owners, which some workloads need.
+`unikraft build` keeps the file owners of a `Dockerfile`, image, or tarball source, the way Docker does, so `COPY --chown` means what it says.
+Files from a directory source belong to root.
 EROFS is a read-only file system, so you can't change owners in place.
-Instead, have the entrypoint copy those files to a writable path (for example, a volume) and run chown there.
+To change them at run time, have the entrypoint copy those files to a writable path (for example, a volume) and run `chown` there.
 :::
 
 ### CPIO deployment
