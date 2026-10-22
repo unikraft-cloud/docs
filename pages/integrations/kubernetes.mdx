@@ -365,7 +365,8 @@ A few details differ from a regular kubelet:
 ### Egress filtering with a network shield
 
 A [network shield](/features/network-shield) is an egress firewall for sandboxes.
-It starts closed and only lets out what a policy allows, by host, network, port, or protocol, and it can intercept TLS, rate-limit requests, and inject secrets into outgoing headers.
+It starts closed and only lets out what a policy allows, by host, network, port, or protocol.
+It can also intercept TLS, rate-limit requests, and inject secrets into outgoing headers.
 Kraftlet gives a Pod its own shield from a PodTemplate in the same namespace, which needs chart version 0.11.0 or later:
 
 ```bash
@@ -375,7 +376,8 @@ helm upgrade kraftlet \
   oci://ghcr.io/unikraft-cloud/helm-charts/kraftlet
 ```
 
-The PodTemplate describes the shield: one container that runs the shield image, with the `netshield` plugin attached through its plugins ConfigMap, and the certificate authority it signs intercepted connections with in the `CA_CERT` and `CA_KEY` environment variables.
+The PodTemplate describes the shield: one container that runs the shield image, with the `netshield` plugin attached through its plugins ConfigMap.
+The `CA_CERT` and `CA_KEY` environment variables hold the certificate authority it signs intercepted connections with.
 It can't declare ports, init containers, or network and CNI annotations.
 A Pod then points at it:
 
@@ -395,7 +397,8 @@ spec:
 Kraftlet creates the shield instance from the template, routes every instance of the Pod through it, and deletes it along with the Pod.
 It publishes the address of each plugin on the shield as `cloud.unikraft.v1.instances/relay.plugins.<plugin>.url` on the Pod, which is where you send the policy.
 
-To share one shield between Pods, run the shield as a Pod of its own with `cloud.unikraft.v1.instances/network-interface-name` set to a name, and relay the others through it with `cloud.unikraft.v1.instances/relay` set to that name.
+To share one shield between Pods, run the shield as a Pod of its own with `cloud.unikraft.v1.instances/network-interface-name` set to a name.
+Then relay the others through it with `cloud.unikraft.v1.instances/relay` set to that name.
 `cloud.unikraft.v1.instances/relay-dns` chooses whether DNS requests go through the shield as well.
 
 Note the following:
@@ -666,7 +669,7 @@ When you delete a Kubernetes object, Kraftlet deletes the corresponding Unikraft
 
 | Kubernetes object deleted | Unikraft Cloud resources deleted |
 |---|---|
-| Pod or Deployment replica | Instances for its containers and init containers, the service once no instance uses it, the volumes for its `emptyDir` and `hostPath` mounts, any certificate the service held, and the network shield created from its relay template |
+| Pod or Deployment replica | Instances for its containers and init containers, the service once no instance uses it, the volumes for its `emptyDir` and `hostPath` mounts, any certificate the service held, and its network shield |
 | PersistentVolumeClaim with the `ukc-volume` class | The volume behind the claim |
 
 Kraftlet also cleans up a Pod that finishes on its own.
