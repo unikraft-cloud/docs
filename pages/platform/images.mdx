@@ -91,6 +91,39 @@ Be aware that this choice may increase image size, memory use, and boot time.
 :::
 
 
+### Root filesystem from an existing image
+
+If the image you want to run already exists, take its root filesystem straight from the registry instead of rebuilding it from a `Dockerfile`.
+Set the `rootfs` source type to `oci`:
+
+```yaml title="Kraftfile"
+spec: v0.7
+
+runtime: base-compat:latest
+
+targets:
+  - kraftcloud/x86_64
+
+rootfs:
+  source:
+    type: oci
+    path: docker.io/library/nginx:latest
+  format: erofs
+```
+
+The build flattens the layers of a container image into the requested format.
+For a Unikraft image, it reuses the existing root filesystem unchanged.
+The image's own command, environment, and labels carry over, and anything you set in the `Kraftfile` applies on top.
+
+Note the following:
+
+- Set `type: oci` explicitly.
+  The CLI never guesses it from the path.
+- The path has to be a registry reference, and the image has to provide the platform you build for.
+- A container image still needs a BuildKit builder to flatten its layers.
+
+See the [Kraftfile reference](/kraftfile/v0.7) for the other source types.
+
 ## Platform kernel
 
 {/* vale off */}

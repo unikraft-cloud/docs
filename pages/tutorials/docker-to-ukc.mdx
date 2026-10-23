@@ -26,6 +26,11 @@ unikraft login
 The fastest way to get an existing container running on Unikraft Cloud is to keep its root filesystem as-is.
 For that, BuildKit fetches the upstream image through a `FROM image:latest` line and the `Kraftfile` reproduces the original start command.
 
+:::tip
+A `rootfs` source of `type: oci` skips the `Dockerfile` entirely and keeps the image's command and environment, so the steps below only matter when you want to change them.
+See [root filesystem from an existing image](/platform/images#root-filesystem-from-an-existing-image).
+:::
+
 ### Inspect the upstream image
 
 Before writing the `Kraftfile`, inspect the original image and record its effective startup command.
