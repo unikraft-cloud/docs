@@ -611,6 +611,46 @@ You can also have the platform create a template implicitly as part of an instan
 See [On-demand templates](/features/on-demand-templates).
 :::
 
+### Updating a template
+
+You can move a template to new images without recreating it.
+A `PATCH /instances/templates` request changes the image of a template, and the images of its [ROMs](/features/roms) and [plugins](/features/plugins):
+
+```bash
+unikraft api /v1/instances/templates -X PATCH --metro fra \
+  '[
+    { "name": "web-base", "prop": "image", "op": "set", "value": "<my-org>/web:v2" }
+  ]'
+```
+
+These properties only take the `set` operation.
+The patches for one template in a request make up a single update, and if one of them fails, none of them applies.
+
+The platform boots a new revision of the template with the new images, and turns it into a template the same way as the first revision.
+Once the new revision is ready, it takes over the UUID and the name of the template.
+While the update runs, the status of the template lists it in `updates` as `pending`.
+If the new revision fails, the template doesn't change, and `updates` reports the update as `failed`, with the reason in `error`.
+
+The instances of the template then follow the update:
+
+- An instance created from the template uses the new revision at its next start, unless it has a snapshot of its own.
+  This includes instances that [scale to zero](/features/scale-to-zero) in stateless mode.
+- An instance with a snapshot of its own, for example a suspended one, keeps its revision as long as it has that snapshot.
+- Templates created from the updated template follow it, and [autoscale](/features/autoscale) uses the new revision for new instances.
+- An instance with an image of its own, or with ROMs or plugins that replace those of the template, keeps its revision.
+  That holds whether you set them at creation or later.
+
+The status of an instance created from a template names its source in `clone_source`.
+
+Note the following:
+
+- You can't update a template with volumes, or a template without exactly one network interface.
+- A template takes one update at a time.
+  A request for a template whose update still runs fails.
+- An update of the ROMs or plugins must list every ROM or plugin of the template, except those inherited from a parent template, with the same names, paths, and authorization.
+  Only their images and the plugin configuration change.
+- A template created from another template changes its image only together with its parent.
+
 ### Nested templates
 
 You can clone a template from another template, creating a hierarchy.
