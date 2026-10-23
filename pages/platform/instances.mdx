@@ -383,6 +383,26 @@ Instances created from a template of a GPU instance inherit its GPU configuratio
 A create request that uses such a template can't set `--gpus`.
 The value comes from the template.
 
+#### vGPU licenses
+
+An NVIDIA vGPU needs a license in the guest.
+Operators can turn on license management for a metro.
+There, the platform borrows a license for each vGPU instance when it starts, hands it to the guest, and returns it when the instance stops.
+The license doesn't delay the start, so the guest runs without one until it arrives.
+
+The `gpus.*.license` field reports the license of each vGPU.
+Its `state` is one of the following, and `id` names the license while the guest holds it:
+
+| State | Meaning |
+|---|---|
+| `unlicensed` | The vGPU has no license. |
+| `pending` | The platform is borrowing a license. |
+| `held` | The guest holds a license. |
+| `renewing` | The platform is renewing the lease of the license. |
+
+The platform delivers the license over vsock port 140.
+The image has to listen on that port, install the license for `nvidia-gridd` in `/etc/nvidia/vGPULicense`, and run `nvidia-gridd`.
+
 ### Wait for running
 
 By default [`POST /instances`](/api/platform/v1/instances#create-instance) returns as soon as the platform queues the instance.
