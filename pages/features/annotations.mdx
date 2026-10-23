@@ -172,9 +172,11 @@ A `dns` object without `nameservers` keeps the instance's own `nameserver` field
 An invalid `dns` object stops the instance at boot.
 Applying `dns` requires the latest base-compat guest kernel.
 
-The guest doesn't use stateless address autoconfiguration (SLAAC), so it never takes IPv6 addresses or routes from router advertisements.
+The guest never configures IPv6 addresses from router advertisements, because it doesn't use stateless address autoconfiguration.
+It does take the default router and the maximum transmission unit from them, because some CNI plugins announce the IPv6 default route only in a router advertisement.
+This needs the latest base-compat guest kernel.
 The instance's own addresses and `gateway` field are IPv4 only, which leaves the document as the only source of IPv6 addresses.
-List an IPv6 [default route](#default-routes) in the document, or configure one inside the guest, if the workload needs it.
+List an IPv6 [default route](#default-routes) in the document, announce one in a router advertisement, or configure one inside the guest, if the workload needs it.
 The guest also skips duplicate address detection, so its IPv6 link-local addresses and the addresses from the document are usable directly after boot.
 
 ### Routes
