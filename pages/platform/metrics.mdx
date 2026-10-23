@@ -70,6 +70,11 @@ Each entry in the `instances` array contains the following fields:
 |-------|------|-------------|
 | `rss_bytes` | int64 | Resident set size: physical memory in use, in bytes. |
 | `cpu_time_ms` | int64 | Total CPU time consumed since last start, in milliseconds. |
+| `mem_mb_ms` | int64 | Memory-time consumed since last start, in mebibyte-milliseconds. |
+
+Memory-time is the memory of the instance integrated over the time the instance runs.
+It follows the current size of an instance with [vertical scaling](/features/vertical-scaling), and a stopped instance or one in standby consumes none.
+Full VMs report their CPU time and memory use too.
 
 ### Network throughput
 
@@ -142,6 +147,7 @@ curl -X GET \
         "net_time_us": 102963,
         "rss_bytes": 0,
         "cpu_time_ms": 150,
+        "mem_mb_ms": 2089216,
         "rx_bytes": 2012,
         "rx_packets": 23,
         "tx_bytes": 1196,
@@ -278,6 +284,10 @@ instance_rss_bytes{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea"} 0
 # HELP instance_cpu_time_s Consumed CPU time in seconds
 # TYPE instance_cpu_time_s counter
 instance_cpu_time_s{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea"} 0.150000
+
+# HELP instance_mem_mb_s Consumed memory-time in mebibyte-seconds
+# TYPE instance_mem_mb_s counter
+instance_mem_mb_s{instance_uuid="f31c1fa8-6188-4ebe-b6e0-b2de063ad7ea"} 2089.216000
 
 # HELP instance_rx_bytes Amount of bytes received over network
 # TYPE instance_rx_bytes counter
