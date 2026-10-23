@@ -29,6 +29,10 @@ curl --proto '=https' --tlsv1.2 -fsSL https://unikraft.com/cli/install.sh | sh
 brew install unikraft/cli/unikraft
 ```
 
+```powershell title="Windows (PowerShell)"
+irm https://unikraft.com/cli/install.ps1 | iex
+```
+
 ```bash title="Debian/Ubuntu"
 # Update and install dependencies
 sudo apt update
@@ -69,6 +73,16 @@ yum install unikraft-cli
 ```
 
 </CodeTabs>
+
+On Windows, the installer puts `unikraft.exe` into `%LOCALAPPDATA%\Programs\Unikraft\bin` and adds that directory to your user `PATH`.
+Set `UNIKRAFT_CLI_INSTALL_BIN_DIR` to install somewhere else, or download the Windows zip from the [releases page](https://github.com/unikraft-cloud/cli/releases).
+`unikraft upgrade` keeps the Windows build current like any other.
+
+A few limitations apply on Windows:
+
+- `unikraft build` needs a BuildKit that builds Linux images, either Docker Desktop's or one you name with `BUILDKIT_HOST`.
+  See [debugging the build and push steps](/platform/troubleshooting#debugging-the-build-and-push-steps).
+- There's no Scoop or winget package yet.
 
 See [alternative installation instructions](https://github.com/unikraft-cloud/cli/?tab=readme-ov-file#installation) for other platforms.
 

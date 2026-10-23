@@ -58,6 +58,8 @@ A few limitations apply:
   It has no job control either, so `ctrl-z`, `bg`, and `fg` don't work.
 - `copy`, `read`, and `write` carry one regular file at a time, and don't carry file permissions across.
 - `exec` forwards standard input only when you redirect it from a file or a pipe.
+- The shell isn't available on Windows yet.
+  Run it from [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) instead.
 
 ## How it works
 
