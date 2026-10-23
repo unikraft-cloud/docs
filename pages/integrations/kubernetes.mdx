@@ -362,6 +362,54 @@ A few details differ from a regular kubelet:
 * An instance created before you enabled exec has no plugin.
   Recreate its Pod to add one.
 
+### Egress filtering with a network shield
+
+A [network shield](/features/network-shield) is an egress firewall for sandboxes.
+It starts closed and only lets out what a policy allows, by host, network, port, or protocol.
+It can also intercept TLS, rate-limit requests, and inject secrets into outgoing headers.
+Kraftlet gives a Pod its own shield from a PodTemplate in the same namespace, which needs chart version 0.11.0 or later:
+
+```bash
+helm upgrade kraftlet \
+  --namespace kraftlet \
+  --reuse-values \
+  oci://ghcr.io/unikraft-cloud/helm-charts/kraftlet
+```
+
+The PodTemplate describes the shield: one container that runs the shield image, with the `netshield` plugin attached through its plugins ConfigMap.
+The `CA_CERT` and `CA_KEY` environment variables hold the certificate authority it signs intercepted connections with.
+It can't declare ports, init containers, or network and CNI annotations.
+A Pod then points at it:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sandbox
+  annotations:
+    cloud.unikraft.v1.instances/relay-template: netshield
+spec:
+  containers:
+    - name: app
+      image: my-app:latest
+```
+
+Kraftlet creates the shield instance from the template, routes every instance of the Pod through it, and deletes it along with the Pod.
+It publishes the address of each plugin on the shield as `cloud.unikraft.v1.instances/relay.plugins.<plugin>.url` on the Pod, which is where you send the policy.
+
+To share one shield between Pods, run the shield as a Pod of its own with `cloud.unikraft.v1.instances/network-interface-name` set to a name.
+Then relay the others through it with `cloud.unikraft.v1.instances/relay` set to that name.
+`cloud.unikraft.v1.instances/relay-dns` chooses whether DNS requests go through the shield as well.
+
+Note the following:
+
+- A relayed Pod and its shield have to be on the same node, in the same namespace.
+- Every sandbox behind a shield has to trust its certificate authority, or intercepted connections fail.
+- A Pod whose shield isn't ready yet stays `Pending` with the reason `RelayUnavailable`, and fails after the `kraftlet.relayWaitTimeout` of 5 minutes.
+  A shield Pod stays `Terminating` until no Pod relays through it.
+- A shield whose policy fails to apply stays closed, so replace it.
+- Inbound policies aren't supported, and a relayed Pod can't use CNI.
+
 ## Kraftlet internals
 
 This section describes how Kraftlet translates Kubernetes objects into Unikraft Cloud resources.
@@ -621,7 +669,7 @@ When you delete a Kubernetes object, Kraftlet deletes the corresponding Unikraft
 
 | Kubernetes object deleted | Unikraft Cloud resources deleted |
 |---|---|
-| Pod or Deployment replica | Instances for its containers and init containers, the service once no instance uses it, the volumes for its `emptyDir` and `hostPath` mounts, and any certificate the service held |
+| Pod or Deployment replica | Instances for its containers and init containers, the service once no instance uses it, the volumes for its `emptyDir` and `hostPath` mounts, any certificate the service held, and its network shield |
 | PersistentVolumeClaim with the `ukc-volume` class | The volume behind the claim |
 
 Kraftlet also cleans up a Pod that finishes on its own.
@@ -672,6 +720,11 @@ Kraftlet supports the following Unikraft Cloud platform features on Kraftlet-man
 
   Instance metadata that also reaches the guest.
   Kraftlet writes the [CNI result](/features/annotations#guest-network-configuration-with-cni) that a guest configures its own interfaces from.
+
+* [**Network shield**](/features/network-shield)
+
+  A Pod gets its own egress firewall from a PodTemplate, or relays its traffic through the interface of another Pod.
+  See [egress filtering with a network shield](#egress-filtering-with-a-network-shield).
 
 ## Custom networking with CNI
 
@@ -732,6 +785,10 @@ Kraftlet reads the following annotations from Pod and Service objects to configu
 | `cloud.unikraft.v1.instances/enable-exec` | boolean | `false` | Adds the sandbox plugin so [`kubectl exec`](#running-commands-with-kubectl-exec) reaches the instance. Needs exec turned on in Kraftlet. |
 | `cloud.unikraft.v1.instances/plugins` | string | — | ConfigMap holding the plugin list, written as `<configmap>` or `<configmap>/<key>`. |
 | `cloud.unikraft.v1.instances/plugins.<container>` | string | — | Same as above, for a single container of a multi-container Pod. |
+| `cloud.unikraft.v1.instances/relay-template` | string | — | PodTemplate in the Pod's namespace that Kraftlet creates a [network shield](#egress-filtering-with-a-network-shield) from, and relays the Pod through. |
+| `cloud.unikraft.v1.instances/network-interface-name` | string | — | Names the network interface of the instance, so that other Pods can relay through it. |
+| `cloud.unikraft.v1.instances/relay` | string | — | Relays every instance of the Pod through the named interface of another Pod on the same node. |
+| `cloud.unikraft.v1.instances/relay-dns` | boolean | platform default | Whether DNS requests go through the relay as well. |
 | `cloud.unikraft.v1.instances/scale_to_zero.policy` | `on` \| `off` \| `idle` | `on` | Enables or disables scale-to-zero for instances that back a service or carry plugins. |
 | `cloud.unikraft.v1.instances/scale_to_zero.stateful` | boolean | `false` | When `true`, Kraftlet retains the instance state when scaling to zero. |
 | `cloud.unikraft.v1.instances/scale_to_zero.cooldown_time_ms` | integer | `1000` | Idle time in milliseconds before Kraftlet suspends the instance. |
@@ -769,6 +826,7 @@ Kraftlet writes a few annotations back onto the Pod as it reports status:
 | Annotation | Description |
 |---|---|
 | `cloud.unikraft.v1.instances/plugins.<plugin>.url` | Address of a running plugin, prefixed with the container name for multi-container Pods. |
+| `cloud.unikraft.v1.instances/relay.plugins.<plugin>.url` | Address of a plugin running on the network shield of the Pod. |
 | `cloud.unikraft.v1.instances/fqdns` | JSON object mapping each container to the private and service FQDN of its instance. |
 
 The FQDN annotation stays off until you install the chart with `--set kraftlet.enableInstanceFqdnAnnotations=true`.
@@ -793,6 +851,7 @@ The values below cover the settings most deployments touch.
 | `kraftlet.enableInstanceFqdnAnnotations` | `false` | Annotate Pods with the FQDNs of their instances. |
 | `kraftlet.enableFailedPodReclaim` | `true` | Delete a Pod that fails because the live memory quota is full, so its controller replaces it. |
 | `kraftlet.podStatusUpdateInterval` | `15s` | How often Kraftlet refreshes Pod status from the platform, alongside the event stream. |
+| `kraftlet.relayWaitTimeout` | `5m` | How long a Pod waits for the interface it relays through before it fails. `0` waits forever. |
 | `kraftlet.podSyncWorkers` | `1` | Number of Pod reconcile workers. |
 | `kraftlet.logLevel` and `kraftlet.logType` | `info` and `json` | Log verbosity and format. |
 | `kraftlet.port` | `10250` | Port for the kubelet API that serves logs and Pod listings. |
