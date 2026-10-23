@@ -163,9 +163,14 @@ Give every address a MAC address to land on:
 - The document needs a `cniVersion` of `0.3.1`, `0.4.0`, `1.0.0`, or `1.1.0`, and has to be a result rather than a network configuration.
 - Keep the document on one line, because annotation values reject control characters.
 
-Only `interfaces[].mac`, `ips[].interface`, `ips[].address`, `ips[].gateway`, and the [`routes`](#routes) array have any effect.
-`dns`, `mtu`, and `sandbox` do nothing, so you can pass a plugin's full result through untouched.
-Set the resolver with the instance's own `nameserver` field.
+Only `interfaces[].mac`, `ips[].interface`, `ips[].address`, `ips[].gateway`, the [`routes`](#routes) array, and the `dns` object have any effect.
+`mtu` and `sandbox` do nothing, so you can pass a plugin's full result through untouched.
+The guest writes the `dns` object to its `/etc/resolv.conf` at boot, and again when the instance resumes from a snapshot.
+It takes up to three `nameservers`, six `search` domains, and eight `options`, and ignores further entries.
+When the object has both `domain` and `search`, `search` applies.
+A `dns` object without `nameservers` keeps the instance's own `nameserver` field, and so does a document without a `dns` object.
+An invalid `dns` object stops the instance at boot.
+Applying `dns` requires the latest base-compat guest kernel.
 
 The guest doesn't use stateless address autoconfiguration (SLAAC), so it never takes IPv6 addresses or routes from router advertisements.
 The instance's own addresses and `gateway` field are IPv4 only, which leaves the document as the only source of IPv6 addresses.
