@@ -115,6 +115,10 @@ The controller assigns each plugin's socket a port from a configurable range.
 It walks the range from the start and gives each plugin the next free port, skipping any port that the guest already uses.
 Operators set the range with the node-level `--vmm-plugin-port-start` (default `20000`) and `--vmm-plugin-port-end` (default `29999`) flags.
 
+Users with the `net_manager` permission see the port of each plugin as `api_port` in the instance status.
+With it, a network manager can reach the plugin directly on the address of the instance, without going through the platform.
+That path skips the platform's [authorization](#authorization), so keep it to networks you trust.
+
 ## Adding plugins when you create an instance
 
 Pass `--plugin` to [`unikraft instance create`](/cli/unikraft/instances/create) or [`unikraft instance run`](/cli/unikraft/instances/run), once for each plugin:
