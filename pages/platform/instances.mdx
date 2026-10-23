@@ -611,6 +611,42 @@ You can also have the platform create a template implicitly as part of an instan
 See [On-demand templates](/features/on-demand-templates).
 :::
 
+### Updating a template
+
+You can move a template to new images without recreating it.
+A `PATCH /instances/templates` request changes the image of a template, and the images of its [ROMs](/features/roms) and [plugins](/features/plugins):
+
+```bash
+unikraft api /v1/instances/templates -X PATCH --metro fra \
+  '[
+    { "name": "web-base", "prop": "image", "op": "set", "value": "<my-org>/web:v2" }
+  ]'
+```
+
+The platform boots a new revision of the template with the new images, and turns it into a template the same way as the first revision.
+Once the new revision is ready, it takes over the UUID and the name of the template.
+If the new revision fails, the template doesn't change, and its status reports the failed update in `updates`.
+
+The instances of the template then follow the update:
+
+- An instance created from the template uses the new revision at its next start, unless it has a snapshot of its own.
+  This includes instances that [scale to zero](/features/scale-to-zero) in stateless mode.
+- An instance with a snapshot of its own, for example a suspended one, keeps its revision as long as it has that snapshot.
+- Templates created from the updated template follow it, and [autoscale](/features/autoscale) uses the new revision for new instances.
+- An instance whose image, ROMs, or plugins changed after its creation keeps its revision.
+
+The status of an instance created from a template names its source in `clone_source`.
+
+Note the following:
+
+- The platform has to be able to create the snapshot of the template again.
+  That works for templates created with `POST /instances`, and for templates converted from an instance that never started.
+  You can't update a template converted from a running instance.
+- You can't update a template with volumes, or a template without exactly one network interface.
+- The ROMs and plugins of an update must keep their names, paths, and authorization.
+  Only their images and the plugin configuration change.
+- A template created from another template changes its image only together with its parent.
+
 ### Nested templates
 
 You can clone a template from another template, creating a hierarchy.
