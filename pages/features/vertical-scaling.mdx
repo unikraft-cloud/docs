@@ -85,6 +85,7 @@ The thresholds, intervals, and cooldowns for both memory and vCPU scaling are co
 
 Added memory and vCPUs count against your account's live limits, `hard.live_memory_mb` and `hard.live_vcpus` in your [quotas](/platform/quotas).
 When that budget runs out, the instance doesn't grow further.
+Once the instance reaches its maximum memory or the budget runs out, the guest's out-of-memory handling takes over, as on an instance of fixed size.
 The range itself must fit the per-instance limits in your quotas: `limits.min_memory_mb` to `limits.max_memory_mb` for memory, and `limits.min_vcpus` to `limits.max_vcpus` for vCPUs.
 
 ## Inspecting a scaling instance
@@ -99,9 +100,11 @@ unikraft instance get my-instance
 ## Requirements and limitations
 
 - Only the default `micro` [instance type](/platform/instances#instance-types) supports vertical scaling, so a request that sets a range for a full VM fails.
-- Vertical scaling is available on `x86_64` only.
+- Memory scaling works on `x86_64` and `arm64`, and vCPU scaling on `x86_64` only.
 - The guest kernel must support vertical scaling.
-  If the kernel in your image lacks that support, the instance runs at its initial size and the platform can't scale it.
+  The default guest kernel configuration and the platform's guest kernel support it.
+  If the kernel in your image lacks that support for a resource that has a range, the instance fails to start with an error such as `the image does not support vertical scaling of memory`.
+- On `x86_64`, images built with the default kernel configuration boot with the Advanced Configuration and Power Interface (ACPI) enabled, which vCPU scaling needs.
 - You can't change the range after you create the instance.
 - An instance created from an instance template that has a snapshot can't set its own range, because it inherits the range of its template.
 - Instance templates and [autoscale](/features/autoscale) templates accept the same fields and pass the range on to their clones, so for [on-demand templates](/features/on-demand-templates) you set the range inside `create_args`.
