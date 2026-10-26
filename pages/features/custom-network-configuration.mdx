@@ -139,7 +139,8 @@ Your side provides the TAP device and decides the addressing on it, and the plat
 A CNI plugin can also supply the link's addressing and routes without requiring your app or image to configure them.
 Write the plugin's result into the instance's [`unikraft.com/cni` annotation](/features/annotations#guest-network-configuration-with-cni), and the guest matches the addresses in it to this interface by MAC address.
 It then configures those addresses and the result's [routes](/features/annotations#routes) itself.
-The guest doesn't use stateless address autoconfiguration (SLAAC), so IPv6 addresses and routes on the link have to come from that document or from inside the guest.
+The guest doesn't use stateless address autoconfiguration, so IPv6 addresses on the link have to come from that document or from inside the guest.
+A router advertisement on the link can still set the IPv6 default router and the maximum transmission unit.
 
 Such an interface differs from an addressed one in three ways:
 
@@ -206,7 +207,6 @@ The default mode, `isolates`, keeps the behavior that the rest of this page desc
 
 | Error message | Cause |
 |---------------|-------|
-| `Insufficient license. Please make sure your license is valid and includes custom network configurations` | Your account's license doesn't include custom network configuration. |
 | `Network interface IP and MAC address require a TAP device` | You set `ip` or `mac` without a `tap_name`, so either add the TAP device or drop the address. |
 | `Network interface IP address cannot be from the platform's address pool` | The `ip` overlaps the platform's managed address pool. Use an address outside it. |
 | `Network interface TAP device cannot be from the platform's device pool` | The `tap_name` refers to a platform-managed TAP device. Use one of your own. |
@@ -221,12 +221,12 @@ The default mode, `isolates`, keeps the behavior that the rest of this page desc
 ## Limitations
 
 - An instance can have at most **four** network interfaces.
-- The feature requires the `net_manager` permission and a license that includes it (see the note at the top of this page).
+- The feature requires the `net_manager` permission (see the note at the top of this page).
 - Creating a [template](/platform/instances#instance-templates) from an instance **drops** its network configuration, since binding a template to a specific TAP device or IP defeats the purpose of cloning many instances from it.
 - You currently **can't** [branch](/features/branching) or [checkpoint](/features/checkpoints) an instance with more than one interface.
 - The [relay](/features/network-shield) feature works between pool-allocated interfaces only, on both ends.
 - The create call sets the configuration once; **no** PATCH support exists yet.
-- [Managed network mode](#managed-network-mode) is only available on BYOC and on-prem installations, and requires the same permission and license as the rest of this feature.
+- [Managed network mode](#managed-network-mode) is only available on BYOC and on-prem installations, and requires the same permission as the rest of this feature.
 - On a node in managed mode, the TAP device of every interface has to exist before the instance starts.
 - On a node in managed mode, [autoscale](/features/autoscale), [relay](/features/network-shield) interfaces, internal [service groups](/platform/services), and the internal DNS for instance names aren't available.
 
