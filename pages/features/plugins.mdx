@@ -49,6 +49,21 @@ unikraft instance read my-instance /var/log/app.log
 
 The commands use the plugin named `sandbox` by default.
 Pass `--plugin-name <name>` to use a sandbox plugin that you loaded under a different name.
+If the instance has no sandbox plugin, the commands offer to attach one and restart the instance, and `--plugin-image` picks the image to attach.
+The offer only appears in an interactive terminal.
+Elsewhere, the error says how to attach the plugin.
+
+#### Shell builtins
+
+Inside `unikraft instance shell`, a line that starts with `:` runs in the CLI instead of on the instance, so you can manage the instance you're in without leaving it:
+
+```bash
+$ :mount data /var/lib/app --readonly
+$ :restart
+```
+
+The builtins are `:get`, `:volumes`, `:edit`, `:mount`, `:unmount`, `:start`, `:stop`, `:restart`, and `:suspend`, and `:help` lists them.
+The same builtins work in the instance terminal of the dashboard.
 
 A few limitations apply:
 
@@ -58,6 +73,8 @@ A few limitations apply:
   It has no job control either, so `ctrl-z`, `bg`, and `fg` don't work.
 - `copy`, `read`, and `write` carry one regular file at a time, and don't carry file permissions across.
 - `exec` forwards standard input only when you redirect it from a file or a pipe.
+- The shell isn't available on Windows yet.
+  Run it from [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) instead.
 
 ## How it works
 

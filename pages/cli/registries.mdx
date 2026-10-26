@@ -58,6 +58,24 @@ Tags are arbitrary strings.
 The platform defaults to `latest` when you don't specify a tag.
 You can also refer to images by digest to pin to an exact version.
 
+### Images served over HTTP
+
+The platform can also run an image from an [OCI image layout](https://github.com/opencontainers/image-spec/blob/main/image-layout.md) that a plain HTTP or HTTPS server serves as a tarball, without a registry.
+Such a reference works anywhere the CLI takes an image:
+
+```text title=""
+http+oci://<host>/<repository>/<tag>
+https+oci://<host>/<repository>/<tag>
+https+oci://<host>/<repository>/@<digest>
+```
+
+```bash
+unikraft run --metro fra --image https+oci://cdn.example.com/my-org/my-app/latest
+```
+
+The server has to answer with the layout tarball and a `Content-Type` of `application/vnd.oci.layout.v1+tar`.
+`unikraft image inspect` and `unikraft image copy` don't support these references yet.
+
 ## Authentication
 
 Registry authentication uses the same API token as the rest of the platform.

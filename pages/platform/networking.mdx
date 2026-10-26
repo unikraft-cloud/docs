@@ -47,6 +47,13 @@ unikraft instance get <instance-name>
 ...
 ```
 
+The private FQDN isn't in the default output of `instance get` or `instance list`.
+Show it as `private-fqdn` with `-o long`, or select it with `-f`:
+
+```bash
+unikraft instance list -f name,private-fqdn
+```
+
 Check out this [guide](/guides/httpserver-flask-redis) for an example of how to use internal communication to connect a Flask app to a Redis instance, without exposing the latter to the internet.
 
 :::tip
