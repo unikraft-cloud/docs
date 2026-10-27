@@ -1,0 +1,200 @@
+---
+title: Live Migration
+navigation_icon: arrow-right-left
+description: |
+  Move an instance to another node without restarting it.
+---
+
+{/* vale off */}
+:::caution[**Limited Access**]
+Live migration is a new feature which is available to enterprise customers.
+If you would like to try it out, please reach out to the [Unikraft Cloud Discord](https://unikraft.com/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
+:::
+{/* vale on */}
+
+**Live migration** moves an instance from one node to another.
+A running instance keeps running while it moves, so it keeps its memory and its state.
+
+Use it to:
+
+- Empty a node before maintenance.
+- Move load from a busy node to a quieter one.
+
+## How it works
+
+A migration copies an instance from a source node to a destination node:
+
+- A running instance moves while it runs.
+  The platform copies the guest memory while the guest keeps running, pauses the guest only to send the pages that changed last, and resumes it on the destination.
+- A stopped instance, or one in `standby`, moves with its snapshot and keeps its state on the destination.
+- The volumes of the instance move with it.
+  For a running instance, the platform copies them while the instance runs, and then sends only the blocks that changed.
+
+On the destination, the instance keeps its UUID, name, configuration, and creation time.
+Its uptime, start counts, CPU time, and memory-time continue from their values on the source.
+Its [service group](/platform/services) moves with it, and so does its private FQDN.
+
+The instance gets new network interfaces on the destination.
+Their private IP addresses and MAC addresses come from that node.
+Connect to it through its [private FQDN](/platform/networking#internal-communication) rather than its private IP address, so that clients follow it.
+
+Once the migration completes, the instance exists only on the destination.
+If a migration fails, or you abort it, the instance stays on the source node and resumes there.
+
+## Requirements
+
+- Your account needs the `migration` permission on both nodes.
+  Root users have it.
+  Your operator grants it to other users, and should grant it only to trusted ones, because the destination creates the instance with the owner and configuration that the source sends.
+- The owner of the instance has to exist on the destination node, and the instance's name has to be free there.
+- Both nodes need a platform release with live migration, set up for migration by your operator.
+
+## Migrating an instance
+
+A migration takes two requests: one to the destination node, which issues a token, and one to the source node, which sends the instance.
+
+There's no dedicated `unikraft` CLI subcommand yet, so the examples use the [`unikraft api`](/cli/unikraft/api) command.
+In them, `node-a` and `node-b` are metros of a custom [profile](/tutorials/kraftkit-to-unikraft#profile-management) that point at the API endpoints of the source and destination nodes.
+
+### Issuing a token on the destination
+
+Ask the destination node for a token for the instance:
+
+<CodeTabs syncKey="cli">
+```bash title="unikraft"
+unikraft api /v1/instances/migrate/accept -X PUT --metro node-b \
+  '{"uuid": "<instance-uuid>"}'
+```
+</CodeTabs>
+
+```json title="Response"
+{
+  "status": "success",
+  "data": {
+    "instances": [
+      {
+        "status": "success",
+        "uuid": "<instance-uuid>",
+        "url": "ukpmig://api.node-b.example.com:45235",
+        "token": "<token>",
+        "ttl_s": 300
+      }
+    ]
+  }
+}
+```
+
+The response holds the migration address of the destination in `url`, and the token.
+A token admits one migration, and only of the instance whose UUID you passed.
+Send the request without a body to get a token that admits any one instance.
+
+A token stays valid for `ttl_s` seconds until its first use.
+Set `ttl_s` in the request to choose a lifetime of up to `86400` seconds.
+Without it, the node's default applies, which is `300` seconds unless your operator changed it.
+Treat the token as a secret, since it lets the holder create an instance on the destination.
+
+### Sending the instance from the source
+
+Pass the `url` and the `token` to the source node:
+
+<CodeTabs syncKey="cli">
+```bash title="unikraft"
+unikraft api /v1/instances/migrate -X PUT --metro node-a \
+  '{
+    "uuid": "<instance-uuid>",
+    "destination": {
+      "url": "ukpmig://api.node-b.example.com:45235",
+      "token": "<token>"
+    }
+  }'
+```
+</CodeTabs>
+
+You can name the instance by `name` instead of `uuid`, or use `/v1/instances/<instance-uuid>/migrate`.
+To move more than one instance, send an array of such objects, each with a token of its own.
+
+The request returns as soon as the migration starts, with the [migration fields](#following-a-migration) of the instance.
+To wait for the migration to end instead, set `timeout_s`.
+It takes up to the API timeout of the node, which is `60` seconds by default, and `-1` waits for that maximum.
+When the timeout expires first, the request reports `Operation timed out`, but the migration goes on.
+
+## Following a migration
+
+The status of the instance on the source node shows how far the migration is:
+
+| Field | Meaning |
+|---|---|
+| `"migration_pending": "queued"` | The migration waits for a free slot, since a node sends at most four migrations at the same time. |
+| `"migration_pending": "waiting"` | The migration waits for the instance to finish starting, stopping, or suspending. |
+| `"migrating": true` | The platform is copying the instance. |
+
+Read it with `unikraft api /v1/instances/<instance-uuid> --metro node-a`.
+When the migration completes, the instance disappears from the source node, and the destination lists it.
+
+Queued migrations start in the order of their requests.
+While a migration waits, you can still start, stop, and change the instance.
+The platform checks the instance again when the migration starts, and fails it if it no longer qualifies.
+
+While the instance migrates, the platform refuses changes to it, to its service group, and to its volumes.
+It also refuses to start the instance, and to stop it without `force`.
+A forced stop aborts the migration.
+
+A restart of the platform controller doesn't cancel a migration.
+The migration picks up where it stopped.
+
+## Aborting a migration
+
+Abort a migration on the source node:
+
+<CodeTabs syncKey="cli">
+```bash title="unikraft"
+unikraft api /v1/instances/migrate/abort -X PUT --metro node-a \
+  '{"uuid": "<instance-uuid>"}'
+```
+</CodeTabs>
+
+The request returns at once, and the platform rolls the migration back in the background.
+The instance stays on the source node and resumes there.
+You can abort a migration while it's queued or waiting, and in every phase until the source commits the instance to the destination.
+
+## Error handling
+
+| Error message | Cause |
+|---------------|-------|
+| `Failed to migrate instances: insufficient permissions` | Your account lacks the `migration` permission on the source, and the accept and abort requests report the same reason. |
+| `Failed to accept migration: this node accepts no migrations` | The destination node isn't set up to receive migrations. |
+| `Failed to accept migration: too many migrations accepted` | The destination holds too many unused tokens, so use them or wait for them to expire. |
+| `Failed to start migration: ENOTSUP` | The instance, or one of its volumes, can't migrate yet (see [Limitations](#limitations)). |
+| `Failed to start migration: EBUSY` | The instance is busy with a snapshot, a scheduled restart, or another migration, so retry later. |
+| `Failed to start migration: service group changed, retry` | The service group of the instance changed during the request, so send it again. |
+| `Failed to migrate: migration aborted` | Someone aborted the migration while the request waited for it. |
+| `Failed to update instance: the instance is migrating` | You changed an instance during its migration, so wait until the migration ends. |
+| `Failed to abort migration: the instance is not migrating out` | The instance has no migration to abort on this node. |
+| `Failed to abort migration: the migration can no longer be aborted` | The source already committed the instance to the destination. |
+
+## Limitations
+
+The platform doesn't migrate the following instances yet:
+
+- Full VMs.
+- Instances with [vertical scaling](/features/vertical-scaling).
+- Instances of [kernel-less images](/platform/images#platform-kernel).
+- Instances with [inline ROMs](/features/roms#inline-roms).
+- [Templates](/platform/instances#instance-templates), and instances cloned from a template.
+- [Autoscale](/features/autoscale) instances, and instances in a service group with autoscale.
+- Instances with [autokill](/features/autokill), and instances that the platform deletes when they stop.
+- Instances with dependencies, and instances that running instances depend on.
+- Instances with changes to volumes, ROMs, or dependencies that wait for the next restart.
+- Instances in a service group with custom certificates, or in a [persistent service group](/platform/services#persistent-service-groups).
+- Instances with a [custom TAP device](/features/custom-network-configuration), a [relay](/features/network-shield), or `autoconfig` turned off on an interface.
+
+Every volume of the instance has to qualify, or the instance doesn't migrate.
+A volume qualifies when it has the same owner as the instance, no other instance has it attached, and it's neither a [managed volume](/features/managed-volumes) nor a [`virtiofs` volume](/platform/volumes#filesystems).
+
+## Learn more
+
+* [Instances](/platform/instances): how instances work, their states, and their configuration.
+* [Networking](/platform/networking): reach an instance through its private FQDN.
+* [Services](/platform/services): how service groups route traffic to instances.
+* [Volumes](/platform/volumes): persistent storage that moves with an instance.
+* The [CLI reference](/docs/cli/unikraft).
