@@ -51,7 +51,12 @@ This means each shield:
 - Is fully flexible and extensible in the capabilities it provides.
   The image it uses determines its behavior.
 
-A first official network shield image will be available soon.
+The official shield runs the `netshield` plugin, which serves an API for its policies.
+A policy allows traffic by host (wildcards included), network, port, or protocol.
+It can also intercept TLS, rate-limit requests and connections, and inject secrets into outgoing headers, so a sandbox sends `{{GITHUB_TOKEN}}` and never sees the real value.
+The shield needs a certificate authority in `CA_CERT` and `CA_KEY` for TLS interception, which every sandbox behind it has to trust.
+It starts closed, and a shield whose policy fails to apply stays closed, so replace it.
+On Kubernetes, Kraftlet [runs a shield as a sidecar container](/integrations/kubernetes#egress-filtering-with-a-network-shield) of a Pod.
 
 ## Relay
 
@@ -92,7 +97,7 @@ unikraft api /v1/instances --metro fra \
 
 </CodeTabs>
 
-Relay builds on [custom network configuration](/features/custom-network-configuration): the `relay` object is a field of a `network_interfaces` entry, so the same permission, license, and limitations apply.
+Relay builds on [custom network configuration](/features/custom-network-configuration): the `relay` object is a field of a `network_interfaces` entry, so the same permission and limitations apply.
 
 The `relay` object accepts the following fields:
 
@@ -158,14 +163,13 @@ unikraft api /v1/instances/<uuid> --metro fra
 
 | Error message | Cause |
 |---------------|-------|
-| `Insufficient license. Please make sure your license is valid and includes custom network configurations` | Your account's license doesn't include custom network configuration, which relay is part of. |
 | `Unknown member 'network_interfaces'` | Your account lacks the `net_manager` permission required for this feature. |
 | `Invalid relay '<interface>'. Please make sure the relay exists and does not create a circular dependency` | The interface you named doesn't exist, already relays through another interface, or is itself a custom interface. |
 | `Network interface without an IP address cannot use a relay` | You configured a `relay` on an interface without an `ip`, and the relay datapath keys on the client interface's address. |
 
 ## Limitations
 
-- The feature requires the `net_manager` permission and a license that includes it (see the note at the top of this page).
+- The feature requires the `net_manager` permission (see the note at the top of this page).
 - Creating a [template](/platform/instances#instance-templates) from an instance **drops** its network configuration, since binding a template to a specific TAP device or IP defeats the purpose of cloning many instances from it.
 - The create call sets the configuration once, and **no** PATCH support exists yet.
 - Both ends of a relay have to be interfaces that Unikraft Cloud allocates, meaning entries where you set no `ip`, `mac`, or `tap_name` of your own.
@@ -178,4 +182,5 @@ unikraft api /v1/instances/<uuid> --metro fra
 * [Custom network configuration](/features/custom-network-configuration): the interface, gateway, and nameserver settings that relay builds on.
 * [Instances](/platform/instances): how instances work, from their lifecycle to their configuration.
 * [Sandboxes](/use-cases/sandboxes): run untrusted code in a hardware-isolated microVM.
+* [Kubernetes](/integrations/kubernetes#egress-filtering-with-a-network-shield): a shield per Pod on a Kraftlet node.
 * Unikraft Cloud's [REST API reference](/api/platform/v1), in particular the section on [instances](/api/platform/v1/instances).

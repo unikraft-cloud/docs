@@ -91,6 +91,39 @@ Be aware that this choice may increase image size, memory use, and boot time.
 :::
 
 
+### Root filesystem from an existing image
+
+If the image you want to run already exists, take its root filesystem straight from the registry instead of rebuilding it from a `Dockerfile`.
+Set the `rootfs` source type to `oci`:
+
+```yaml title="Kraftfile"
+spec: v0.7
+
+runtime: base-compat:latest
+
+targets:
+  - kraftcloud/x86_64
+
+rootfs:
+  source:
+    type: oci
+    path: docker.io/library/nginx:latest
+  format: erofs
+```
+
+The build flattens the layers of a container image into the requested format.
+For a Unikraft image, it reuses the existing root filesystem unchanged.
+The image's own command, environment, and labels carry over, and anything you set in the `Kraftfile` applies on top.
+
+Note the following:
+
+- Set `type: oci` explicitly.
+  The CLI never guesses it from the path.
+- The path has to be a registry reference, and the image has to provide the platform you build for.
+- A container image still needs a BuildKit builder to flatten its layers.
+
+See the [Kraftfile reference](/kraftfile/v0.7) for the other source types.
+
 ## Platform kernel
 
 {/* vale off */}
@@ -165,13 +198,35 @@ How the build resolves architectures depends on what the `Kraftfile` declares:
 
 | `Kraftfile` | Architectures used |
 |-------------|--------------------|
-| `runtime` with no `targets` or `--arch` | Every architecture the runtime provides. |
+| `runtime` with no `targets` or `--arch` | `x86_64` only, even when the runtime provides more. |
 | `runtime` with `targets` or `--arch` | Only the architectures listed in both `targets` and `--arch`, which must be ones the runtime provides. |
 | [`roms`](/features/roms) with no `runtime` | Only the architectures listed in both `targets` and `--arch`, and the build fails when you supply neither. |
 
 :::caution
 Multi-platform builds need a correctly configured BuildKit builder on the host.
 Learn more [here](https://docs.docker.com/build/building/multi-platform/)
+:::
+
+### Local outputs
+
+`--output` names an image reference unless it looks like a path.
+A local path starts with `./`, `../`, or `/`, and the build saves the image there as an OCI archive or an OCI layout instead of pushing it:
+
+```bash
+unikraft build . --arch x86_64 -o ./app.tar
+```
+
+```text title=""
+│ saved image output=oci-archive://./app.tar
+```
+
+The build prints where the image went.
+Add the `oci-archive://` or `oci-layout://` prefix to make the choice explicit.
+The same rule applies to `image get`, `image delete`, and `image copy`.
+
+:::caution
+An output such as `app.tar` or `dist/` is an image reference, so the build pushes it to the registry instead of writing it locally.
+Add `./` to keep writing to a local path.
 :::
 
 ## Example workflows
