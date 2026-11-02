@@ -129,6 +129,7 @@ const config: ZudokuConfig = {
             "/features/branching",
             "/features/managed-volumes",
             "/features/checkpoints",
+            "/features/live-migration",
             "/features/plugins",
             "/features/custom-network-configuration",
             "/features/network-shield",
