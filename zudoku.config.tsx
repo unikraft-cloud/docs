@@ -145,6 +145,7 @@ const config: ZudokuConfig = {
           collapsed: false,
           items: [
             "/platform/metros",
+            "/platform/hosting-options",
             "/platform/instances",
             "/platform/services",
             "/platform/networking",

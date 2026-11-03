@@ -73,8 +73,21 @@ const Hint = ({ children, tone }: { children: ReactNode; tone: "amber" | "blue" 
   );
 };
 
-const MarkChip = ({ label, mark, hint }: { label: string; mark: Mark; hint?: ReactNode }) => {
+const HOSTING_PAGE = "/platform/hosting-options";
+
+const MarkChip = ({
+  label,
+  mark,
+  hint,
+  href,
+}: {
+  label: string;
+  mark: Mark;
+  hint?: ReactNode;
+  href?: string;
+}) => {
   const off = mark === false;
+  const text = <span className={off ? "line-through decoration-muted-foreground/50" : ""}>{label}</span>;
   return (
     <span
       className={
@@ -89,7 +102,13 @@ const MarkChip = ({ label, mark, hint }: { label: string; mark: Mark; hint?: Rea
       ) : (
         <CircleCheckIcon size={16} className="text-emerald-500" aria-label="Available" />
       )}
-      <span className={off ? "line-through decoration-muted-foreground/50" : ""}>{label}</span>
+      {href ? (
+        <Link to={href} className="hover:underline underline-offset-2">
+          {text}
+        </Link>
+      ) : (
+        text
+      )}
       {hint}
       {mark === "differs" && <Hint tone="amber">Differs</Hint>}
     </span>
@@ -101,18 +120,26 @@ const MarkRow = ({
   marks,
   labels,
   hints = {},
+  hrefs = {},
   trailing,
 }: {
   label: string;
   marks: Record<string, Mark | undefined>;
   labels: Record<string, string>;
   hints?: Record<string, ReactNode>;
+  hrefs?: Record<string, string>;
   trailing?: ReactNode;
 }) => (
   <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
     <RowLabel>{label}</RowLabel>
     {Object.keys(labels).map((key) => (
-      <MarkChip key={key} label={labels[key]} mark={marks[key] ?? true} hint={hints[key]} />
+      <MarkChip
+        key={key}
+        label={labels[key]}
+        mark={marks[key] ?? true}
+        hint={hints[key]}
+        href={hrefs[key]}
+      />
     ))}
     {trailing}
   </div>
@@ -134,6 +161,11 @@ export const Availability = ({ spec }: { spec: string | AvailabilitySpec }) => {
             label="Available on"
             marks={data.hosting}
             labels={HOSTING_LABELS}
+            hrefs={{
+              cloud: `${HOSTING_PAGE}#unikraft-cloud`,
+              byoc: `${HOSTING_PAGE}#byoc`,
+              "on-prem": `${HOSTING_PAGE}#on-prem`,
+            }}
             hints={{
               cloud:
                 data.plan === "enterprise" && data.hosting.cloud !== false ? (
