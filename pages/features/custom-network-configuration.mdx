@@ -1,14 +1,21 @@
 ---
 title: Custom Network Configuration
 navigation_icon: network
+availability:
+  hosting: { cloud: soon, byoc: true, on-prem: true }
+  plan: enterprise
+  status: ga
+  interfaces: { api: true, cli: soon, sdk: false }
+  notes:
+    - target: cloud
+      text: Custom network configuration is coming soon to Unikraft Cloud. Managed network mode is only available on BYOC and on-prem installations.
+      link: "#managed-network-mode"
+      linkText: Managed network mode
+    - target: cli
+      text: Dedicated CLI subcommands are coming soon. Until then, use the API, for example with the unikraft api command.
+      link: /cli/unikraft/api
+      linkText: unikraft api
 ---
-
-{/* vale off */}
-:::caution[**Limited Access**]
-Custom network configuration is a new feature which is available to enterprise customers, and is coming soon to the hosted platform.
-If you would like to try it out now, please reach out to the [Unikraft Cloud Discord](https://unikraft.com/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
-:::
-{/* vale on */}
 
 By default, Unikraft Cloud gives every instance a single network interface, allocated from the platform's address and TAP device pool.
 Custom network configuration lets you take control of this setup.
@@ -16,13 +23,6 @@ It allows you to attach up to four interfaces, supply your own IP addresses, MAC
 You can also override the gateway and nameserver that the guest uses.
 
 This is the building block for private networking between your instances, and for the [network shield and relay](/features/network-shield).
-
-{/* vale off */}
-:::caution
-Dedicated `unikraft` CLI subcommands for custom network configuration are coming soon.
-In the meantime, configure custom network configuration through the [API](/api/platform/v1/instances#create-instance), which you can invoke with `curl` or the [`unikraft api`](/cli/unikraft/api) command.
-:::
-{/* vale on */}
 
 ## How it works
 

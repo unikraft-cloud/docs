@@ -3,16 +3,23 @@ title: Audit events
 navigation_icon: scroll-text
 description: |
   Follow instance state changes live and see who or what caused each one.
+availability:
+  hosting: { cloud: soon, byoc: true, on-prem: true }
+  plan: enterprise
+  status: ga
+  interfaces: { api: true, cli: false, sdk: false }
+  notes:
+    - target: cloud
+      text: Audit events are coming soon to Unikraft Cloud.
+      link: mailto:support@unikraft.com
+      linkText: Contact support to try them
+    - target: cli
+      text: The unikraft api command waits for the response to end, so it shows nothing for a stream. Use a client such as curl -N.
+      link: "#subscribing-to-the-stream"
+      linkText: Subscribe to the stream
 ---
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "zudoku/ui/Tabs"
-
-{/* vale off */}
-:::caution[**Limited Access**]
-Audit events are a new feature which is available to enterprise customers, and is coming soon to the hosted platform.
-If you would like to try it out now, please reach out to the [Unikraft Cloud Discord](https://unikraft.com/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
-:::
-{/* vale on */}
 
 **Audit events** tell you who or what changed an instance.
 Every `vm.state_change` and `vm.start_failed` event carries an `attribution` that names its source, such as an API request, the guest, or scale-to-zero, and the user behind an API request.

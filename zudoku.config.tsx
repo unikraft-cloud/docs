@@ -17,6 +17,7 @@ import {
   ValueCard,
   ValueCards,
 } from "./src/DiagramComponents";
+import { Availability } from "./src/Availability";
 import { topNavMenus } from "./src/TopNavMenus";
 import { UseCaseCast, UseCaseVideo } from "./src/UseCaseMedia";
 
@@ -60,6 +61,7 @@ const config: ZudokuConfig = {
   },
   mdx: {
     components: {
+      Availability,
       CheckpointTimeline,
       FeatureRow,
       FeatureTable,
