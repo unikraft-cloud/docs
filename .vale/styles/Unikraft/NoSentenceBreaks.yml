@@ -1,7 +1,26 @@
-extends: existence
+# Vale joins the lines of a paragraph with spaces before it runs a token
+# rule, so a regex cannot tell a line break from a space. This script
+# walks the raw lines instead and skips fenced code blocks.
+extends: script
 message: "Only use one sentence per line."
 level: error
-scope: paragraph
-nonword: true
-tokens:
-  - '[.!?](?: |$)[A-Z]'
+scope: raw
+script: |
+  text := import("text")
+  matches := []
+  offset := 0
+  fence := false
+  for line in text.split(scope, "\n") {
+    if text.has_prefix(text.trim_space(line), "```") {
+      fence = !fence
+    }
+    if !fence {
+      found := text.re_find(`[.!?] +[A-Z]`, line, -1)
+      if found != undefined {
+        for m in found {
+          matches = append(matches, {begin: offset + m[0].begin, end: offset + m[0].end})
+        }
+      }
+    }
+    offset += len(line) + 1
+  }
