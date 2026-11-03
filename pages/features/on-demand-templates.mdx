@@ -1,6 +1,16 @@
 ---
 title: On-Demand Templates
 navigation_icon: layers
+availability:
+  hosting: { cloud: true, byoc: true, on-prem: true }
+  plan: all
+  status: ga
+  interfaces: { api: true, cli: false, sdk: true }
+  notes:
+    - target: cli
+      text: The CLI does not support on-demand template creation yet. Call the API, for example with the unikraft api command.
+      link: /cli/unikraft/api
+      linkText: unikraft api
 ---
 
 [Instance templates](/platform/instances#instance-templates) let you pay an expensive initialization cost once, snapshot the warmed-up instance, and then stamp out new instances from that snapshot in milliseconds.
@@ -14,11 +24,6 @@ This means you issue the same instance create operation every time and template 
 
 This works for any instance-create call—not only one-off instances.
 In particular, you can create the template of an [autoscaled service](/features/autoscale) this way, so the platform prepares and manages the template autoscale clones from, without a separate template step.
-
-:::caution
-Currently, there is no unikraft CLI support for on-demand instance template creation.
-You must do this by calling the platform [API](/api/platform/v1/instances#create-instance) with `unikraft api` or curl.
-:::
 
 ## On-demand template creation
 

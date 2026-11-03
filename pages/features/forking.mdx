@@ -1,12 +1,15 @@
 ---
 title: Instance Forking
 navigation_icon: git-fork
+availability:
+  hosting: { cloud: soon, byoc: soon, on-prem: soon }
+  plan: all
+  status: preview
+  notes:
+    - text: Instance forking is a preview feature and is not on the stable release yet. The interface can change before general availability.
+      link: mailto:support@unikraft.com
+      linkText: Contact support to try it
 ---
-
-:::caution[**Limited Access**]
-Instance forking is a preview feature and isn't yet available on stable.
-The interface described here reflects the current implementation and may change before general availability.
-:::
 
 Instance forking lets a running instance create an independent copy of itself at a snapshot boundary.
 Both the original instance (the **parent**) and the copy (the **child**) resume execution from the same memory state.

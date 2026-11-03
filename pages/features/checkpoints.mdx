@@ -1,6 +1,15 @@
 ---
 title: Checkpoints
 navigation_icon: save
+availability:
+  hosting: { cloud: true, byoc: true, on-prem: true }
+  plan: enterprise
+  status: ga
+  interfaces: { api: true, cli: true, sdk: true }
+  notes:
+    - text: Checkpoints are part of enterprise plans. Contact support to enable them for your account.
+      link: mailto:support@unikraft.com
+      linkText: support@unikraft.com
 ---
 
 A **checkpoint** captures the full state of an instance—its memory and volume state—at any moment, so you can later start new instances that resume from exactly that state.

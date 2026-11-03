@@ -1,6 +1,16 @@
 ---
 title: Cron Jobs / Scheduled Wake-ups
 navigation_icon: clock
+availability:
+  hosting: { cloud: true, byoc: true, on-prem: true }
+  plan: all
+  status: ga
+  interfaces: { api: true, cli: false, sdk: false }
+  notes:
+    - target: cli
+      text: There is no CLI subcommand for schedules yet. Manage them through the API, for example with the unikraft api command.
+      link: /cli/unikraft/api
+      linkText: unikraft api
 ---
 
 Scheduled operations let you automatically start, stop, delete, checkpoint, or exec a command in instances on a calendar-based schedule.
@@ -8,10 +18,6 @@ Each scheduled operation specifies a name, a calendar expression, and an action 
 
 :::info
 When you clone an instance from a [template](/platform/instances#instance-templates), the clone inherits its scheduled operations.
-:::
-
-:::caution
-You can currently only manage schedules via the [API](/api/platform/v1/instances#create-instance) or [`unikraft api`](/cli/unikraft/api).
 :::
 
 ## Calendar expression format
