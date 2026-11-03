@@ -26,6 +26,9 @@ importers:
       regex-utilities:
         specifier: ^2.3.0
         version: 2.3.0
+      yaml:
+        specifier: ^2.9.1
+        version: 2.9.1
       zudoku:
         specifier: ^0.93.0
         version: 0.93.0(@oxc-project/types@0.139.0)(@types/json-schema@7.0.15)(@types/node@24.13.3)(@vitejs/devtools-kit@0.4.12(srvx@1.0.3)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)))(jiti@2.7.0)(lightningcss@1.33.0)(oxc-parser@0.140.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(rolldown@1.1.5)(rollup@4.63.1)(supports-color@7.2.0)(use-sync-external-store@1.6.0(react@19.2.8))
@@ -48,12 +51,6 @@ importers:
       eslint:
         specifier: ^9.14.0
         version: 9.39.5(jiti@2.7.0)(supports-color@7.2.0)
-      unist-util-visit:
-        specifier: ^5.2.0
-        version: 5.2.0
-      yaml:
-        specifier: ^2.9.1
-        version: 2.9.1
 
 packages:
 
