@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "make generate && zudoku dev --port 3131",
-    "build": "make generate && zudoku build",
+    "build": "make generate && zudoku build && node scripts/inject-availability.mjs",
     "preview": "zudoku preview",
     "lint": "eslint"
   },
