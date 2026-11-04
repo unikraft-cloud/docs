@@ -594,6 +594,7 @@ const config: ZudokuConfig = {
       icon: "tag",
       items: [
         "/releases/index",
+        "/releases/r15-isonoe",
         "/releases/r14-harpalyke",
         "/releases/r13-adrastea",
         "/releases/r12-thebe",
