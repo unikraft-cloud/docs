@@ -17,6 +17,7 @@ import {
   ValueCard,
   ValueCards,
 } from "./src/DiagramComponents";
+import { Availability } from "./src/Availability";
 import { topNavMenus } from "./src/TopNavMenus";
 import { UseCaseCast, UseCaseVideo } from "./src/UseCaseMedia";
 
@@ -60,6 +61,7 @@ const config: ZudokuConfig = {
   },
   mdx: {
     components: {
+      Availability,
       CheckpointTimeline,
       FeatureRow,
       FeatureTable,
@@ -143,6 +145,7 @@ const config: ZudokuConfig = {
           collapsed: false,
           items: [
             "/platform/metros",
+            "/platform/hosting-options",
             "/platform/instances",
             "/platform/services",
             "/platform/networking",
@@ -591,6 +594,7 @@ const config: ZudokuConfig = {
       icon: "tag",
       items: [
         "/releases/index",
+        "/releases/r15-isonoe",
         "/releases/r14-harpalyke",
         "/releases/r13-adrastea",
         "/releases/r12-thebe",

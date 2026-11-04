@@ -1,19 +1,20 @@
 ---
 title: Network Shield and Relay
 navigation_icon: shield
+availability:
+  hosting: { cloud: true, dedicated: true, byoc: true, on-prem: true }
+  plan: enterprise
+  status: ga
+  interfaces: { api: true, cli: soon, sdk: false }
+  notes:
+    - text: Network shield and relay are available to enterprise customers. Contact support to try them.
+      link: mailto:support@unikraft.com
+      linkText: support@unikraft.com
+    - target: cli
+      text: Dedicated CLI subcommands are coming soon. Until then, configure the shield and the relay through the API, for example with the unikraft api command.
+      link: /api/platform/v1/instances#create-instance
+      linkText: Create instance API
 ---
-
-{/* vale off */}
-:::caution[**Limited Access**]
-Network shield and relay is a new feature which is available to enterprise customers.
-If you would like to try it out now, please reach out to the [Unikraft Cloud Discord](https://unikraft.com/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
-:::
-
-:::caution
-Dedicated `unikraft` CLI subcommands for the network shield and relay are coming soon.
-In the meantime, configure them through the [API](/api/platform/v1/instances#create-instance), which you can invoke with `curl` or the [`unikraft api`](/cli/unikraft/api) command.
-:::
-{/* vale on */}
 
 A relay redirects all network traffic to and from a network interface toward another network interface.
 You can set up a relay VM and configure its interface as the relay for another VM's interface, so that all its traffic transparently passes through the relay.

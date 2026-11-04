@@ -1,6 +1,20 @@
 ---
 title: Images
 navigation_icon: package
+availability:
+  hosting: { cloud: differs, dedicated: true, byoc: true, on-prem: true }
+  plan: all
+  status: ga
+  interfaces: { api: true, cli: true, sdk: true }
+  notes:
+    - target: cloud
+      text: The local registry is only available on dedicated, BYOC, and on-prem installations.
+      link: /cli/registries
+      linkText: Registries
+    - target: cloud
+      text: Kernel-less images and arm64 hosts are part of enterprise plans. Contact support to use them.
+      link: mailto:support@unikraft.com
+      linkText: support@unikraft.com
 ---
 
 Unikraft Cloud uses a **registry** to store images used to instantiate apps.
@@ -15,10 +29,6 @@ This bypasses the central registry entirely.
 Skipping this extra network round trip speeds up deployments.
 It also reduces bandwidth consumption.
 Read more about this in the [registries documentation](/cli/registries).
-
-:::caution[**Limited Access**]
-The local registry is only available in BYOC or on-prem Unikraft Cloud installations.
-:::
 
 {/* vale off */}
 ## Dockerfile, Kraftfile and runtime
@@ -127,10 +137,6 @@ See the [Kraftfile reference](/kraftfile/v0.7) for the other source types.
 ## Platform kernel
 
 {/* vale off */}
-:::caution[**Limited Access**]
-Kernel-less images are available as part of enterprise plans.
-To try out this feature, reach out to the [Unikraft Cloud Discord](https://unikraft.com/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
-:::
 {/* vale on */}
 
 An image doesn't have to carry its own kernel.
@@ -167,10 +173,6 @@ The Unikraft Cloud platform runs on both `x86_64` and `arm64` hosts, and the hos
 The architecture of the guest images must match the host architecture.
 
 {/* vale off */}
-:::caution[**Limited Access**]
-`arm64` hosts are available as part of enterprise plans.
-To deploy to them, reach out to the [Unikraft Cloud Discord](https://unikraft.com/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
-:::
 {/* vale on */}
 
 List the architectures you want under `targets` in the `Kraftfile`:

@@ -1,0 +1,515 @@
+---
+title: "Release 15: Isonoe"
+description: Unikraft Cloud Release 15 (Isonoe) release notes.
+date: "2026-11-04"
+---
+**Released:** 2026-11-04
+
+:::note
+Read the [Release 15: Isonoe announcement](https://unikraft.com/blog/isonoe-15-release) on the Unikraft blog.
+:::
+
+---
+
+Release 15 lets running instances move between nodes without a restart, and brings Windows to the platform as a VM next to your Linux microVMs.
+Instance templates can now take updates, root users can suspend and resume accounts, and the platform tracks CPU time and memory-time per instance and per user.
+Memory vertical scaling arrives on ARM64, and the platform no longer enforces a license.
+The CLI ships for Windows and can manage an instance from inside its own shell.
+The dashboard adds a built-in CLI terminal, editable environment variables, more ways to create an instance, and self-service billing.
+Kraftlet reacts to failed pods right away, passes pod DNS settings through to instances, and gives each sandbox its own network shield.
+
+---
+
+## Platform
+
+### Live migration
+
+Instances can now move from one node to another.
+A running instance keeps running while it moves, so its workload doesn't restart and doesn't lose its state.
+Stopped and suspended instances can move too.
+
+An instance keeps its UUID, its name, and its configuration on the new node.
+Its block volumes and its service group move along with it.
+If a migration fails, the instance stays on its original node.
+
+See [live migration](/features/live-migration).
+
+**Breaking changes:** Release 15 reserves port 45235 on the public addresses of each node for migrations, so guests can no longer publish a service on that port.
+Some nodes need extra configuration before the controller starts.
+See [live migration](/features/live-migration) for the details.
+
+**Requirements and limitations:** Requires the new migration permission, which root users have.
+Give it only to trusted users.
+Both nodes need Release 15.
+Supports microVMs only.
+You can't change an instance while it migrates, and on the destination it gets network addresses from that node.
+Live migration doesn't yet support instances created from a template, instances with vertical scaling, instances of kernel-less images, or autoscale instances.
+It also doesn't yet support instances with autokill, dependencies, inline ROMs, relay interfaces, or custom TAP devices.
+A volume moves only if it's a block volume created with the instance and no other instance has it attached.
+
+**Why it matters:** Operators can empty a node for maintenance or move load to another node.
+Workloads don't restart and don't lose their state.
+
+**Enterprise only.**
+
+### Windows VMs
+
+Until now, Unikraft has been a Linux-only outfit.
+That changes with Release 15.
+Windows now runs on the platform as a VM, right next to your Linux microVMs.
+
+A Windows instance on Unikraft can do the same as any other.
+It scales to zero when idle and wakes on the next request.
+You can capture it as a template and stamp out new instances from there, and you can suspend and snapshot it like the rest.
+
+**Breaking changes:** None.
+
+**Why it matters:** Workloads that never made the jump to Linux can now run on Unikraft too.
+They get the same scale-to-zero, templates, and snapshots as everything else.
+
+**Enterprise only.**
+
+### Template updates
+
+Instance templates can now take updates.
+You can give a template a new image, and new images for its ROMs and plugins.
+The template keeps its name and its UUID.
+If an update fails, the template doesn't change, and the template status shows the failed update.
+
+Instances created from the template follow the update.
+An instance without a snapshot of its own uses the new version at its next start, including instances that use scale-to-zero in stateless mode.
+An instance with its own snapshot, such as a suspended instance, keeps its version while it has that snapshot.
+Templates created from the updated template follow too, and autoscale uses the new version for new instances.
+The instance status now shows which template a clone came from.
+
+See [updating a template](/platform/instances#updating-a-template).
+
+**Breaking changes:** None.
+
+**Requirements and limitations:** Works for templates created directly and for templates converted from an instance that never started.
+You can't update a template converted from a running instance, a template with volumes, a template without exactly one network interface, or a template exported to a shared directory.
+An update keeps the names, paths, and authorization of ROMs and plugins, and changes only their images and the plugin configuration.
+A template created from another template changes its image only together with its parent.
+A clone whose image, ROMs, or plugins changed after its creation keeps its version.
+
+**Why it matters:** A new version of an app, or a security fix in its image, now reaches every instance of a template.
+Clients and autoscale configurations keep using the same template name.
+
+### Account suspension
+
+Root users can now suspend a user account and resume it later.
+A suspended user keeps read access, but can't make any other changes.
+The user's scheduled operations fail, autoscale of the user's service groups stops, and autokill of the user's instances pauses.
+
+Root users can also choose to bring all instances of the user to rest when suspending the account.
+Resuming the account restores those instances to the state they were in, and autokill counts again from the end of the suspension.
+The user list shows which accounts have a suspension.
+
+**Breaking changes:** None.
+
+**Requirements and limitations:** Root users themselves can't have their accounts suspended.
+If the suspension doesn't include the user's instances, instances in standby still start on incoming requests.
+
+**Why it matters:** Operators can block an account, for example because of an unpaid invoice or abuse, without deleting its instances, and restore the account later in the same state.
+
+### CPU time and memory-time accounting
+
+The platform now measures the CPU time and the memory-time of each instance to the millisecond, and adds them up for each user.
+Memory-time follows the current size of an instance with vertical scaling.
+Stopped instances and instances in standby use no memory-time.
+
+The user totals include deleted instances and carry on across controller restarts.
+CPU time no longer loses precision on long-running instances, and full VMs now report their CPU time and memory use as well.
+
+See [metrics](/platform/metrics).
+
+**Breaking changes:** None.
+
+**Requirements and limitations:** Requires the Firecracker and QEMU packages of this release.
+
+**Why it matters:** Usage-based billing and internal chargeback need exact numbers per instance and per user.
+The counters keep their precision at every size and survive instance deletion.
+
+**Enterprise only.**
+
+### NVIDIA vGPU license management
+
+The platform can now manage the NVIDIA licenses of vGPU instances.
+An instance holds a license only while it runs, and returns it when it stops.
+The instance status shows the license state of each vGPU.
+
+**Breaking changes:** None.
+The feature is off by default.
+
+**Requirements and limitations:** Requires an NVIDIA Delegated License Service (DLS) appliance in node-locked leasing mode.
+Instances don't wait for a license to start, and run unlicensed until it arrives.
+The guest image must include the NVIDIA licensing service.
+
+**Why it matters:** License seats go only to instances that run, so a license server covers more instances.
+
+**Enterprise only.**
+
+### Memory vertical scaling on ARM64
+
+Vertical scaling of memory now also works for microVMs on ARM64 hosts, with the same API as on x86-64.
+Vertical scaling of vCPUs stays on x86-64 only.
+The default guest kernel configuration now supports vertical scaling on both architectures, so you don't need a custom kernel for it.
+
+An instance whose image can't scale a resource you set a range for now fails to start with a clear error.
+When the guest reaches its maximum memory or its quota, it now handles running out of memory as usual instead of stalling.
+
+See [vertical scaling](/features/vertical-scaling).
+
+**Breaking changes:** On x86-64, images built with the default kernel configuration now boot with Advanced Configuration and Power Interface (ACPI) enabled.
+
+**Requirements and limitations:** Requires a guest kernel of this release.
+
+**Why it matters:** ARM64 instances also no longer have to use resources sized for their peak memory use.
+
+**Enterprise only.**
+
+### DNS settings in the CNI network configuration
+
+The guest now applies the DNS settings from the CNI network configuration of an instance: nameservers, domain, search domains, and options.
+The settings apply at boot and again when the instance resumes from a snapshot.
+Without nameservers in the settings, the instance keeps the nameserver from the platform configuration.
+
+See [guest network configuration with CNI](/features/annotations#guest-network-configuration-with-cni).
+
+**Breaking changes:** The guest ignored DNS settings before this release.
+Invalid DNS settings now stop the instance at boot.
+
+**Requirements and limitations:** Supports at most 3 nameservers, 6 search domains, and 8 options, and the guest ignores further entries.
+If both a domain and search domains are present, the search domains apply.
+Requires a guest kernel of this release.
+
+**Why it matters:** An external CNI plugin or IP address management system can now set the name resolution of an instance together with its addresses and routes.
+
+**Enterprise only.**
+
+### Faster node startup
+
+A newly booted node now gets ready to serve requests in half the time.
+Nodes with many instances also stay responsive during system service reloads.
+
+**Breaking changes:** Requires `ukp-networking` 1.7.0 or later.
+This release removes the controller option `--net-iface-preopen`, and the controller doesn't start while it's set.
+Remove it from your configuration before updating.
+
+**Requirements and limitations:** Managed network mode doesn't change.
+
+**Why it matters:** New capacity takes on work sooner, for example when you add nodes to a metro or replace one.
+
+**Enterprise only.**
+
+### IPv6 router advertisements in the guest
+
+The guest accepts IPv6 router advertisements again for its default router and its Maximum Transmission Unit (MTU).
+It still doesn't configure addresses from them.
+
+See [writing the CNI document](/features/annotations#writing-the-document).
+
+**Breaking changes:** A router advertisement on the guest network can again set the IPv6 default router and the MTU of the guest.
+
+**Requirements and limitations:** Applies to instances with a guest kernel of this release.
+
+**Why it matters:** Some CNI setups provide the IPv6 default route only through a router advertisement, and those instances now get it.
+
+**Enterprise only.**
+
+### Licensing becomes enrollment
+
+The platform no longer enforces a license.
+Every feature, including checkpointing, plugins, GPUs, and custom networking, works on every node, including nodes without an enrollment.
+This release removes the grace period and the `Insufficient license` errors.
+
+What used to be the node license is now called enrollment.
+Enrollment ties a node to an organization, shows the node's state in the dashboard, and reports its usage.
+The commands, options, and settings take new enrollment names, and the old license names still work.
+
+**Breaking changes:** The agent's Prometheus metrics move from `license_*` to `enrollment_*`, for example `license_valid` becomes `enrollment_valid`, with no alias.
+Update any dashboards and alerts that use them.
+
+**Requirements and limitations:** Nodes that install packages from the `ukp://` package source still need enrollment.
+
+**Why it matters:** Nobody wants a license check in the critical path of production.
+Enrollment keeps the usage overview without a node ever refusing a workload because of it.
+
+**Enterprise only.**
+
+### Automatic node enrollment
+
+A node that has an enrollment token now enrolls itself on startup, and keeps trying until it succeeds.
+The node starts reporting to its organization right away, without a restart.
+
+**Breaking changes:** None.
+Nodes that already have an enrollment keep it.
+
+**Requirements and limitations:** Each node needs its own token, or a reusable token from the **Enrollment** page of the dashboard.
+Remove the token from the node configuration once the node has enrolled.
+
+**Why it matters:** Enrollment used to be a manual step after installation, which didn't work for golden images and autoscaled machines.
+With a reusable token in the image, every machine built from it enrolls itself on first boot.
+
+**Enterprise only.**
+
+### Other platform changes
+
+- Images without a kernel now use the platform's guest kernel package automatically when it's installed.
+- The instance status now shows the API port of each plugin to users with the `net_manager` permission.
+- Prometheus metrics now include the quota use of each user for certificates and volumes.
+- A new controller option sets the maximum number of users, 5,000 by default.
+- The guest kernel now supports rate limits and traffic shaping inside the guest.
+- This release updates the guest kernel to Linux 6.12.114 and CoreDNS to 1.15.0.
+
+---
+
+## Tooling
+
+### CLI
+
+#### Windows builds
+
+The CLI now runs on Windows, on both amd64 and arm64, alongside Linux and macOS.
+A PowerShell installer matches the existing shell installer, the release downloads include Windows builds, and `unikraft upgrade` works on Windows too.
+
+See [CLI overview](/cli/overview).
+
+**Breaking changes:** None.
+
+**Requirements and limitations:** `unikraft instance shell` isn't available on Windows yet, so use the CLI from WSL for that.
+Builds need a BuildKit that can build Linux images.
+No Scoop or winget package exists yet.
+
+**Why it matters:** Lots of people develop on Windows, and "use WSL" was the only answer for them so far.
+
+#### Root filesystem from an existing image
+
+A Kraftfile's root filesystem can now come straight from an existing image.
+Both regular container images and Unikraft images work.
+The image's command, environment, and labels carry over, with anything set in the Kraftfile on top.
+
+See [root filesystem from an existing image](/platform/images#root-filesystem-from-an-existing-image).
+
+**Breaking changes:** None.
+
+**Requirements and limitations:** You need to set the image source type explicitly, because the CLI never guesses it.
+The image must be a registry reference and include the platform you're building for.
+Regular container images need a BuildKit builder.
+
+**Why it matters:** If the image already exists, rebuilding it from a Dockerfile to get the same files back is a waste of time.
+
+**Enterprise only.**
+
+#### Images served over HTTP
+
+The platform can run images served over plain HTTP or HTTPS, without a registry.
+The CLI now understands these image references anywhere it takes an image.
+
+See [images served over HTTP](/cli/registries#images-served-over-http).
+
+**Breaking changes:** None.
+
+**Requirements and limitations:** `image inspect` and `image copy` don't support these references yet.
+
+**Why it matters:** Before this release, a single instance using such an image broke `instance list` for its whole metro.
+Serving images from a CDN or an internal server can be simpler than running a registry.
+
+#### Sandbox shell builtins
+
+`unikraft instance shell` can now manage the instance you're in without leaving the shell.
+You can inspect the instance and its volumes, edit it, mount and unmount volumes, and start, stop, restart, or suspend it.
+The same builtins also work in the dashboard's instance terminal.
+
+The sandbox commands also check for the sandbox plugin first.
+If it's missing, they offer to attach it and restart the instance, instead of failing.
+
+See [shell builtins](/features/plugins#shell-builtins).
+
+**Breaking changes:** The `--plugin` option of `shell`, `exec`, `copy`, `read`, and `write` becomes `--plugin-name`, with a new `--plugin-image` option alongside it.
+
+**Requirements and limitations:** Edits, mounts, and unmounts apply after the next restart.
+The offer to attach the plugin only appears in an interactive terminal.
+
+**Why it matters:** Mounting a volume or restarting used to mean opening a second terminal and reconnecting the shell afterward.
+Now you can do it from where you already are.
+
+#### Private hostnames and boot timing
+
+Two more instance fields from the platform are now in the CLI:
+
+- The private hostname that reaches the instance from inside Unikraft Cloud.
+- The full breakdown of boot timing, from start to ready.
+  Checkpoints and templates get their own timing fields too.
+
+See [fields](/cli/fields).
+
+**Breaking changes:** None.
+
+**Requirements and limitations:** Both appear in `instance get`, but not in the default `instance list` table.
+Some timing fields need a newer platform, and stay empty otherwise.
+
+**Why it matters:** Instances talking to each other was the main reason left to reach for `unikraft api`.
+When a cold start is slow, the timing breakdown shows where the time went.
+
+**Enterprise only.**
+
+### Dashboard
+
+#### CLI terminal
+
+A new **Terminal** entry in the sidebar runs the real `unikraft` CLI in the browser, already signed in as you.
+Each organization you belong to is available as a profile, and your token never reaches the browser.
+
+The terminal stays open while you move around the rest of the dashboard, with as many session tabs as you like.
+Links in command output open in the dashboard.
+The terminal always runs the latest stable CLI release.
+
+**Breaking changes:** None.
+
+**Requirements and limitations:** The terminal runs one command at a time and isn't a full shell, so pipes, redirects, and command substitution don't work.
+Commands that need your local machine, such as `build`, `instance tunnel`, `volume import`, the terminal UI, and interactive editing, only work in the native CLI.
+Sessions close after 30 minutes without activity.
+
+**Why it matters:** Sometimes you need to run only one command, and installing a CLI and logging in for a single command is a lot of ceremony.
+Anything the dashboard doesn't have a button for yet is now only a few keystrokes away.
+
+#### Edit instance environment variables
+
+You can now edit the **Environment variables** card on an instance's **Runtime** tab.
+Change, add, or remove variables, or paste a whole `.env` file and check the rows it creates.
+**Save** applies the change on the next restart, and **Save and restart** applies it now.
+
+**Breaking changes:** None.
+
+**Requirements and limitations:** Changes only take effect when the instance restarts.
+Secret values stay hidden and unchanged unless you edit them.
+
+**Why it matters:** Changing a single variable used to mean the CLI or the API.
+It's the most common edit to a running instance, so it should be the easiest one.
+
+#### More ways to create an instance
+
+The **New instance** page can now start an instance from more than an image:
+
+- **Image**, as before.
+- **Template**, which inherits the configuration and state the template holds.
+- **Checkpoint**, which resumes with the memory and disk captured at that moment.
+- **Fork**, which copies an existing instance, running or stopped, with its configuration and disk.
+
+You can now set more than one port forward, and scale-to-zero no longer needs a public port.
+The memory and vCPU sliders follow the limits of the selected metro.
+You can pick existing volumes from a list or create a new one, and mount volumes read-only.
+
+**Create from code** turns the form into the matching CLI command, or a Go, Python, or JavaScript SDK snippet, ready to copy.
+
+**Breaking changes:** None.
+
+**Requirements and limitations:** Template, checkpoint, and fork sources need the matching features on the metro.
+
+**Why it matters:** Most new instances come from something that already exists, and the form now covers those cases.
+Once something works in the form, **Create from code** is the shortest way to get it into a script.
+
+#### Billing and plans
+
+Organization settings have a new **Billing** tab, showing the organization's current plan and what each plan includes.
+Organization admins can upgrade, switch, or cancel a plan themselves, and new limits reach every metro shortly after payment.
+Downgrading shows the lower plan's limits before you confirm, and cancelling keeps the current plan until the end of the billing period.
+
+New organizations start on the Hobby plan.
+See the [pricing page](https://unikraft.com/pricing) for the details of each plan.
+
+**Breaking changes:** Some accounts had no Hobby plan limits applied, and now have the correct limits.
+
+**Requirements and limitations:** Only organization admins can change the plan.
+Unikraft manages the plan of organizations with custom quotas, so they can't change plans themselves.
+After a downgrade, instances above the new plan's limits don't start or wake up.
+
+**Why it matters:** Moving to a bigger plan used to mean talking to a person, and new organizations started with no quota at all.
+Now you can sign up, try things out, and upgrade when you hit the limits, without waiting on anyone.
+
+#### Metros and nodes
+
+Every member of an organization can now see the **Metros** tab.
+Each metro shows its API endpoints, ready to copy into the CLI or an SDK, and the organization's quota usage in it.
+
+Organizations running their own compute get a new **Nodes** tab, listing every node they own with search and filters by metro and status.
+Nodes no longer have to belong to a metro.
+
+**Breaking changes:** None.
+
+**Requirements and limitations:** The **Nodes** tab only appears for organizations that operate a metro.
+
+**Why it matters:** "Which endpoint does the CLI need?" is one of the first questions anyone asks, and most people asking it couldn't see the answer.
+
+**Enterprise only.**
+
+---
+
+## Integrations
+
+### Kraftlet pod status from platform events
+
+Kraftlet now updates a pod's status as soon as its instance stops, fails, or errors, instead of waiting for the next status check.
+Regular status checks stay in place as a backstop.
+
+See [pod status](/integrations/kubernetes#pod-status).
+
+**Breaking changes:** None.
+The feature is on by default, and you can turn it off.
+
+**Requirements and limitations:** Changes into states such as running or standby don't trigger an update, so scale-to-zero doesn't flood the Kubernetes API.
+
+**Why it matters:** Up to 15 seconds is a long time for Kubernetes to think a dead pod is fine.
+Controllers now see a failure, and replace the pod, as soon as it happens.
+
+**Enterprise only.**
+
+### Custom DNS for Kraftlet and Karpenter
+
+Kraftlet now passes a pod's DNS configuration, including nameservers, search domains, and options, through to its instance.
+Without one, the instance uses the DNS from the CNI result.
+
+The Karpenter provider can now also skip DNS entirely.
+New machines then get no DNS records, and the cluster reaches them at their cloud provider's internal hostname instead.
+
+See [custom networking with CNI](/integrations/kubernetes#custom-networking-with-cni) and [Karpenter](/integrations/karpenter).
+
+**Breaking changes:** None.
+
+**Requirements and limitations:** Pod DNS configuration only applies to CNI pods.
+Machines without DNS serve a self-signed certificate, the controller and Kraftlet must run inside the same VPC, and you can't change this setting after creation.
+
+**Why it matters:** Pods can use their own resolvers, including IPv6 ones.
+Clusters that live entirely inside a VPC no longer need a public DNS zone to provision nodes.
+
+**Enterprise only.**
+
+### Network shield for Kraftlet pods
+
+The network shield is an egress firewall for sandboxes.
+It starts closed and only lets out the traffic a policy allows, by host, network, port, or protocol.
+Policies can inspect TLS traffic, rate-limit requests and connections, and add secrets to outgoing requests, so a sandbox never sees the real value of a secret it uses.
+
+In Kraftlet, a pod can now get its own shield that comes and goes with the pod.
+Pods can also share one shield.
+
+See [egress filtering with a network shield](/integrations/kubernetes#egress-filtering-with-a-network-shield).
+
+**Breaking changes:** None.
+Requires Kraftlet chart 0.11.0.
+
+**Requirements and limitations:** A pod and its shield must run on the same node and in the same namespace.
+Inspecting TLS traffic needs a certificate authority that every sandbox behind the shield trusts.
+A shield whose policy fails to apply stays closed, and you need to replace it.
+The shield doesn't support inbound policies yet.
+
+**Why it matters:** Running code you don't trust means controlling what it can reach.
+The shield used to be a separate pod that someone had to place on the same node by hand.
+Now it comes and goes with the pod it protects.
+
+**Enterprise only.**
+
+---
+
+[Back to all releases](/releases)
