@@ -16,9 +16,9 @@ const HOSTING_URL = `${SITE_URL}/platform/hosting-options`;
 const MARKER = "**Availability**";
 const MARKER_LINE = `> ${MARKER}`;
 
-const HOSTING = { cloud: "Unikraft Cloud", byoc: "BYOC", "on-prem": "on-prem" };
+const HOSTING = { cloud: "Unikraft Cloud", dedicated: "dedicated hosts", byoc: "BYOC", "on-prem": "on-prem" };
 const INTERFACES = { api: "the API", cli: "the CLI", sdk: "the SDKs" };
-const TARGETS = { ...HOSTING, "on-prem": "On-prem", api: "API", cli: "CLI", sdk: "SDKs" };
+const TARGETS = { ...HOSTING, dedicated: "Dedicated", "on-prem": "On-prem", api: "API", cli: "CLI", sdk: "SDKs" };
 const STATUS = { preview: "Preview", "coming-soon": "Coming soon" };
 
 const walk = async (dir) => {

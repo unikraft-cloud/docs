@@ -12,7 +12,7 @@ import {
 export type Mark = boolean | "soon" | "differs";
 
 export type AvailabilitySpec = {
-  hosting?: { cloud?: Mark; byoc?: Mark; "on-prem"?: Mark };
+  hosting?: { cloud?: Mark; dedicated?: Mark; byoc?: Mark; "on-prem"?: Mark };
   plan?: "all" | "enterprise";
   status?: "ga" | "preview" | "coming-soon";
   interfaces?: { api?: Mark; cli?: Mark; sdk?: Mark };
@@ -21,6 +21,7 @@ export type AvailabilitySpec = {
 
 const HOSTING_LABELS: Record<string, string> = {
   cloud: "Unikraft Cloud",
+  dedicated: "Dedicated",
   byoc: "BYOC",
   "on-prem": "On-prem",
 };
@@ -163,6 +164,7 @@ export const Availability = ({ spec }: { spec: string | AvailabilitySpec }) => {
             labels={HOSTING_LABELS}
             hrefs={{
               cloud: `${HOSTING_PAGE}#unikraft-cloud`,
+              dedicated: `${HOSTING_PAGE}#dedicated-hosts`,
               byoc: `${HOSTING_PAGE}#byoc`,
               "on-prem": `${HOSTING_PAGE}#on-prem`,
             }}
