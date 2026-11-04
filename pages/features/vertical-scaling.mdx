@@ -1,16 +1,21 @@
 ---
 title: Vertical scaling
 navigation_icon: move-vertical
+availability:
+  hosting: { cloud: soon, dedicated: true, byoc: true, on-prem: true }
+  plan: enterprise
+  status: preview
+  interfaces: { api: true, cli: false, sdk: false }
+  notes:
+    - target: cloud
+      text: Vertical scaling is coming soon to Unikraft Cloud. Without it, an instance with a range boots and runs at its initial size.
+      link: mailto:support@unikraft.com
+      linkText: Contact support to try it
+    - target: cli
+      text: The CLI and the SDKs do not expose the range fields yet. Use the API, for example through the unikraft api command.
+      link: /cli/unikraft/api
+      linkText: unikraft api
 ---
-
-{/* vale off */}
-:::caution[**Limited Access**]
-Vertical scaling is coming soon to the hosted platform.
-Without it, an instance with a range boots and runs at its initial size, and the platform doesn't scale it.
-To try it out, reach out to the [Unikraft Cloud Discord](https://unikraft.com/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
-The interface described here reflects the current implementation and may change before general availability.
-:::
-{/* vale on */}
 
 Vertical scaling lets an instance grow and shrink its memory and its number of vCPUs while it runs.
 Where [autoscale](/features/autoscale) changes the *number of instances* behind a service, vertical scaling changes the *size of a single instance*.

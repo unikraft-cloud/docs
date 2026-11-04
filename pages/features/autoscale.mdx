@@ -1,6 +1,16 @@
 ---
 title: Autoscale
 navigation_icon: square-stack
+availability:
+  hosting: { cloud: true, dedicated: true, byoc: true, on-prem: true }
+  plan: all
+  status: ga
+  interfaces: { api: true, cli: soon, sdk: true }
+  notes:
+    - target: cli
+      text: Dedicated CLI subcommands are coming soon. Until then, drive autoscale through the API, for example with the unikraft api command.
+      link: /api/platform/v1/autoscale
+      linkText: Autoscale API
 ---
 
 {/* vale off */}
@@ -33,13 +43,6 @@ Autoscale, as well as load balancing in general, currently supports only Interne
 :::
 
 ## Setting up autoscale
-
-{/* vale off */}
-:::caution
-Dedicated `unikraft` CLI subcommands for autoscale are coming soon.
-In the meantime, drive autoscale through the [API](/api/platform/v1/autoscale), which you can invoke with `curl` or the [`unikraft api`](/cli/unikraft/api) command.
-:::
-{/* vale on */}
 
 First, create an instance, in this example using NGINX:
 

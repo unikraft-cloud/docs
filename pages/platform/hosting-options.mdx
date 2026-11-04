@@ -1,0 +1,64 @@
+---
+title: Hosting options
+navigation_icon: server
+description: |
+  Where Unikraft Cloud runs: the hosted platform, dedicated hosts, your own cloud, or your own servers.
+---
+
+Unikraft Cloud runs in four places.
+The availability block at the top of a feature page tells you where that feature works.
+
+| Option | Who runs the nodes | Who can use it |
+|---|---|---|
+| [Unikraft Cloud](#unikraft-cloud) | Unikraft, in the [metros](/platform/metros) | Everyone with an account |
+| [Dedicated hosts](#dedicated-hosts) | Unikraft, on nodes reserved for you | Enterprise customers |
+| [BYOC](#byoc) | Unikraft, in your cloud account | Enterprise customers |
+| [On-prem](#on-prem) | You, in your data center | Enterprise customers |
+
+## Unikraft Cloud
+
+Unikraft Cloud is the hosted platform.
+Unikraft operates the nodes in the public [metros](/platform/metros), and you deploy with the [CLI](/cli/overview), the [API](/api/platform/v1), or an [SDK](/sdks/overview).
+[Sign up](https://console.unikraft.cloud/signup) to get an access token.
+
+Some features need an enterprise plan on Unikraft Cloud.
+The availability block shows an **Enterprise** hint on the Unikraft Cloud chip for those features.
+To enable one for your account, send an email to [support@unikraft.com](mailto:support@unikraft.com).
+
+## Dedicated hosts
+
+With dedicated hosts, Unikraft Cloud runs on nodes that serve only your organization.
+Unikraft operates the nodes, on bare metal or on cloud VMs, and no other customer shares them.
+This is the option when you want control of the host but no cloud account or data center of your own.
+
+## BYOC
+
+With BYOC, short for bring your own cloud, Unikraft Cloud runs on servers in your own cloud account.
+You keep the data and the network inside your account, and Unikraft operates the installation.
+
+## On-prem
+
+With on-prem, Unikraft Cloud runs on your own servers in your own data center.
+This is the option for compliance programs and for workloads that must not leave your network.
+
+## Dedicated, BYOC, and on-prem installations
+
+A dedicated, BYOC, or on-prem installation runs under a license, so every feature on it belongs to an enterprise plan.
+Some features exist only on these installations, because they need control of the nodes.
+Examples are [live migration](/features/live-migration), [managed network mode](/features/custom-network-configuration#managed-network-mode), and the [local registry](/cli/registries).
+
+Each installation is a metro of its own.
+To target it with the CLI, define a [profile](/tutorials/kraftkit-to-unikraft#profile-management) with the API endpoint of the installation, then pass its name with `--metro`.
+
+To discuss a dedicated, BYOC, or on-prem installation, [get in touch](https://unikraft.com/contact).
+
+## Reading the availability block
+
+- **Available on** lists the four hosting options.
+  A check mark means the feature works there.
+  A clock means it's coming soon.
+  A cross means it's not available there.
+  A **Differs** hint means the page describes something that behaves differently on that option, and the notes explain how.
+- **Interfaces** shows whether the API, the CLI, and the SDKs expose the feature.
+- **Notes** give the next step when something is missing.
+  A note can name a workaround or a contact address.

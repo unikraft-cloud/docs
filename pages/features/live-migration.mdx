@@ -3,14 +3,21 @@ title: Live Migration
 navigation_icon: arrow-right-left
 description: |
   Move an instance to another node without restarting it.
+availability:
+  hosting: { cloud: false, dedicated: true, byoc: true, on-prem: true }
+  plan: enterprise
+  status: ga
+  interfaces: { api: true, cli: false, sdk: false }
+  notes:
+    - target: cloud
+      text: Live migration needs control of the nodes, so it is not available on Unikraft Cloud.
+      link: mailto:support@unikraft.com
+      linkText: Contact support
+    - target: cli
+      text: There is no dedicated CLI subcommand yet. The examples on this page use the unikraft api command.
+      link: /cli/unikraft/api
+      linkText: unikraft api
 ---
-
-{/* vale off */}
-:::caution[**Limited Access**]
-Live migration is only available in BYOC or on-prem Unikraft Cloud installations.
-To explore such a deal, reach out to the [Unikraft Cloud Discord](https://unikraft.com/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
-:::
-{/* vale on */}
 
 **Live migration** moves an instance from one node to another.
 A running instance keeps running while it moves, so it keeps its memory and its state.
