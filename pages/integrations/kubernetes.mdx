@@ -370,7 +370,31 @@ It can also intercept TLS, rate-limit requests, and inject secrets into outgoing
 Kraftlet runs the shield as a sidecar: the container of the Pod that `cloud.unikraft.v1.instances/relay-container` names.
 
 The shield container runs the shield image, with the `netshield` plugin attached through `cloud.unikraft.v1.instances/plugins.<container>`.
-The `CA_CERT` and `CA_KEY` environment variables hold the certificate authority it signs intercepted connections with, here from a Secret:
+The `CA_CERT` and `CA_KEY` environment variables hold the [certificate authority](/features/network-shield#certificate-authority) it signs intercepted connections with.
+Create a Secret from the `ca.crt` and `ca.key` files of the CA:
+
+```bash
+kubectl create secret generic shield-ca \
+  --from-file=CA_CERT=ca.crt \
+  --from-file=CA_KEY=ca.key
+```
+
+Then create a ConfigMap with the `netshield` plugin.
+The plugin's `sandbox_iface` setting names `eth1`, the interface of the shield that the other instances of the Pod relay through:
+
+```yaml title="netshield-plugins.yaml"
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: netshield-plugins
+data:
+  plugins.json: |
+    [
+      {"name": "netshield", "rom": "plugins/netshield:latest", "config": {"sandbox_iface": "eth1"}}
+    ]
+```
+
+The Pod runs the official shield image and reads the CA from the Secret:
 
 ```yaml
 apiVersion: v1
@@ -385,7 +409,7 @@ spec:
     - name: app
       image: my-app:latest
     - name: shield
-      image: <my-org>/netshield:latest
+      image: official/utils/netshield:latest
       envFrom:
         - secretRef:
             name: shield-ca
@@ -405,7 +429,9 @@ Note the following:
 - The Pod-wide `cloud.unikraft.v1.instances/template` annotation skips the shield.
   Give the shield a template of its own with `cloud.unikraft.v1.instances/template.<container>`.
 - Kraftlet deletes the shield with the Pod, after the other instances.
-- Every sandbox behind a shield has to trust its certificate authority, or intercepted connections fail.
+- Every sandbox behind a shield has to [trust its certificate authority](/features/network-shield#trust-the-ca-in-a-sandbox), or intercepted connections fail.
+- The official shield image needs two network interfaces.
+  Kraftlet gives them to the shield container from version 0.6.0.
 - A shield whose policy fails to apply stays closed, so replace the Pod.
 - Inbound policies aren't supported, and a Pod with a shield can't use CNI.
 
