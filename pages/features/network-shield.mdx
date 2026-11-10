@@ -91,8 +91,13 @@ For the same reason, don't use a CA that other systems trust.
 Every sandbox behind the shield has to trust `ca.crt`.
 Otherwise, its connections through an `https` policy fail with a certificate error.
 
-Add the certificate to the system trust store of the sandbox image.
-On Debian and Ubuntu:
+On Debian and Ubuntu, `update-ca-certificates` adds every file under `/usr/local/share/ca-certificates/`, in subdirectories too, whose name ends in `.crt` to the system trust store.
+You can put the certificate there without rebuilding the image, with an [inline ROM](/features/roms#inline-roms) that you add to the sandbox when you create it.
+The [relay example](#relay) puts it at `/usr/local/share/ca-certificates/shield/ca.crt` in the official Debian image.
+Then, in the sandbox, install the `ca-certificates` package, which runs `update-ca-certificates`.
+In an image that already has the package, run `update-ca-certificates` yourself.
+
+In an image of your own, copy the certificate there when you build it:
 
 ```dockerfile
 FROM debian:bookworm-slim
@@ -105,21 +110,15 @@ COPY ca.crt /usr/local/share/ca-certificates/network-shield.crt
 RUN update-ca-certificates
 ```
 
-On Alpine, install the `ca-certificates` package with `apk add`, and then copy the certificate and run `update-ca-certificates` in the same way.
-`update-ca-certificates` reads only files whose names end in `.crt`.
-
 Tools that use the system trust store, such as curl, wget, and Go programs, then trust the shield.
 Some runtimes keep their own list of certificate authorities and ignore the system trust store.
 Point them at the certificate as well:
 
 | Runtime | Setting |
 |---------|---------|
-| Node.js | `NODE_EXTRA_CA_CERTS=/usr/local/share/ca-certificates/network-shield.crt` |
+| Node.js | `NODE_EXTRA_CA_CERTS`, set to the path of `ca.crt` |
 | Python `requests` | `REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt`, the system bundle that `update-ca-certificates` writes |
 | Java | `keytool -importcert -cacerts -alias network-shield -file ca.crt -storepass changeit -noprompt` |
-
-If you can't add the certificate to an image, allow the hosts it needs with `passthrough` policies.
-These policies don't intercept TLS, so they can't add secrets or limit requests.
 
 ## Relay
 
@@ -133,7 +132,10 @@ The following example puts a sandbox behind the official network shield, which t
 The shield runs a proxy, a DNS resolver, and its API, so it needs more than the default 128 MB of memory, and the example gives it 1024 MB.
 The shield reads its [certificate authority](#certificate-authority) from `ca.crt` and `ca.key`.
 `jq` puts both files in the request with their line breaks, and `@-` makes `unikraft api` read the request from standard input.
-Replace `<my-org>/my-sandbox:latest` with an image that [trusts the CA](#trust-the-ca-in-a-sandbox).
+
+The sandbox runs the official Debian image, with the [sandbox plugin](/features/plugins#sandbox-plugin) so that you can run commands in it.
+An inline ROM puts `ca.crt` at `/usr/local/share/ca-certificates/shield/ca.crt`, so that the sandbox can [trust the CA](#trust-the-ca-in-a-sandbox).
+The sandbox gets 512 MB of memory, which `apt-get` needs.
 
 <CodeTabs syncKey="cli">
 
@@ -167,10 +169,11 @@ jq -n --rawfile cert ca.crt --rawfile key ca.key \
 ```
 
 ```bash title="Sandbox instance (relay client)"
-unikraft api /v1/instances --metro fra \
+jq -n --rawfile cert ca.crt \
   '{
     "name": "my-sandbox",
-    "image": "<my-org>/my-sandbox:latest",
+    "image": "official/debian:13",
+    "memory_mb": 512,
     "autostart": true,
     "network_interfaces": [
       {
@@ -179,19 +182,52 @@ unikraft api /v1/instances --metro fra \
           "relay_dns": true
         }
       }
+    ],
+    "plugins": [
+      {
+        "name": "sandbox",
+        "image": "plugins/sandbox:latest"
+      }
+    ],
+    "roms": [
+      {
+        "name": "shield-ca",
+        "files": [
+          {
+            "path": "ca.crt",
+            "encoding": "text",
+            "data": $cert
+          }
+        ],
+        "at": "/usr/local/share/ca-certificates/shield"
+      }
     ]
-  }'
+  }' | unikraft api /v1/instances --metro fra @-
 ```
 
 </CodeTabs>
 
 The shield starts closed, so the sandbox can't reach anything yet.
-To let traffic out, send a policy to the `netshield` plugin of the shield.
-This policy allows HTTPS to GitHub and intercepts it:
+To let traffic out, send policies to the `netshield` plugin of the shield.
+These policies allow the following traffic:
+
+- `allow-debian`: plain HTTP to the Debian package mirror, for `apt-get`.
+- `allow-github`: HTTPS to GitHub, which the shield intercepts.
+- `sandbox-plugin`: the platform's connections to the sandbox plugin, which `unikraft instance exec` uses.
+  An inbound policy names the sandbox by its private name, `<name>.internal`, so send it after you create the sandbox.
 
 ```bash
 unikraft api -X PUT /v1/instances/<shield-uuid>/plugins/netshield/policies --metro fra \
   '[
+    {
+      "id": "allow-debian",
+      "direction": "outbound",
+      "handler": "http",
+      "match": {
+        "hosts": ["deb.debian.org"],
+        "ports": [80]
+      }
+    },
     {
       "id": "allow-github",
       "direction": "outbound",
@@ -200,8 +236,34 @@ unikraft api -X PUT /v1/instances/<shield-uuid>/plugins/netshield/policies --met
         "hosts": ["github.com", "*.github.com"],
         "ports": [443]
       }
+    },
+    {
+      "id": "sandbox-plugin",
+      "direction": "inbound",
+      "handler": "passthrough",
+      "match": {
+        "hosts": ["my-sandbox.internal"],
+        "port_ranges": [{"first": 20000, "last": 29999}]
+      }
     }
   ]'
+```
+
+Install `ca-certificates` and curl in the sandbox.
+The package runs `update-ca-certificates`, which adds the shield's CA from the ROM to the system trust store:
+
+```bash
+unikraft instance exec my-sandbox -- sh -c 'apt-get update && apt-get install -y ca-certificates curl'
+```
+
+curl then trusts the certificate that the shield shows for GitHub:
+
+```bash
+unikraft instance exec my-sandbox -- curl -sS -o /dev/null -w '%{http_code}\n' https://github.com
+```
+
+```text title=""
+200
 ```
 
 Relay builds on [custom network configuration](/features/custom-network-configuration): the `relay` object is a field of a `network_interfaces` entry, so the same permission and limitations apply.
