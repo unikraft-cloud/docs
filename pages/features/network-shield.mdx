@@ -55,40 +55,127 @@ This means each shield:
 The official shield runs the `netshield` plugin, which serves an API for its policies.
 A policy allows traffic by host (wildcards included), network, port, or protocol.
 It can also intercept TLS, rate-limit requests and connections, and inject secrets into outgoing headers, so a sandbox sends `{{GITHUB_TOKEN}}` and never sees the real value.
-The shield needs a certificate authority in `CA_CERT` and `CA_KEY` for TLS interception, which every sandbox behind it has to trust.
+The shield needs a [certificate authority](#certificate-authority) in `CA_CERT` and `CA_KEY` for TLS interception, which every sandbox behind it has to trust.
 It starts closed, and a shield whose policy fails to apply stays closed, so replace it.
 On Kubernetes, Kraftlet [runs a shield as a sidecar container](/integrations/kubernetes#egress-filtering-with-a-network-shield) of a Pod.
 
+## Certificate authority
+
+A policy with the `https` handler intercepts TLS.
+The shield ends the TLS connection of the sandbox, so that it can read the request, limit requests, and add secrets.
+It shows the sandbox a certificate for the host, signed with a certificate authority (CA) that you supply.
+The `http` and `passthrough` handlers don't intercept TLS.
+
+The shield doesn't start without the CA, even when no policy intercepts TLS.
+Pass the certificate in `CA_CERT` and the private key in `CA_KEY`, both in PEM format with their line breaks.
+
+### Create a certificate authority
+
+Create a CA for the shield alone:
+
+```bash
+openssl genrsa -out ca.key 2048
+openssl req -new -x509 -key ca.key -out ca.crt -days 3650 \
+  -subj "/CN=Network shield CA" \
+  -addext "basicConstraints=critical,CA:TRUE" \
+  -addext "keyUsage=critical,keyCertSign,cRLSign" \
+  -addext "extendedKeyUsage=serverAuth"
+```
+
+Give `ca.key` only to the shield, and keep it out of sandbox images.
+Anyone with the key can create a certificate for any host, and every sandbox that trusts the CA accepts it.
+For the same reason, don't use a CA that other systems trust.
+
+### Trust the CA in a sandbox
+
+Every sandbox behind the shield has to trust `ca.crt`.
+Otherwise, its connections through an `https` policy fail with a certificate error.
+
+Add the certificate to the system trust store of the sandbox image.
+On Debian and Ubuntu:
+
+```dockerfile
+FROM debian:bookworm-slim
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
+COPY ca.crt /usr/local/share/ca-certificates/network-shield.crt
+RUN update-ca-certificates
+```
+
+On Alpine, install the `ca-certificates` package with `apk add`, and then copy the certificate and run `update-ca-certificates` in the same way.
+`update-ca-certificates` reads only files whose names end in `.crt`.
+
+Tools that use the system trust store, such as curl, wget, and Go programs, then trust the shield.
+Some runtimes keep their own list of certificate authorities and ignore the system trust store.
+Point them at the certificate as well:
+
+| Runtime | Setting |
+|---------|---------|
+| Node.js | `NODE_EXTRA_CA_CERTS=/usr/local/share/ca-certificates/network-shield.crt` |
+| Python `requests` | `REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt`, the system bundle that `update-ca-certificates` writes |
+| Java | `keytool -importcert -cacerts -alias network-shield -file ca.crt -storepass changeit -noprompt` |
+
+If you can't add the certificate to an image, allow the hosts it needs with `passthrough` policies.
+These policies don't intercept TLS, so they can't add secrets or limit requests.
+
 ## Relay
 
-To use a relay, reference another interface by name inside a `relay` object:
+To use a relay, reference another interface by name inside a `relay` object.
+The following example puts a sandbox behind the official network shield, which takes two interfaces:
 
-{/* TODO: Update this example to use the official network shield image once it becomes available. */}
+- The first interface is on the platform's network, and the shield serves its API there.
+- The second interface has a name, and sandboxes relay through it.
+  The `sandbox_iface` setting of the `netshield` plugin names it `eth1`.
+
+The shield runs a proxy, a DNS resolver, and its API, so it needs more than the default 128 MB of memory, and the example gives it 1024 MB.
+The shield reads its [certificate authority](#certificate-authority) from `ca.crt` and `ca.key`.
+`jq` puts both files in the request with their line breaks, and `@-` makes `unikraft api` read the request from standard input.
+Replace `<my-org>/my-sandbox:latest` with an image that [trusts the CA](#trust-the-ca-in-a-sandbox).
 
 <CodeTabs syncKey="cli">
 
-```bash title="Relay instance"
-unikraft api /v1/instances --metro fra \
+```bash title="Network shield (relay)"
+jq -n --rawfile cert ca.crt --rawfile key ca.key \
   '{
-    "name": "my-relay",
-    "image": "<my-org>/my-relay:latest",
+    "name": "my-shield",
+    "image": "official/utils/netshield:latest",
+    "memory_mb": 1024,
+    "autostart": true,
     "network_interfaces": [
+      {},
       {
-        "name": "my-relay-iface"
+        "name": "my-shield-iface"
+      }
+    ],
+    "env": {
+      "CA_CERT": $cert,
+      "CA_KEY": $key
+    },
+    "plugins": [
+      {
+        "name": "netshield",
+        "image": "plugins/netshield:latest",
+        "config": {
+          "sandbox_iface": "eth1"
+        }
       }
     ]
-  }'
+  }' | unikraft api /v1/instances --metro fra @-
 ```
 
 ```bash title="Sandbox instance (relay client)"
 unikraft api /v1/instances --metro fra \
   '{
     "name": "my-sandbox",
-    "image": "official/alpine:latest",
+    "image": "<my-org>/my-sandbox:latest",
+    "autostart": true,
     "network_interfaces": [
       {
         "relay": {
-          "name": "my-relay-iface",
+          "name": "my-shield-iface",
           "relay_dns": true
         }
       }
@@ -97,6 +184,25 @@ unikraft api /v1/instances --metro fra \
 ```
 
 </CodeTabs>
+
+The shield starts closed, so the sandbox can't reach anything yet.
+To let traffic out, send a policy to the `netshield` plugin of the shield.
+This policy allows HTTPS to GitHub and intercepts it:
+
+```bash
+unikraft api -X PUT /v1/instances/<shield-uuid>/plugins/netshield/policies --metro fra \
+  '[
+    {
+      "id": "allow-github",
+      "direction": "outbound",
+      "handler": "https",
+      "match": {
+        "hosts": ["github.com", "*.github.com"],
+        "ports": [443]
+      }
+    }
+  ]'
+```
 
 Relay builds on [custom network configuration](/features/custom-network-configuration): the `relay` object is a field of a `network_interfaces` entry, so the same permission and limitations apply.
 
@@ -131,10 +237,10 @@ unikraft api /v1/instances/<uuid> --metro fra
             ...
             "relay": {
               "uuid": "<relay-interface-uuid>",
-              "name": "my-relay-iface",
+              "name": "my-shield-iface",
               "instance": {
                 "uuid": "<relay-instance-uuid>",
-                "name": "my-relay"
+                "name": "my-shield"
               },
               "relay_dns": true
             }
