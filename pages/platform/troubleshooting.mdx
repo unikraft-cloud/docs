@@ -94,25 +94,25 @@ Here the cause is insufficient memory.
 If the stop reason lacks detail, enable debug tracing for the instance.
 
 To do that, pick an app from the [examples repository](https://github.com/unikraft-cloud/examples/) or an app directory you created.
-Update the `runtime` entry in the `Kraftfile` to reference the debug build by adding `-dbg` to the runtime name.
+Add a `runtime` entry to the `Kraftfile` that references the debug build of the kernel.
 For example, if you want to run the [httpserver-go1.21 example](https://github.com/unikraft-cloud/examples/tree/main/httpserver-go1.21) with debug output, update its `Kraftfile` as follows:
 
-```yaml title="Kraftfile"
-spec: v0.7
+```diff title="Kraftfile"
+ spec: v0.7
 
-runtime: base-compat:latest-dbg
++runtime: base-compat:latest-dbg
 
-targets:
-  - kraftcloud/x86_64
+ targets:
+   - kraftcloud/x86_64
 
-rootfs:
-  source: ./Dockerfile
-  format: erofs
+ rootfs:
+   source: ./Dockerfile
+   format: erofs
 
-cmd: ["/server"]
+ cmd: ["/server"]
 ```
 
-That is, change `base-compat:latest` to `base-compat:latest-dbg`.
+That is, add `runtime: base-compat:latest-dbg`.
 
 Now you're ready to re-deploy:
 
@@ -151,6 +151,8 @@ The CLI performs steps on your local device before actually deploying your app t
 1. Builds the app filesystem using the `Dockerfile` via [BuildKit](https://unikraft.org/guides/building-dockerfile-images-with-buildkit).
 1. Packages the app filesystem and the runtime in an Open Container Initiative (OCI) image.
 1. Pushes the OCI image to the to the Unikraft Cloud registry under your username's namespace.
+
+If the `Kraftfile` has no `runtime`, the CLI doesn't download or package a runtime image.
 
 If any of these steps fail, enable CLI debugging with the `--log-level` and `--log-type` flags:
 
