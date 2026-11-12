@@ -362,7 +362,7 @@ const config: ZudokuConfig = {
           label: "Concepts",
           icon: "lightbulb",
           collapsed: false,
-          items: ["/cli/registries", "/cli/fields"],
+          items: ["/cli/registries", "/cli/fields", "/cli/remote-builds"],
         },
         {
           type: "category",
