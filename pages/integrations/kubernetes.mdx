@@ -316,7 +316,7 @@ On a fresh install, add the same `--set` flag to the [`helm install`](#getting-s
 Exec needs Kraftlet to authenticate requests to its kubelet API.
 The chart sets this up by default with the cluster CA.
 Without it, Kraftlet refuses to start with exec on.
-The API server also has to trust the [serving certificate](#serving-certificate) of Kraftlet, which on Amazon Elastic Kubernetes Service (EKS) needs chart version 0.14.0 or later.
+The API server also has to trust the [serving certificate](#serving-certificate) of Kraftlet, which Kraftlet can get with a CertificateSigningRequest.
 
 Each Pod opts in with the `cloud.unikraft.v1.instances/enable-exec` annotation.
 Kraftlet adds the plugin only to instances whose Pod carries it:
@@ -367,7 +367,7 @@ A few details differ from a regular kubelet:
 
 The Kubernetes API server connects to Kraftlet to run `kubectl exec` and `kubectl logs`.
 By default, Kraftlet serves a self-signed certificate.
-If the API server checks the certificate, as on Amazon EKS, both commands fail with `x509: certificate signed by unknown authority`.
+If the API server checks the certificate, as on Amazon Elastic Kubernetes Service (EKS), both commands fail with `x509: certificate signed by unknown authority`.
 
 From chart version 0.14.0, `tls.signerName` makes Kraftlet get its certificate from the cluster.
 Kraftlet sends a CertificateSigningRequest to that signer, approves it, and renews the certificate before it expires.
@@ -377,13 +377,12 @@ The chart gives Kraftlet the permissions to do this for that signer only:
 helm upgrade kraftlet \
   --namespace kraftlet \
   --reuse-values \
-  --set tls.signerName=beta.eks.amazonaws.com/app-serving \
+  --set tls.signerName=kubernetes.io/kubelet-serving \
   oci://ghcr.io/unikraft-cloud/helm-charts/kraftlet
 ```
 
-On Amazon EKS, use `beta.eks.amazonaws.com/app-serving`.
+On Amazon EKS, set `tls.signerName` to `beta.eks.amazonaws.com/app-serving` instead.
 EKS issues `kubernetes.io/kubelet-serving` certificates only to the kubelets of its EC2 nodes, so a request from Kraftlet stays approved but never gets a certificate.
-On other clusters, use `kubernetes.io/kubelet-serving`.
 
 To use a certificate of your own, put it in a Secret and set `tls.secretName` and `tls.secretKeys` instead.
 Set only one of `tls.signerName` and `tls.secretName`, because Kraftlet doesn't start with both.
