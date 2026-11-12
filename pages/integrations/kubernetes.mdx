@@ -316,6 +316,7 @@ On a fresh install, add the same `--set` flag to the [`helm install`](#getting-s
 Exec needs Kraftlet to authenticate requests to its kubelet API.
 The chart sets this up by default with the cluster CA.
 Without it, Kraftlet refuses to start with exec on.
+The API server also has to trust the [serving certificate](#serving-certificate) of Kraftlet, which Kraftlet can get with a CertificateSigningRequest.
 
 Each Pod opts in with the `cloud.unikraft.v1.instances/enable-exec` annotation.
 Kraftlet adds the plugin only to instances whose Pod carries it:
@@ -361,6 +362,30 @@ A few details differ from a regular kubelet:
   Set `KRAFTLET_EXEC_POLL_INTERVAL` through `kraftlet.env` to change that delay from its `250ms` default.
 * An instance created before you enabled exec has no plugin.
   Recreate its Pod to add one.
+
+### Serving certificate
+
+The Kubernetes API server connects to Kraftlet to run `kubectl exec` and `kubectl logs`.
+By default, Kraftlet serves a self-signed certificate.
+If the API server checks the certificate, as on Amazon Elastic Kubernetes Service (EKS), both commands fail with `x509: certificate signed by unknown authority`.
+
+From chart version 0.14.0, `tls.signerName` makes Kraftlet get its certificate from the cluster.
+Kraftlet sends a CertificateSigningRequest to that signer, approves it, and renews the certificate before it expires.
+The chart gives Kraftlet the permissions to do this for that signer only:
+
+```bash
+helm upgrade kraftlet \
+  --namespace kraftlet \
+  --reuse-values \
+  --set tls.signerName=kubernetes.io/kubelet-serving \
+  oci://ghcr.io/unikraft-cloud/helm-charts/kraftlet
+```
+
+On Amazon EKS, set `tls.signerName` to `beta.eks.amazonaws.com/app-serving` instead.
+EKS issues `kubernetes.io/kubelet-serving` certificates only to the kubelets of its EC2 nodes, so a request from Kraftlet stays approved but never gets a certificate.
+
+To use a certificate of your own, put it in a Secret and set `tls.secretName` and `tls.secretKeys` instead.
+Set only one of `tls.signerName` and `tls.secretName`, because Kraftlet doesn't start with both.
 
 ### Egress filtering with a network shield
 
@@ -433,7 +458,21 @@ Note the following:
 - The official shield image needs two network interfaces.
   Kraftlet gives them to the shield container from version 0.6.0.
 - A shield whose policy fails to apply stays closed, so replace the Pod.
-- Inbound policies aren't supported, and a Pod with a shield can't use CNI.
+- The shield drops inbound traffic until an inbound policy allows it.
+  `kubectl exec` reaches the plugin of the sandbox through the shield, so it fails with `504 Gateway Time-out` until a policy opens the plugin ports, 20000 to 29999:
+
+  ```json
+  {
+    "id": "sandbox-plugin",
+    "direction": "inbound",
+    "handler": "passthrough",
+    "match": {"networks": ["0.0.0.0/0"], "port_ranges": [{"first": 20000, "last": 29999}]}
+  }
+  ```
+
+- With `cloud.unikraft.v1.instances/enable-exec`, Kraftlet adds the plugin to the shield too, and the environment of the shield holds `CA_KEY`.
+  Give `pods/exec` on the Pod only to users who may read the `shield-ca` Secret.
+- A Pod with a shield can't use CNI.
 
 ## Kraftlet internals
 
@@ -640,7 +679,7 @@ Kraftlet records what it does on the Pod as events:
 
 `CreateInstanceFailed` and `PodCreateServiceFailed` carry the platform error that blocked the Pod.
 
-`kubectl logs` works against a Pod on the Kraftlet node.
+`kubectl logs` works against a Pod on the Kraftlet node, if the API server trusts the [serving certificate](#serving-certificate) of Kraftlet.
 Kraftlet serves it from the instance console and returns the last 4096 bytes.
 The `--tail` and `--limit-bytes` flags move that window, and Kraftlet counts both in bytes rather than in lines.
 
