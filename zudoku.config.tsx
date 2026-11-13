@@ -84,6 +84,7 @@ const config: ZudokuConfig = {
   syntaxHighlighting: {
     languages: [
       "c",
+      "diff",
       "go",
       "html",
       "javascript",
