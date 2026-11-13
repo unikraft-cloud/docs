@@ -1,0 +1,221 @@
+---
+title: Remote builds
+description: Build images on the remote build server instead of your own machine
+navigation_icon: hammer
+---
+
+By default, `unikraft build` builds an image on your machine and needs a local BuildKit or Docker.
+With the `--remote` flag, the remote build server builds the image and pushes it to the registry.
+Your machine only sends the project files.
+
+:::tip
+Use a remote build when you have no BuildKit or Docker, for example in a CI job or on Windows.
+:::
+
+For local builds, see [images](/platform/images).
+
+## Build remotely
+
+Add `--remote` and name the image to push with `--output`:
+
+```bash
+unikraft build . --remote --output <my-org>/<image-name>:latest
+```
+
+:::note
+A remote build always pushes its image, so `--output` is mandatory and must be a registry reference.
+The registry defaults to `index.unikraft.io`.
+A local output such as an OCI archive isn't possible.
+:::
+
+Without a value, `--remote` uses the default remote build server, `https://controlplane.unikraft.com`.
+To use another one, see [select the remote build server](#select-the-remote-build-server).
+
+The CLI logs these messages in order:
+
+{/* vale off */}
+
+- `building remotely`, with the address of the remote build server.
+- `created build`, with the ID of the build.
+- The progress of the build steps.
+- `pushed image`, with the reference and the digest of the image.
+
+{/* vale on */}
+
+The image is then ready to use:
+
+```bash
+unikraft run --metro fra --image <my-org>/<image-name>:latest
+```
+
+### Select the metro
+
+The remote build server chooses the metro that the build runs in.
+To limit the choice, give one or more metros, by name or by the address of the metro's API:
+
+```bash
+unikraft build . --remote --metro fra --output <my-org>/<image-name>:latest
+```
+
+`--metro` applies only together with `--remote`.
+
+## What a remote build uses
+
+The input is the same as for a local build:
+
+- A directory with a `Kraftfile` builds from the `Kraftfile`.
+- A directory without a `Kraftfile` builds from its `Dockerfile`.
+- A path to a `Kraftfile` or a `Dockerfile` builds from that file, with its directory as the build context.
+
+The CLI doesn't upload an archive.
+The remote build server reads the files that it needs from your machine while the build runs.
+A `.dockerignore` file at the root of the project applies.
+Keep the CLI running until the build ends.
+
+These flags work as in a local build:
+
+| Flag          | Remote behavior                                                                  |
+| ------------- | -------------------------------------------------------------------------------- |
+| `--arch`      | Selects the architectures to build.                                              |
+| `--build-arg` | Sets a build-time variable, and `--build-arg KEY` reads `KEY` from your environment. |
+| `--secret`    | The remote build server reads the secret from your machine and doesn't store it. |
+| `--ssh`       | The build uses the SSH socket or keys of your machine.                           |
+| `--no-cache`  | The build doesn't use the cache of the builder.                                  |
+
+`--insecure` doesn't apply to a remote build.
+
+:::caution
+Don't put secret values in `--build-arg`.
+The remote build server keeps build arguments in the build record.
+Use `--secret` instead.
+:::
+
+Registry logins come from your machine: the Docker configuration and the current profile.
+You don't need to log in to `index.unikraft.io`.
+
+### Kraftfile limits
+
+A remote build doesn't support these parts of a `Kraftfile` yet:
+
+- `kernel` or `unikraft`
+- `libraries`
+- `volumes`
+- `template`
+- A ROM with a `Dockerfile` source
+
+The runtime must be an image in a registry.
+
+## Builders
+
+A remote build runs on a builder.
+A builder is an instance with a cache volume in **your own account**.
+Builds on the same builder share its cache.
+
+A builder scales to zero when it has no build to run, and starts again for the next build.
+
+The first remote build creates a builder with the name `default` and the default sizes.
+The platform deletes the `default` builder and its cache after 7 days without a build.
+A builder with another name stays until you delete it.
+
+To choose the sizes, create the builder before the first build:
+
+```bash
+unikraft builder create --vcpus 4 --memory 8GiB --cache 50GiB
+```
+
+You don't need a flag to use the builder.
+`unikraft build --remote` always runs on the `default` builder:
+
+```bash
+unikraft build . --remote --output <my-org>/<image-name>:latest
+```
+
+`unikraft build` can't select a builder with another name yet.
+
+The `unikraft builder` commands manage builders:
+
+| Command                          | Action                                                 |
+| -------------------------------- | ------------------------------------------------------ |
+| `unikraft builder create`        | Creates a builder.                                     |
+| `unikraft builder get`           | Shows a builder, its running builds, and its instance. |
+| `unikraft builder list`          | Lists the builders.                                    |
+| `unikraft builder du`            | Shows the disk usage of the cache of a builder.        |
+| `unikraft builder prune`         | Frees the cache of a builder and keeps the builder.    |
+| `unikraft builder delete <name>` | Deletes a builder and its cache.                       |
+
+## Select the remote build server
+
+You only need this section to use a remote build server other than the default.
+
+`unikraft build --remote` takes the address of the remote build server from the first of these that has a value:
+
+| Order | Source                                                                                         |
+| ----- | ---------------------------------------------------------------------------------------------- |
+| 1     | The flag, as `--remote=<url>`                                                                  |
+| 2     | The `UNIKRAFT_BUILD_URL` environment variable                                                  |
+| 3     | The `build_url` key of the current [profile](/tutorials/kraftkit-to-unikraft#profile-management) |
+| 4     | The default, `https://controlplane.unikraft.com`                                               |
+
+To set the address in a profile, add `build_url` to it in `~/.config/unikraft/config.yaml`:
+
+```yaml title="config.yaml"
+profiles:
+  <profile-name>:
+    build_url: https://build.example.com
+```
+
+## Cancel a build
+
+Press `Ctrl+C` to cancel a remote build.
+The CLI tells the remote build server to cancel the build and then exits with code 1.
+
+## Detached builds
+
+A build from the CLI is an attached build.
+The remote build server reads the project from your machine, so the build stops when the CLI stops.
+
+{/* vale off */}
+A detached build has all its sources in the request, as a public git repository or an HTTPS tarball.
+It runs without a connection to your machine.
+The CLI can't start a detached build yet.
+Start one with [**New build**](https://console.unikraft.com/new/build) in the console.
+{/* vale on */}
+
+## Builds in the console
+
+Remote builds from the CLI also appear in the console, on the **Builds** page of the organization.
+The CLI has no command to list builds or to read the logs of an earlier build, so use the console for that.
+
+:::note
+You need the builds permission to see the **Builds** page.
+The console hides the page for an organization without this permission.
+:::
+
+The page of a build shows:
+
+{/* vale off */}
+
+- The status: `waiting`, `running`, `succeeded`, `failed`, or `cancelled`.
+- The inputs, the settings, and the logs of the build.
+- The pushed image, with **Open the image** and **Create instance**.
+- **Cancel** for a build in progress, and delete for a finished one.
+
+{/* vale on */}
+
+Deleting a build removes the build and its logs.
+The pushed image stays.
+
+## Troubleshooting
+
+| Message                                                 | Fix                                                                    |
+| ------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `a remote build needs --output, the image to push`      | Add `--output` with a registry reference.                              |
+| `a remote build pushes to a registry, not to ...`       | Give `--output` a registry reference, not a local path.                |
+| `--metro applies only to a remote build, with --remote` | Add `--remote`, or remove `--metro`.                                   |
+| `the build service ... must be https`                   | Use an address that starts with `https://`.                            |
+| `--insecure does not apply to a remote build`           | Remove `--insecure`.                                                   |
+| `no build service: set build_url in profile ...`        | Give the `unikraft builder` command an address, see [select the remote build server](#select-the-remote-build-server). |
+| `there is no builder ...`                               | Create the builder with `unikraft builder create <name>`.              |
+| `kraftfile: ... is not supported yet`                   | Remove the part that [Kraftfile limits](#kraftfile-limits) names.      |
+
+For all flags, see the [`unikraft build`](/cli/unikraft/build) reference.
