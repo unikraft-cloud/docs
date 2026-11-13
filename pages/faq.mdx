@@ -88,8 +88,6 @@ Below is a sample `Kraftfile` with a brief explanation:
 ```yaml title="Kraftfile"
 spec: v0.7
 
-runtime: python:3.12
-
 targets:
   - kraftcloud/x86_64
 
@@ -100,12 +98,11 @@ rootfs:
 cmd: ["/usr/bin/python3", "/src/server.py"]
 ```
 
-The `runtime` specifies one of the Unikraft Cloud runtimes (microVMs) built to run different languages and apps.
-Here it specifies a Python runtime.
+The `Kraftfile` sets no `runtime`, so the image boots on the [platform kernel](/platform/images#platform-kernel).
 
 The `targets` parameter specifies the platform and architecture pairs to build for.
 Here it targets `kraftcloud` (Unikraft Cloud) on `x86_64`, which is the architecture the hosted platform runs on.
-Without `targets`, a `runtime` builds for `x86_64` only, so list every architecture you need, for example `kraftcloud/arm64` alongside `kraftcloud/x86_64`.
+Without `targets` or `runtime`, the build fails unless you pass `--arch`, so list every architecture you need, for example `kraftcloud/arm64` alongside `kraftcloud/x86_64`.
 See [architectures](/platform/images#architectures) for more detail.
 
 The `rootfs` parameter tells the CLI to use a `Dockerfile` in the same directory to build the root filesystem as an [EROFS image](/tutorials/rootfs-formats).
@@ -220,7 +217,8 @@ The CLI runs on macOS, Linux, and Windows.
 
 Both `x86_64` and `arm64`, and the hosted platform runs on `x86_64`.
 The architecture of the guest image must match the host architecture, so name the architectures you deploy to in the `targets` key of your `Kraftfile` or through the `--arch` flag.
-A `runtime` with no `targets` builds for `x86_64` only, and a single `unikraft build` invocation produces an image for every architecture you ask for.
+A `runtime` with no `targets` builds for `x86_64` only, and a `Kraftfile` without a `runtime` fails to build without `targets` or `--arch`.
+A single `unikraft build` invocation produces an image for every architecture you ask for.
 See [architectures](/platform/images#architectures) for more detail.
 
 {/* vale off */}

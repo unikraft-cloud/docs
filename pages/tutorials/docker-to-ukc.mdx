@@ -64,8 +64,6 @@ Then create a matching `Kraftfile`:
 ```yaml title="Kraftfile"
 spec: v0.7
 
-runtime: base-compat:latest
-
 targets:
   - kraftcloud/x86_64
 
@@ -78,11 +76,14 @@ cmd: ["/path/from-entrypoint", "arg1", "arg2"]
 
 In this first-pass `Kraftfile`:
 
-* `runtime: base-compat:latest` selects the generic compatibility runtime.
 * `targets: kraftcloud/x86_64` specifies the platform and architecture pairs to build for.
-  Without `targets`, the build produces `x86_64` only, so add `kraftcloud/arm64` to the list to also build for ARM hosts.
+  Without `targets`, you must pass `--arch` to `unikraft build`.
+  Add `kraftcloud/arm64` to the list to also build for ARM hosts.
 * `rootfs: ./Dockerfile` tells the CLI to build the root filesystem from the `Dockerfile`.
 * `cmd: [...]` explicitly sets the process arguments that should run inside the instance.
+
+If the `Kraftfile` sets a `runtime`, it will build with that guest kernel in the image.
+You can also remove it, so that the image boots on the [platform kernel](/platform/images#platform-kernel).
 
 Replace the placeholder command with the exact values extracted from `docker image inspect`.
 For example, if the image reports `Entrypoint=["/usr/local/bin/docker-entrypoint.sh"]` and `Cmd=["postgres"]`, then use `cmd: ["/usr/local/bin/docker-entrypoint.sh", "postgres"]`.
@@ -96,7 +97,7 @@ Also note that instances run as `root` unless you explicitly switch users at run
 ### Deploy the first pass
 
 Run an initial deployment before optimizing anything.
-This confirms that the runtime, filesystem, and command line are valid.
+This confirms that the filesystem and command line are valid.
 
 ```bash
 unikraft build . --output <my-org>/docker-port:latest
