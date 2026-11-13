@@ -1,0 +1,159 @@
+---
+title: Terraform
+navigation_icon: blocks
+---
+
+The Unikraft Cloud Terraform provider enables infrastructure-as-code management of platform resources.
+It communicates with the platform API to manage instances, certificates, and volumes.
+
+- **Repository**: [unikraft-cloud/terraform-provider-ukc](https://github.com/unikraft-cloud/terraform-provider-ukc)
+
+## Provider configuration
+
+```hcl title=""
+provider "ukc" {
+  metro = "fra0"
+  token = var.ukc_token
+}
+```
+
+| Attribute | Type | Required | Environment Variable | Description |
+|-----------|------|----------|---------------------|-------------|
+| `metro` | string | No | `UKC_METRO` | Target metro identifier |
+| `token` | string | Yes (sensitive) | `UKC_TOKEN` | Platform API authentication token |
+
+## Resources
+
+The provider manages three resource types.
+
+### `ukc_instance`
+
+Creates a VM instance.
+All changes require replacement.
+The provider doesn't support in-place updates for this resource.
+
+```hcl title=""
+resource "ukc_instance" "web" {
+  image     = "unikraft.io/myorg/myapp:latest"
+  name      = "web-server"
+  memory_mb = 128
+  autostart = true
+
+  service_group {
+    services {
+      port             = 443
+      destination_port = 8080
+      handlers         = ["tls", "http"]
+    }
+  }
+}
+```
+
+| Attribute | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `image` | string | Yes | Container image reference |
+| `service_group` | block | Yes | Service group with nested `services` block |
+| `args` | list(string) | No | Arguments passed to the unikernel |
+| `memory_mb` | number | No | Memory in MiB (provider validates 16–256; the platform supports higher values) |
+| `autostart` | bool | No | Start instance on creation |
+| `name` | string | No | Instance name |
+
+Computed attributes (read-only): `uuid`, `name`, `fqdn`, `private_ip`, `private_fqdn`, `state`, `created_at`, `env`, `network_interfaces`, `boot_time_us`.
+
+Import: `terraform import ukc_instance.web <UUID>`
+
+### `ukc_certificate`
+
+Uploads a TLS certificate.
+All changes require replacement.
+
+```hcl title=""
+resource "ukc_certificate" "app" {
+  cn    = "app.example.com"
+  chain = file("cert.pem")
+  pkey  = file("key.pem")
+}
+```
+
+| Attribute | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `cn` | string | Yes | Common name (subject) |
+| `chain` | string | Yes | Certificate chain in Privacy-Enhanced Mail format |
+| `pkey` | string | Yes (sensitive) | Private key in Privacy-Enhanced Mail format |
+| `name` | string | No | Certificate name |
+
+Computed attributes: `uuid`, `status`, `data.certificates`.
+
+Import: `terraform import ukc_certificate.app <UUID>`
+
+### `ukc_volume`
+
+Creates a persistent volume.
+You can change the `size_mb` attribute in place.
+This is the only mutable field across all resources.
+
+```hcl title=""
+resource "ukc_volume" "data" {
+  name    = "app-data"
+  size_mb = 2048
+}
+```
+
+| Attribute | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `size_mb` | number | Yes | Volume size in MiB (mutable) |
+| `name` | string | No | Volume name |
+
+Computed attributes: `uuid`, `state`, `persistent`, `created_at`, `attached_to`.
+
+Import: `terraform import ukc_volume.data <UUID>`
+
+## Data sources
+
+Four data sources read existing platform state.
+
+### `ukc_instance`
+
+Look up a single instance by UUID.
+
+```hcl title=""
+data "ukc_instance" "existing" {
+  uuid = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+}
+```
+
+### `ukc_instances`
+
+List instance UUIDs with an optional state filter.
+
+```hcl title=""
+data "ukc_instances" "running" {
+  state = "running"
+}
+```
+
+### `ukc_volume`
+
+Look up a single volume by UUID.
+
+```hcl title=""
+data "ukc_volume" "existing" {
+  uuid = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+}
+```
+
+### `ukc_volumes`
+
+List volume UUIDs with an optional state filter.
+
+```hcl title=""
+data "ukc_volumes" "all" {
+  state = "available"
+}
+```
+
+## Learn more
+
+* The `kraft cloud` [command-line tool reference](/cli/)
+* Unikraft Cloud's [REST API reference](/api/platform/v1)
+* [Kubernetes integration](/integrations/kubernetes): alternative Kubernetes-native integration
