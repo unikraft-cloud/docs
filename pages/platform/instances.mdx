@@ -286,6 +286,8 @@ Every instance runs as one of two virtual machine types, which you pick with `--
 Full VMs running on QEMU are required for [GPU support](#gpus).
 They don't support [branching](/features/branching), [checkpointing](/features/checkpoints), or [vertical scaling](/features/vertical-scaling) yet, and work only with block-based volumes rather than [virtiofs](/platform/volumes#filesystems).
 A create request therefore can't combine `--type=full` with `--branch` or `--checkpoint`.
+A `full` instance needs an image with a kernel of its own built for full VMs.
+[Kernel-less images](/platform/images#platform-kernel) run as `micro` only.
 
 ### Replicas
 
