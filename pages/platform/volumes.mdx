@@ -217,6 +217,13 @@ unikraft instances delete httpserver-python312-flask30-bxwxm
 
 You should see that the volume is now `available` again.
 
+:::tip[Let the instance shut down before you delete it]
+`unikraft instances delete` lets the instance shut down cleanly, and waits up to the platform's API timeout, 60 seconds by default.
+When you call [`DELETE /instances`](/api/platform/v1/instances#delete-instances) yourself, set `timeout_s` in the request for the same behavior.
+Without `timeout_s`, the platform stops the instance at once, so the instance can lose data that it hasn't written to the volume yet.
+The volume then also stays in use for a short time after the request returns.
+:::
+
 :::info
 While the instance is `stopped`, the volume is still attached to it, but **not** mounted.
 Mounting of an attached volume happens automatically when the instance starts.
