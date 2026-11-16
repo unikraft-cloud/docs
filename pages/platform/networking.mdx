@@ -31,6 +31,15 @@ For example, you wouldn't want to expose your database publicly, but you would w
 Even when using internal communication, scale-to-zero triggers will still work as expected, and your instances will scale down to zero when not in use.
 :::
 
+{/* vale off */}
+:::warning
+Internal communication is always enabled on the hosted platform, and operators can enable it on BYOC or on-prem installations.
+Where it's enabled, instances of the same user reach each other directly at the network level, which includes each other's [plugin](/features/plugins) ports.
+That path doesn't pass through the platform, so nothing checks a [plugin authorization](/features/plugins#authorization) token on it: any instance can drive the plugin API of every other instance of the same user.
+Treat one account as one trust domain where internal communication is enabled and plugins are running, such as on the hosted platform.
+:::
+{/* vale on */}
+
 Every instance, by default, receives a private IP and a private FQDN (of the format `<instance-name>.internal`).
 You can see the private IP of your instance by grabbing its details:
 
