@@ -141,6 +141,10 @@ A `Kraftfile` without a `runtime`, or a `Dockerfile` on its own, builds such a k
 A kernel-less image runs only in metros that have a platform kernel installed.
 Images that do ship a kernel keep working exactly as before.
 
+The platform kernel runs `micro` instances only.
+A kernel-less image can't run as a `full` instance, which [GPU instances](/platform/instances#gpus) require.
+To run as `full`, the image needs a kernel of its own built for full VMs.
+
 This decouples the guest kernel from your app.
 A kernel update, including a security fix, becomes available to workloads that cold-boot after the operator rolls out the new kernel package.
 You no longer rebuild and re-push every image to pick one up.
