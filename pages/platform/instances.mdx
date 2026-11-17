@@ -197,6 +197,7 @@ Currently the platform-defined values are:
 | `4`   | `NO_GPU`     | The platform didn't start the instance because no GPU was free for it. |
 | `5`   | `NO_MEM_VSCALING` | The instance has a memory range for [vertical scaling](/features/vertical-scaling), but its image doesn't support memory vertical scaling. |
 | `6`   | `NO_CPU_VSCALING` | The instance has a vCPU range for [vertical scaling](/features/vertical-scaling), but its image doesn't support vCPU vertical scaling. |
+| `7`   | `RESUME_FAILED` | The instance stopped before it resumed from its [snapshot](/features/snapshots), and the platform keeps the snapshot for the next start until a stop request discards it. |
 
 When the guest kernel reports a stop code, it uses the following encoding:
 
