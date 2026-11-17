@@ -192,6 +192,11 @@ Currently the platform-defined values are:
 |-------|--------------|----------|
 | `0`   | `UNKNOWN`    | No platform-specific stop code is available. |
 | `1`   | `NOMEDIUM`   | The instance couldn't start because the image or another required medium wasn't available, for example because an image pull failed. |
+| `2`   | `BRANCH`     | [Branching](/features/branching) the instance failed. |
+| `3`   | `QUOTA`      | The platform didn't start the instance because the start would exceed a [quota](/platform/quotas). |
+| `4`   | `NO_GPU`     | The platform didn't start the instance because no GPU was free for it. |
+| `5`   | `NO_MEM_VSCALING` | The instance has a memory range for [vertical scaling](/features/vertical-scaling), but its image doesn't support memory vertical scaling. |
+| `6`   | `NO_CPU_VSCALING` | The instance has a vCPU range for [vertical scaling](/features/vertical-scaling), but its image doesn't support vCPU vertical scaling. |
 
 When the guest kernel reports a stop code, it uses the following encoding:
 
