@@ -2,6 +2,14 @@
 title: Remote builds
 description: Build images on the remote build server instead of your own machine
 navigation_icon: hammer
+availability:
+  hosting: { cloud: false, dedicated: true, byoc: true, on-prem: true }
+  status: preview
+  interfaces: { api: true, cli: true, sdk: true }
+  notes:
+    - text: To use remote builds through the console, contact support to enable them for your account.
+      link: mailto:support@unikraft.com
+      linkText: support@unikraft.com
 ---
 
 By default, `unikraft build` builds an image on your machine and needs a local BuildKit or Docker.
