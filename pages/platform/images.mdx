@@ -164,6 +164,44 @@ If both files are present, the `Kraftfile` takes precedence.
 
 A `Dockerfile` has no targets to take an architecture from, so you must pass `--arch`.
 
+### Container images
+
+A container image, such as one that Docker builds, also runs as a kernel-less image, without a build step.
+Copy it to the central registry, and start an instance from it:
+
+```bash
+# copy an image from another registry
+unikraft image copy docker.io/library/nginx:latest <my-org>/nginx:latest
+
+# or copy an image that you built with Docker
+docker save -o my-app.tar my-app:latest
+unikraft image copy ./my-app.tar <my-org>/my-app:latest
+
+unikraft run --metro fra \
+  -m 512M \
+  -p 443:80/http+tls \
+  --image <my-org>/nginx:latest
+```
+
+When an image has no manifest for Unikraft Cloud, the platform takes its `linux` manifest for the architecture of the node.
+The first time that a node starts the image, the platform downloads its layers and merges them into an EROFS root filesystem.
+This makes the first start on each node slower.
+Later starts on the same node use the root filesystem that the node already has.
+The instance sees the same files as a container of the image.
+
+The platform takes `Entrypoint`, `Cmd`, `Env`, and `WorkingDir` from the image config, and ignores the other fields, such as `EXPOSE` and `VOLUME`.
+Set ports, volumes, and memory when you create the instance.
+To change the start command, pass `--args` to `unikraft run`, which replaces `Cmd`.
+The API also accepts `entrypoint`, which replaces `Entrypoint` and drops `Cmd`, and `workdir`, which replaces `WorkingDir`.
+
+Note the following:
+
+- The platform accepts plain layers, and layers that `gzip` or `zstd` compresses.
+- The platform refuses an image with more than 1,000,000 files and directories, or with more than 64 GiB of file data.
+  On dedicated, BYOC, and on-prem installations, the operator can change these limits.
+- Copy container images to the central registry.
+  The platform doesn't run them from a node's local registry or as [images served over HTTP](/cli/registries#images-served-over-http).
+
 ## Architectures
 
 The Unikraft Cloud platform runs on both `x86_64` and `arm64` hosts, and the hosted platform runs on `x86_64`.
