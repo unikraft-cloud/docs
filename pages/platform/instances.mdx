@@ -520,6 +520,14 @@ You can't combine `drain_timeout_ms` with `force: true`.
 Setting both returns a `400` error.
 :::
 
+A [`DELETE /instances`](/api/platform/v1/instances#delete-instances) request doesn't drain connections.
+To drain an instance before you delete it, stop it with a drain timeout first, and then delete it:
+
+```bash
+unikraft instance stop --drain-timeout 30s my-instance
+unikraft instance delete my-instance
+```
+
 ## Instance templates
 
 An instance template is a snapshotted instance that acts as a source for cloning new instances.
