@@ -13,7 +13,7 @@ import { Sandbox } from "@unikraft/cloud";
 
 const sandbox = await Sandbox.create(
   {
-    image: "nginx:latest",
+    image: "official/alpine:latest",
     memory_mb: 1024,
     env: { LOG_LEVEL: "debug" },
   },
@@ -73,7 +73,7 @@ Its options exclude `token`, `metro`, `client`, and the other client fields, bec
 
 ```ts
 const sandbox = await ukc.metro("fra").sandboxes.create(
-  { image: "nginx:latest", memory_mb: 1024 },
+  { image: "official/alpine:latest", memory_mb: 1024 },
   { bootTimeoutSeconds: 60 },
 );
 ```

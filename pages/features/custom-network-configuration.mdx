@@ -43,13 +43,14 @@ Leaving out `network_interfaces` is the same as requesting a single pool-allocat
 
 ## Creating an instance with custom interfaces
 
-Add a `network_interfaces` array to your [`POST /instances`](/api/platform/v1/instances#create-instance) request:
+Add a `network_interfaces` array to your [`POST /instances`](/api/platform/v1/instances#create-instance) request.
+This example uses the image that the [Nginx guide](/guides/nginx) builds:
 
 ```bash
 unikraft api /v1/instances --metro fra \
   '{
     "name": "my-instance",
-    "image": "nginx:latest",
+    "image": "<my-org>/nginx:latest",
     "network_interfaces": [
       {
         "name": "my-instance-private"

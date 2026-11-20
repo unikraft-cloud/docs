@@ -37,12 +37,14 @@ await ukc.instances.get({ name: "web" }).suspend(); // the suspended instance
 await ukc.instances.get({ name: "web" }).update({ memory_mb: 512 });
 
 await ukc.metro("fra").instances
-  .create({ image: "nginx:latest" })
+  .create({ image: "<my-org>/nginx:latest" })
   .wait({ state: "running", timeoutSeconds: 30 })
   .logs({ offset: -4096 });
 
 await ukc.volumes.get({ name: "data" }).attach({ attach_to: { name: "web" }, at: "/data" });
 ```
+
+The `<my-org>/nginx:latest` image is the one that the [Nginx guide](/guides/nginx) builds.
 
 A handle sends nothing until you await it or chain onto it.
 Each step runs at most once, even when you await it many times.

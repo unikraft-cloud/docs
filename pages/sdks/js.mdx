@@ -32,7 +32,7 @@ const instance = await fra.instances.create({
   memory_mb: 256,
   autostart: true,
   service_group: {
-    services: [{ port: 443, handlers: ["tls", "http"], destination_port: 80 }],
+    services: [{ port: 443, handlers: ["tls", "http"], destination_port: 8080 }],
   },
 });
 
