@@ -156,7 +156,7 @@ The `unikraft builder` commands manage builders:
 
 You only need this section to use a remote build server other than the default.
 
-`unikraft build --remote` takes the address of the remote build server from the first of these that has a value:
+`unikraft build --remote` and the `unikraft builder` commands take the address of the remote build server from the first of these that has a value:
 
 | Order | Source                                                                                         |
 | ----- | ---------------------------------------------------------------------------------------------- |
@@ -228,7 +228,6 @@ The pushed image stays.
 | `--metro applies only to a remote build, with --remote` | Add `--remote`, or remove `--metro`.                                   |
 | `the build service ... must be https`                   | Use an address that starts with `https://`.                            |
 | `--insecure does not apply to a remote build`           | Remove `--insecure`.                                                   |
-| `no build service: set build_url in profile ...`        | Give the `unikraft builder` command an address, see [select the remote build server](#select-the-remote-build-server). |
 | `there is no builder ...`                               | Create the builder with `unikraft builder create <name>`.              |
 | `kraftfile: ... is not supported yet`                   | Remove the part that [Kraftfile limits](#kraftfile-limits) names.      |
 
