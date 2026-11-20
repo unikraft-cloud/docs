@@ -15,7 +15,7 @@ something your program creates and drives directly:
 
 ```ts
 const inst = await ukc.metro("fra").instances
-  .create({ image: "nginx:latest", memory_mb: 256, autostart: true })
+  .create({ image: "<my-org>/nginx:latest", memory_mb: 256, autostart: true })
   .wait({ state: "running" });
 ```
 
@@ -387,12 +387,12 @@ The value comes from the template.
 
 By default [`POST /instances`](/api/platform/v1/instances#create-instance) returns as soon as the platform queues the instance.
 Set `timeout_s` non-zero to block until the instance reaches the `running` state or the timeout expires.
-For example:
+For example, with the image that the [Nginx guide](/guides/nginx) builds:
 
 ```json title="POST /instances"
 {
   ...
-  "image": "nginx:latest",
+  "image": "<my-org>/nginx:latest",
   "memory_mb": 256,
   "autostart": true,
   "timeout_s": 10,
@@ -423,7 +423,7 @@ Pass `delete-on-stop` in the features array to automatically delete the instance
 ```json title="POST /instances"
 {
   ...
-  "image": "nginx:latest",
+  "image": "<my-org>/nginx:latest",
   "memory_mb": 256,
   "features": ["delete-on-stop"],
   "restart_policy": "never",

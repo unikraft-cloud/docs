@@ -168,11 +168,13 @@ await ukc.instances.get(name="web").suspend()  # the suspend
 
 logs = await (
     ukc.metro("fra")
-    .instances.create(image="nginx:latest")
+    .instances.create(image="<my-org>/nginx:latest")
     .wait(state="running", timeout_seconds=30)
     .logs(offset=-4096)
 )
 ```
+
+The `<my-org>/nginx:latest` image is the one that the [Nginx guide](/guides/nginx) builds.
 
 Nothing is sent until a handle is awaited or an operation is chained onto it.
 With one metro in scope, `get(name=...).suspend()` is a single request; when the scope spans metros, the instance is located first so the operation reaches the metro that holds it.
