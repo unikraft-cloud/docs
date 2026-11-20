@@ -227,7 +227,7 @@ const config: ZudokuConfig = {
             "/guides/httpserver-python3.12-django5.0", // Django HTTP Server
             "/guides/dragonflydb", // DragonflyDB
             "/guides/duckdb-go1.21", // DuckDB with Go
-            "/guides/httpserver-elixir1.16", // Elixir HTTP Server
+            "/guides/httpserver-elixir1.19", // Elixir HTTP Server
             "/guides/httpserver-erlang26.2", // Erlang HTTP Server
             "/guides/httpserver-expressjs4.18-node21", // Express HTTP Server
             "/guides/httpserver-python3.12-fastapi-0.121.3", // FastAPI HTTP Server

@@ -36,8 +36,9 @@ The registry defaults to `index.unikraft.io`.
 A local output such as an OCI archive isn't possible.
 :::
 
-Without a value, `--remote` uses the default remote build server, `https://controlplane.unikraft.com`.
-To use another one, see [select the remote build server](#select-the-remote-build-server).
+Without a value, `--remote` uses the address in `UNIKRAFT_BUILD_URL` or in the profile.
+If neither has one, it uses the default remote build server, `https://controlplane.unikraft.com`.
+For the order, see [select the remote build server](#select-the-remote-build-server).
 
 The CLI logs these messages in order:
 
@@ -111,7 +112,9 @@ A remote build doesn't support these parts of a `Kraftfile` yet:
 - `template`
 - A ROM with a `Dockerfile` source
 
-The runtime must be an image in a registry.
+If the `Kraftfile` names a runtime, it must be an image in a registry.
+A `Kraftfile` without a runtime builds an image without a kernel.
+It needs `targets` or `--arch` to set the architecture.
 
 ## Builders
 
@@ -155,7 +158,7 @@ The `unikraft builder` commands manage builders:
 
 You only need this section to use a remote build server other than the default.
 
-`unikraft build --remote` takes the address of the remote build server from the first of these that has a value:
+`unikraft build --remote` and the `unikraft builder` commands take the address of the remote build server from the first of these that has a value:
 
 | Order | Source                                                                                         |
 | ----- | ---------------------------------------------------------------------------------------------- |
@@ -163,6 +166,11 @@ You only need this section to use a remote build server other than the default.
 | 2     | The `UNIKRAFT_BUILD_URL` environment variable                                                  |
 | 3     | The `build_url` key of the current [profile](/tutorials/kraftkit-to-unikraft#profile-management) |
 | 4     | The default, `https://controlplane.unikraft.com`                                               |
+
+:::caution
+`UNIKRAFT_BUILD_URL` makes every `unikraft build` remote, also without `--remote` and also with an empty value.
+To build locally, unset the variable.
+:::
 
 To set the address in a profile, add `build_url` to it in `~/.config/unikraft/config.yaml`:
 
@@ -222,7 +230,6 @@ The pushed image stays.
 | `--metro applies only to a remote build, with --remote` | Add `--remote`, or remove `--metro`.                                   |
 | `the build service ... must be https`                   | Use an address that starts with `https://`.                            |
 | `--insecure does not apply to a remote build`           | Remove `--insecure`.                                                   |
-| `no build service: set build_url in profile ...`        | Give the `unikraft builder` command an address, see [select the remote build server](#select-the-remote-build-server). |
 | `there is no builder ...`                               | Create the builder with `unikraft builder create <name>`.              |
 | `kraftfile: ... is not supported yet`                   | Remove the part that [Kraftfile limits](#kraftfile-limits) names.      |
 

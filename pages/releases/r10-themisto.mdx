@@ -168,14 +168,14 @@ The CLI can now build them, attach them at instance creation time, and edit them
 unikraft instance create \
     --name demo \
     --metro fra \
-    --image nginx:latest \
+    --image <my-org>/nginx:latest \
     --rom image=myuser/my-rom:latest,at=/rom,name=docs
 
 # Attach an inline ROM built from a local directory
 unikraft instance create \
     --name demo \
     --metro fra \
-    --image nginx:latest \
+    --image <my-org>/nginx:latest \
     --rom dir=./mydata,at=/rom
 
 # Add a ROM to an existing instance
@@ -230,7 +230,7 @@ The platform scales idle instances down after `cooldown-time` of no activity, wi
 unikraft instance create \
     --name web \
     --metro fra \
-    --image nginx:latest \
+    --image <my-org>/nginx:latest \
     --scale-to-zero policy=idle,cooldown-time=30000
 ```
 

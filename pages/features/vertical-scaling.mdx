@@ -37,11 +37,13 @@ In the meantime, set them through the [API](/api/platform/v1/instances#create-in
 :::
 {/* vale on */}
 
+This request gives the image that the [Nginx guide](/guides/nginx) builds a memory range and a vCPU range:
+
 ```bash title="POST /instances"
 unikraft api /v1/instances --metro=fra \
    '{
    "name": "my-instance",
-   "image": "nginx:latest",
+   "image": "<my-org>/nginx:latest",
    "memory_mb": 512,
    "min_memory_mb": 256,
    "max_memory_mb": 2048,
