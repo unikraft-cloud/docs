@@ -112,7 +112,9 @@ A remote build doesn't support these parts of a `Kraftfile` yet:
 - `template`
 - A ROM with a `Dockerfile` source
 
-The runtime must be an image in a registry.
+If the `Kraftfile` names a runtime, it must be an image in a registry.
+A `Kraftfile` without a runtime builds an image without a kernel.
+It needs `targets` or `--arch` to set the architecture.
 
 ## Builders
 
