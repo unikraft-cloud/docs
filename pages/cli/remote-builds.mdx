@@ -33,6 +33,7 @@ unikraft build . --remote --output <my-org>/<image-name>:latest
 :::note
 A remote build always pushes its image, so `--output` is mandatory and must be a registry reference.
 The registry defaults to `index.unikraft.io`.
+The reference needs your namespace and a tag: `<image-name>:latest` alone names the `official` namespace, and the remote build server refuses `<my-org>/<image-name>` without a tag.
 A local output such as an OCI archive isn't possible.
 :::
 
@@ -121,9 +122,21 @@ Builds on the same builder share its cache.
 
 A builder scales to zero when it has no build to run, and starts again for the next build.
 
-The first remote build creates a builder with the name `default` and the default sizes.
+The first remote build creates a builder with the name `default` and the default sizes: 1 vCPU, 2 GiB of memory, and a 1 GiB cache volume.
+The builder counts toward the quotas of your account.
 The platform deletes the `default` builder and its cache after 7 days without a build.
 A builder with another name stays until you delete it.
+
+The next build creates the `default` builder again with the default sizes.
+The same happens after you delete the instance of the builder.
+To restore your sizes, run `unikraft builder create --metro <metro>` with your size flags before that build, and give the build the same `--metro`.
+If the build already ran, delete the builder with `unikraft builder delete default --metro <metro>` first.
+With another remote build server, also give both builder commands `--remote <url>`.
+
+A builder keeps its version of the build tools, also after the remote build server moves to a newer one.
+To move a builder to the current version, delete it and create it again.
+For the `default` builder, delete it and the next build creates it again, with the default sizes.
+Deleting a builder also deletes its cache.
 
 To choose the sizes, create the builder before the first build:
 
@@ -139,6 +152,13 @@ unikraft build . --remote --output <my-org>/<image-name>:latest
 ```
 
 `unikraft build` can't select a builder with another name yet.
+
+The cache holds the base images, the intermediate stages, and the layers of each build, and keeps the data of earlier builds until you prune it.
+A build needs more cache than the size of its final image, a multi-stage build most of all.
+`unikraft builder du` shows how much of the cache is in use.
+When the cache is too small, the build fails with `the cache of the builder is full`.
+Free the cache with `unikraft builder prune`, or delete the builder and create it again with a larger `--cache`.
+Give these commands the `--metro` of the builder, and `--remote <url>` with another remote build server.
 
 The `unikraft builder` commands manage builders:
 
@@ -163,6 +183,16 @@ You only need this section to use a remote build server other than the default.
 | 2     | The `UNIKRAFT_BUILD_URL` environment variable                                                  |
 | 3     | The `build_url` key of the current [profile](/tutorials/kraftkit-to-unikraft#profile-management) |
 | 4     | The default, `https://controlplane.unikraft.com`                                               |
+
+:::caution
+`UNIKRAFT_BUILD_URL` is the environment form of `--remote`.
+When it's set, even to an empty value, every `unikraft build` builds remotely.
+To set the address without making every build remote, use `build_url` in the profile.
+:::
+
+Give the address without a path, such as `https://build.example.com`.
+
+The `unikraft builder` commands take the address from the same sources, with `--remote <url>` as the flag.
 
 To set the address in a profile, add `build_url` to it in `~/.config/unikraft/config.yaml`:
 
@@ -222,7 +252,9 @@ The pushed image stays.
 | `--metro applies only to a remote build, with --remote` | Add `--remote`, or remove `--metro`.                                   |
 | `the build service ... must be https`                   | Use an address that starts with `https://`.                            |
 | `--insecure does not apply to a remote build`           | Remove `--insecure`.                                                   |
-| `no build service: set build_url in profile ...`        | Give the `unikraft builder` command an address, see [select the remote build server](#select-the-remote-build-server). |
+| `output ...: no tag`                                    | Add a tag to `--output`, such as `:latest`.                            |
+| `the cache of the builder is full ...`                  | See [builders](#builders): prune the builder, or give it a larger cache. |
+| `starting builder ...`                                  | Delete the builder with `unikraft builder delete default --metro <metro>`, and `--remote <url>` with another remote build server. Then run the build again with the same `--metro`, which creates the builder again with the default sizes and an empty cache. |
 | `there is no builder ...`                               | Create the builder with `unikraft builder create <name>`.              |
 | `kraftfile: ... is not supported yet`                   | Remove the part that [Kraftfile limits](#kraftfile-limits) names.      |
 
