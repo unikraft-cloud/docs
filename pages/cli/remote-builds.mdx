@@ -165,6 +165,11 @@ You only need this section to use a remote build server other than the default.
 | 3     | The `build_url` key of the current [profile](/tutorials/kraftkit-to-unikraft#profile-management) |
 | 4     | The default, `https://controlplane.unikraft.com`                                               |
 
+:::caution
+`UNIKRAFT_BUILD_URL` makes every `unikraft build` remote, also without `--remote` and also with an empty value.
+To build locally, unset the variable.
+:::
+
 To set the address in a profile, add `build_url` to it in `~/.config/unikraft/config.yaml`:
 
 ```yaml title="config.yaml"
