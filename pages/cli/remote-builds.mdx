@@ -36,8 +36,9 @@ The registry defaults to `index.unikraft.io`.
 A local output such as an OCI archive isn't possible.
 :::
 
-Without a value, `--remote` uses the default remote build server, `https://controlplane.unikraft.com`.
-To use another one, see [select the remote build server](#select-the-remote-build-server).
+Without a value, `--remote` uses the address in `UNIKRAFT_BUILD_URL` or in the profile.
+If neither has one, it uses the default remote build server, `https://controlplane.unikraft.com`.
+For the order, see [select the remote build server](#select-the-remote-build-server).
 
 The CLI logs these messages in order:
 
