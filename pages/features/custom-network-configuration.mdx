@@ -2,15 +2,11 @@
 title: Custom Network Configuration
 navigation_icon: network
 availability:
-  hosting: { cloud: soon, dedicated: true, byoc: true, on-prem: true }
+  hosting: { cloud: false, dedicated: true, byoc: true, on-prem: true }
   plan: enterprise
   status: ga
   interfaces: { api: true, cli: soon, sdk: false }
   notes:
-    - target: cloud
-      text: Custom network configuration is coming soon to Unikraft Cloud. Managed network mode is only available on dedicated, BYOC, and on-prem installations.
-      link: mailto:support@unikraft.com
-      linkText: Contact support to try it
     - target: cli
       text: Dedicated CLI subcommands are coming soon. Until then, use the API, for example with the unikraft api command.
       link: /cli/unikraft/api
@@ -222,7 +218,7 @@ The default mode, `isolates`, keeps the behavior that the rest of this page desc
 ## Limitations
 
 - An instance can have at most **four** network interfaces.
-- The feature requires the `net_manager` permission (see the note at the top of this page).
+- The feature requires the `net_manager` permission, so it's only available on [dedicated, BYOC, and on-prem installations](/platform/hosting-options#dedicated-byoc-and-on-prem-installations).
 - Creating a [template](/platform/instances#instance-templates) from an instance **drops** its network configuration, since binding a template to a specific TAP device or IP defeats the purpose of cloning many instances from it.
 - You currently **can't** [branch](/features/branching) or [checkpoint](/features/checkpoints) an instance with more than one interface.
 - The [relay](/features/network-shield) feature works between pool-allocated interfaces only, on both ends.
