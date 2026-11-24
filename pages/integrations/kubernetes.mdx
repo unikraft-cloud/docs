@@ -102,6 +102,7 @@ It launches a machine when a Pod has nowhere to run, installs Kraftlet against i
 
 Below are examples of Kubernetes configurations that define Unikraft Cloud apps through Kubernetes concepts.
 You will notice that each workload object defines `tolerations` and `nodeSelector` so Pods get scheduled on the Kraftlet node.
+The examples run the image that the [Nginx guide](/guides/nginx) builds, so replace `<my-org>` with your username or org name.
 
 :::warning
 Make sure Kraftlet is up and running before trying out examples below.
@@ -138,7 +139,7 @@ spec:
         kubernetes.io/hostname: kraftlet
       containers:
         - name: nginx
-          image: nginx:latest
+          image: <my-org>/nginx:latest
           ports:
             - containerPort: 8080
 ---
@@ -281,11 +282,11 @@ spec:
     kubernetes.io/hostname: kraftlet
   containers:
     - name: nginx
-      image: nginx:latest
+      image: <my-org>/nginx:latest
       ports:
         - containerPort: 8080
       volumeMounts:
-        - mountPath: /usr/share/nginx/html
+        - mountPath: /wwwroot
           name: nginx-storage
   volumes:
     - name: nginx-storage
@@ -338,7 +339,7 @@ spec:
     kubernetes.io/hostname: kraftlet
   containers:
     - name: nginx
-      image: nginx:latest
+      image: <my-org>/nginx:latest
       ports:
         - containerPort: 8080
 ```
@@ -640,7 +641,7 @@ With `Never`, the first failure stops the Pod from starting.
 
 Kraftlet reads the Secrets listed under `spec.imagePullSecrets` and passes the matching credentials to the platform with the image.
 It accepts both the `kubernetes.io/dockerconfigjson` and the `kubernetes.io/dockercfg` Secret types, and matches an entry to the image by registry host.
-An image without a registry host, such as `nginx:latest`, and an image on `docker.io` both match the `index.docker.io` entry.
+An image without a registry host, such as `<my-org>/nginx:latest`, and an image on `docker.io` both match the `index.docker.io` entry.
 
 ### Pod status
 
@@ -794,8 +795,8 @@ Kraftlet supports the following Unikraft Cloud platform features on Kraftlet-man
 
 {/* vale off */}
 :::caution[**Limited Access**]
-CNI-based networking for Kraftlet is available as part of enterprise plans.
-To enable it for your account, reach out to the [Unikraft Cloud Discord](https://unikraft.com/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
+CNI-based networking for Kraftlet is only available in dedicated, BYOC, or on-prem Unikraft Cloud installations.
+To explore such a deal, reach out to the [Unikraft Cloud Discord](https://unikraft.com/discord) or send an email to [support@unikraft.com](mailto:support@unikraft.com).
 :::
 {/* vale on */}
 
