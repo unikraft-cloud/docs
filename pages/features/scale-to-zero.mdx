@@ -42,7 +42,9 @@ Unikraft Cloud currently supports the following scale-to-zero policies:
 | `idle` | Same as `on`, but also puts the instance into standby when there are TCP connections established that have been inactive during the cooldown time. The connections remain established and incoming packets wake up the instance. Scale-to-zero doesn't happen while there are active HTTP requests (that is, traffic on ports which use the `http` [handler](/platform/services#handlers)). |
 
 :::info
-Unikraft Cloud supports scale-to-zero for traffic going through the proxy, as well as [internal traffic](/platform/networking#internal-communication) via Private FQDNs.
+Any network traffic that reaches a `standby` instance wakes it up, also when it doesn't come through the proxy.
+This includes [internal traffic](/platform/networking#internal-communication) from other instances to its private IP or private FQDN.
+An instance that you stop or suspend yourself doesn't wake up on traffic.
 :::
 
 
