@@ -31,6 +31,11 @@ A `rootfs` source of `type: oci` skips the `Dockerfile` entirely and keeps the i
 See [root filesystem from an existing image](/platform/images#root-filesystem-from-an-existing-image).
 :::
 
+:::tip
+To run the upstream image without changes, copy it to the central registry and start an instance from it, with no `Dockerfile` and no `Kraftfile`.
+See [container images](/platform/images#container-images).
+:::
+
 ### Inspect the upstream image
 
 Before writing the `Kraftfile`, inspect the original image and record its effective startup command.
